@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { FarmPlot, FarmSnapshot } from '../api';
 import { farmApi, ApiError } from '../api';
+import { ASSETS, applyAssetOrigin, preloadAllGameAssets } from '../assets';
 
 interface PlotVisual {
   id: number;
@@ -36,84 +37,98 @@ export class FarmScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.createPlaceholderTextures();
+    preloadAllGameAssets(this);
   }
 
   async create(): Promise<void> {
-    // 1. Draw Field Background
+    // 1. Draw Field Background with warm casual grass tones
     const bg = this.add.graphics();
+    // Ambient forest green backdrop
     bg.fillStyle(0x274328, 1);
     bg.fillRect(0, 0, 800, 600);
 
-    // Farm dirt boundary
-    bg.fillStyle(0x355e3b, 1);
-    bg.fillRoundedRect(80, 110, 640, 380, 16);
-    bg.lineStyle(3, 0x1c311c, 0.8);
-    bg.strokeRoundedRect(80, 110, 640, 380, 16);
+    // Warm lush island meadow
+    bg.fillStyle(0x386139, 1);
+    bg.fillRoundedRect(40, 95, 720, 420, 20);
+    bg.lineStyle(3, 0x1f3820, 0.9);
+    bg.strokeRoundedRect(40, 95, 720, 420, 20);
 
-    // 2. Header & HUD
-    this.add.text(400, 28, 'FarmVerse — My Farm', {
+    // Central tilled earth patch for farming plots
+    bg.fillStyle(0x4a2e16, 0.95);
+    bg.fillRoundedRect(150, 145, 500, 265, 16);
+    bg.lineStyle(2, 0x331f0e, 0.8);
+    bg.strokeRoundedRect(150, 145, 500, 265, 16);
+
+    // 2. Island Scenery Props (Approved T-14 sprites)
+    // Cozy Farmhouse Cottage on upper-left
+    const farmhouse = this.add.image(95, 165, ASSETS.FARMHOUSE).setScale(0.82).setDepth(2);
+    applyAssetOrigin(farmhouse, ASSETS.FARMHOUSE);
+
+    // Rustic Grain Silo on upper-right
+    const silo = this.add.image(705, 165, ASSETS.SILO).setScale(0.85).setDepth(2);
+    applyAssetOrigin(silo, ASSETS.SILO);
+
+    // Garden Koi Pond on lower-left
+    const fishPond = this.add.image(95, 430, ASSETS.FISH_POND).setScale(0.8).setDepth(2);
+    applyAssetOrigin(fishPond, ASSETS.FISH_POND);
+
+    // Wooden Fence with Open Gate on lower-right (path toward town square)
+    const fence = this.add.image(705, 430, ASSETS.FENCE_OPEN).setScale(0.85).setDepth(2);
+    applyAssetOrigin(fence, ASSETS.FENCE_OPEN);
+
+    // 3. Header & HUD
+    this.add.text(400, 26, 'FarmVerse — My Farm', {
       fontSize: '22px',
       color: '#f5eed7',
       fontStyle: 'bold',
+      stroke: '#1b2e1c',
+      strokeThickness: 3,
     }).setOrigin(0.5);
 
     // Top HUD Bar
-    const hudBg = this.add.graphics();
-    hudBg.fillStyle(0x1a291a, 0.9);
-    hudBg.fillRoundedRect(80, 56, 640, 42, 8);
-    hudBg.lineStyle(1, 0x486b4a, 0.6);
-    hudBg.strokeRoundedRect(80, 56, 640, 42, 8);
-
-    this.goldText = this.add.text(105, 77, '💰 GOLD: 0', {
-      fontSize: '15px',
-      color: '#f3c969',
-      fontStyle: 'bold',
-    }).setOrigin(0, 0.5);
-
-    this.siloText = this.add.text(260, 77, '🌾 Silo: 0 / 10', {
-      fontSize: '14px',
-      color: '#e4dcc4',
-    }).setOrigin(0, 0.5);
-
-    this.apiBadgeText = this.add.text(700, 77, 'API: Live Hono Server', {
-      fontSize: '12px',
-      color: '#8ec489',
-    }).setOrigin(1, 0.5);
+    this.createTopHUD();
 
     // Toast message area
-    this.toastText = this.add.text(400, 475, '', {
+    this.toastText = this.add.text(400, 480, '', {
       fontSize: '13px',
       color: '#f3eed9',
       fontStyle: 'bold',
-    }).setOrigin(0.5);
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(15);
 
-    // 3. Create 6 Plots (3 columns x 2 rows)
+    // 4. Create 6 Plots (3 columns x 2 rows)
     const positions = [
-      { id: 1, x: 190, y: 200 },
-      { id: 2, x: 400, y: 200 },
-      { id: 3, x: 610, y: 200 },
-      { id: 4, x: 190, y: 340 },
-      { id: 5, x: 400, y: 340 },
-      { id: 6, x: 610, y: 340 },
+      { id: 1, x: 235, y: 215 },
+      { id: 2, x: 400, y: 215 },
+      { id: 3, x: 565, y: 215 },
+      { id: 4, x: 235, y: 345 },
+      { id: 5, x: 400, y: 345 },
+      { id: 6, x: 565, y: 345 },
     ];
 
     for (const pos of positions) {
       const container = this.add.container(pos.x, pos.y);
+      container.setDepth(5);
 
-      const sprite = this.add.image(0, 0, 'plot_empty');
+      const sprite = this.add.image(0, 0, ASSETS.PLOT_EMPTY);
+      applyAssetOrigin(sprite, ASSETS.PLOT_EMPTY);
       sprite.setInteractive({ useHandCursor: true });
 
-      const titleText = this.add.text(0, -32, `Plot #${pos.id}`, {
+      const titleText = this.add.text(0, -44, `Plot #${pos.id}`, {
         fontSize: '13px',
         color: '#f8f4e6',
         fontStyle: 'bold',
+        stroke: '#1c120a',
+        strokeThickness: 3,
       }).setOrigin(0.5);
 
-      const statusText = this.add.text(0, 24, 'EMPTY', {
-        fontSize: '12px',
-        color: '#d4ccb8',
+      const statusText = this.add.text(0, 32, 'EMPTY\n[Gieo hạt]', {
+        fontSize: '11px',
+        color: '#e0d5ba',
         align: 'center',
+        stroke: '#1c120a',
+        strokeThickness: 3,
       }).setOrigin(0.5);
 
       container.add([sprite, titleText, statusText]);
@@ -142,13 +157,13 @@ export class FarmScene extends Phaser.Scene {
       });
     }
 
-    // 4. Action Bar / Quick Sell Buttons
+    // 5. Action Bar / Quick Sell Buttons
     this.createActionBar();
 
-    // 5. Responsive Camera Controls (Overview / Focus & Touch Pan)
+    // 6. Responsive Camera Controls (Overview / Focus & Touch Pan)
     this.createCameraControls();
 
-    // 6. Initial Data Load
+    // 7. Initial Data Load
     await this.refreshFarm();
   }
 
@@ -178,6 +193,39 @@ export class FarmScene extends Phaser.Scene {
     }
   }
 
+  private createTopHUD(): void {
+    const hudBg = this.add.graphics();
+    hudBg.fillStyle(0x1a291a, 0.92);
+    hudBg.fillRoundedRect(50, 50, 700, 42, 8);
+    hudBg.lineStyle(1, 0x486b4a, 0.7);
+    hudBg.strokeRoundedRect(50, 50, 700, 42, 8);
+    hudBg.setDepth(10);
+
+    // Gold icon + text
+    this.add.image(75, 71, ASSETS.COIN_GOLD).setScale(0.55).setOrigin(0.5).setDepth(11);
+    this.goldText = this.add.text(95, 71, '0', {
+      fontSize: '15px',
+      color: '#f3c969',
+      fontStyle: 'bold',
+      stroke: '#241600',
+      strokeThickness: 2,
+    }).setOrigin(0, 0.5).setDepth(11);
+
+    // Silo icon + text
+    this.add.image(210, 71, ASSETS.HUD_SILO_ICON).setScale(0.65).setOrigin(0.5).setDepth(11);
+    this.siloText = this.add.text(230, 71, 'Silo: 0 / 10', {
+      fontSize: '13px',
+      color: '#e4dcc4',
+      stroke: '#1a291a',
+      strokeThickness: 2,
+    }).setOrigin(0, 0.5).setDepth(11);
+
+    this.apiBadgeText = this.add.text(730, 71, 'API: Live Hono Server', {
+      fontSize: '11px',
+      color: '#8ec489',
+    }).setOrigin(1, 0.5).setDepth(11);
+  }
+
   private setFarmSnapshot(farm: FarmSnapshot): void {
     this.farm = farm;
     this.snapshotServerTimeMs = farm.serverTimeMs;
@@ -201,10 +249,10 @@ export class FarmScene extends Phaser.Scene {
 
   private renderFarmState(): void {
     // Update HUD
-    this.goldText.setText(`💰 GOLD: ${this.farm.gold}`);
+    this.goldText.setText(`${this.farm.gold}`);
     const totalSilo = this.farm.silo.counts.NORMAL + this.farm.silo.counts.GOLDEN;
     this.siloText.setText(
-      `🌾 Silo: ${totalSilo}/${this.farm.silo.capacity} (N: ${this.farm.silo.counts.NORMAL}, G: ${this.farm.silo.counts.GOLDEN})`
+      `Silo: ${totalSilo}/${this.farm.silo.capacity} (N: ${this.farm.silo.counts.NORMAL}, G: ${this.farm.silo.counts.GOLDEN})`
     );
 
     if (farmApi.isUsingMock()) {
@@ -229,23 +277,27 @@ export class FarmScene extends Phaser.Scene {
     if (!visual) return;
 
     if (plot.state === 'EMPTY') {
-      visual.sprite.setTexture('plot_empty');
-      visual.statusText.setText('EMPTY\n[Tap to plant]');
-      visual.statusText.setColor('#c2b89d');
+      visual.sprite.setTexture(ASSETS.PLOT_EMPTY);
+      applyAssetOrigin(visual.sprite, ASSETS.PLOT_EMPTY);
+      visual.statusText.setText('EMPTY\n[Gieo hạt]');
+      visual.statusText.setColor('#e0d5ba');
     } else if (plot.state === 'GROWING') {
-      visual.sprite.setTexture('plot_growing');
+      visual.sprite.setTexture(ASSETS.PLOT_GROWING);
+      applyAssetOrigin(visual.sprite, ASSETS.PLOT_GROWING);
       const currentServerTime = this.getEstimatedServerTime();
       const remaining = Math.max(0, (plot.readyAtMs - currentServerTime) / 1000).toFixed(1);
       visual.statusText.setText(`GROWING\n${remaining}s`);
       visual.statusText.setColor('#8eed82');
     } else if (plot.state === 'READY') {
-      visual.sprite.setTexture('plot_ready_normal');
-      visual.statusText.setText('READY!\n[Tap to harvest]');
+      visual.sprite.setTexture(ASSETS.PLOT_READY_NORMAL);
+      applyAssetOrigin(visual.sprite, ASSETS.PLOT_READY_NORMAL);
+      visual.statusText.setText('READY!\n[Thu hoạch]');
       visual.statusText.setColor('#ffd54f');
     } else if (plot.state === 'LOCKED') {
-      visual.sprite.setTexture('plot_locked');
+      visual.sprite.setTexture(ASSETS.PLOT_LOCKED);
+      applyAssetOrigin(visual.sprite, ASSETS.PLOT_LOCKED);
       visual.statusText.setText(`LOCKED\n[${plot.unlockCostGold} GOLD]`);
-      visual.statusText.setColor('#9e9e9e');
+      visual.statusText.setColor('#cfd8dc');
     }
   }
 
@@ -263,19 +315,19 @@ export class FarmScene extends Phaser.Scene {
       try {
         const farm = await farmApi.plant(plotId, this.farm.revision);
         this.setFarmSnapshot(farm);
-        this.showFloatingText(x, y - 20, '🌱 Gieo hạt!', '#8eed82');
+        this.showFloatingText(x, y - 25, '🌱 Gieo hạt!', '#8eed82');
       } catch (err: unknown) {
-        await this.handleApiError(err, 'Gieo hạt thất bại', x, y - 20);
+        await this.handleApiError(err, 'Gieo hạt thất bại', x, y - 25);
       }
     } else if (plot.state === 'GROWING') {
       const currentServerTime = this.getEstimatedServerTime();
       const remaining = Math.max(0, (plot.readyAtMs - currentServerTime) / 1000).toFixed(1);
-      this.showFloatingText(x, y - 20, `⏳ Còn ${remaining}s`, '#ffffff');
+      this.showFloatingText(x, y - 25, `⏳ Còn ${remaining}s`, '#ffffff');
     } else if (plot.state === 'READY') {
       // Harvest action
       const totalSilo = this.farm.silo.counts.NORMAL + this.farm.silo.counts.GOLDEN;
       if (totalSilo >= this.farm.silo.capacity) {
-        this.showFloatingText(x, y - 20, '⚠️ Silo đầy (10/10)!', '#ff9800');
+        this.showFloatingText(x, y - 25, '⚠️ Silo đầy (10/10)!', '#ff9800');
         this.showToast('Silo đầy! Hãy bán bớt crop để có chỗ thu hoạch.', '#ff9800');
         return;
       }
@@ -284,17 +336,18 @@ export class FarmScene extends Phaser.Scene {
         const result = await farmApi.harvest(plotId, this.farm.revision);
         this.setFarmSnapshot(result.farm);
         if (result.harvested === 'GOLDEN') {
-          this.showFloatingText(x, y - 20, '✨ GOLDEN CROP! ✨', '#ffd700', 1.3);
+          this.showFloatingText(x, y - 25, '✨ GOLDEN CROP! ✨', '#ffd700', 1.3);
+          this.spawnHarvestSparkles(x, y);
         } else {
-          this.showFloatingText(x, y - 20, '+1 Normal Crop', '#ffffff');
+          this.showFloatingText(x, y - 25, '+1 Normal Crop 🌾', '#ffffff');
         }
       } catch (err: unknown) {
-        await this.handleApiError(err, 'Thu hoạch thất bại', x, y - 20);
+        await this.handleApiError(err, 'Thu hoạch thất bại', x, y - 25);
       }
     } else if (plot.state === 'LOCKED') {
       // Unlock action
       if (this.farm.gold < plot.unlockCostGold) {
-        this.showFloatingText(x, y - 20, `Cần ${plot.unlockCostGold} GOLD!`, '#ff7043');
+        this.showFloatingText(x, y - 25, `Cần ${plot.unlockCostGold} GOLD!`, '#ff7043');
         this.showToast(`Bạn cần ${plot.unlockCostGold} GOLD để mở ô #${plotId}. Bán crop để kiếm GOLD!`, '#ff7043');
         return;
       }
@@ -302,27 +355,49 @@ export class FarmScene extends Phaser.Scene {
       try {
         const farm = await farmApi.unlock(plotId, this.farm.revision);
         this.setFarmSnapshot(farm);
-        this.showFloatingText(x, y - 20, `🔓 Mở ô #${plotId}! -${plot.unlockCostGold} G`, '#76ff03');
+        this.showFloatingText(x, y - 25, `🔓 Mở ô #${plotId}! -${plot.unlockCostGold} G`, '#76ff03');
         this.showToast(`Đã mở thành công ô #${plotId}!`, '#76ff03');
       } catch (err: unknown) {
-        await this.handleApiError(err, 'Mở ô thất bại', x, y - 20);
+        await this.handleApiError(err, 'Mở ô thất bại', x, y - 25);
       }
     }
   }
 
+  private spawnHarvestSparkles(x: number, y: number): void {
+    for (let i = 0; i < 6; i++) {
+      const angle = (i / 6) * Math.PI * 2;
+      const dist = Phaser.Math.Between(25, 45);
+      const targetX = x + Math.cos(angle) * dist;
+      const targetY = y + Math.sin(angle) * dist - 15;
+
+      const sparkle = this.add.image(x, y - 10, ASSETS.SPARKLE_EFFECT).setScale(0.3).setAlpha(1).setDepth(20);
+      this.tweens.add({
+        targets: sparkle,
+        x: targetX,
+        y: targetY,
+        scale: 0.8,
+        alpha: 0,
+        duration: 800 + i * 50,
+        ease: 'Cubic.easeOut',
+        onComplete: () => sparkle.destroy(),
+      });
+    }
+  }
+
   private createActionBar(): void {
-    const bottomY = 535;
+    const bottomY = 540;
     const isMock = farmApi.isUsingMock();
 
-    const normalX = isMock ? 140 : 180;
-    const goldenX = isMock ? 295 : 375;
-    const storeX = isMock ? 470 : 595;
+    const normalX = isMock ? 135 : 175;
+    const goldenX = isMock ? 295 : 365;
+    const storeX = isMock ? 475 : 590;
 
-    // Quick Sell Normal Button
-    this.sellNormalBtn = this.createButton(
+    // Quick Sell Normal Button with crop_normal icon
+    this.sellNormalBtn = this.createButtonWithIcon(
       normalX,
       bottomY,
       'Bán Thường (+10 G)',
+      ASSETS.CROP_NORMAL,
       0x4a6b47,
       async () => {
         try {
@@ -333,15 +408,16 @@ export class FarmScene extends Phaser.Scene {
           await this.handleApiError(err, 'Không có Crop Thường để bán!', normalX, bottomY - 30);
         }
       },
-      140,
+      155,
       40
     );
 
-    // Quick Sell Golden Button
-    this.sellGoldenBtn = this.createButton(
+    // Quick Sell Golden Button with crop_golden icon
+    this.sellGoldenBtn = this.createButtonWithIcon(
       goldenX,
       bottomY,
       'Bán Vàng (+30 G)',
+      ASSETS.CROP_GOLDEN,
       0x8c6d23,
       async () => {
         try {
@@ -352,20 +428,21 @@ export class FarmScene extends Phaser.Scene {
           await this.handleApiError(err, 'Không có Crop Vàng để bán!', goldenX, bottomY - 30);
         }
       },
-      140,
+      155,
       40
     );
 
-    // Navigation to Town Square / Store Scene (T-11)
-    this.createButton(
+    // Navigation to Town Square / Store Scene with hud_cart_icon
+    this.createButtonWithIcon(
       storeX,
       bottomY,
-      '🏪 Đến Cửa Hàng (Store)',
+      'Đến Cửa Hàng (Store)',
+      ASSETS.HUD_CART_ICON,
       0x1565c0,
       () => {
         this.scene.start('StoreScene');
       },
-      180,
+      185,
       40
     );
 
@@ -381,7 +458,7 @@ export class FarmScene extends Phaser.Scene {
           this.setFarmSnapshot(mockFarm);
           this.showToast('Đã đặt lại phiên chơi mock (0 GOLD, 2 ô trống, silo 0/10)', '#aed581');
         },
-        130,
+        125,
         40
       );
     }
@@ -433,7 +510,7 @@ export class FarmScene extends Phaser.Scene {
     w = 170,
     h = 40
   ): Phaser.GameObjects.Container {
-    const btn = this.add.container(x, y);
+    const btn = this.add.container(x, y).setDepth(10);
 
     const bg = this.add.graphics();
     bg.fillStyle(bgColor, 1);
@@ -458,6 +535,42 @@ export class FarmScene extends Phaser.Scene {
     return btn;
   }
 
+  private createButtonWithIcon(
+    x: number,
+    y: number,
+    label: string,
+    iconKey: string,
+    bgColor: number,
+    onClick: () => void,
+    w = 170,
+    h = 40
+  ): Phaser.GameObjects.Container {
+    const btn = this.add.container(x, y).setDepth(10);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(bgColor, 1);
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 6);
+    bg.lineStyle(1, 0xffffff, 0.3);
+    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 6);
+
+    const icon = this.add.image(-w / 2 + 18, 0, iconKey).setScale(0.48).setOrigin(0.5);
+    const text = this.add.text(8, 0, label, {
+      fontSize: '11px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    btn.add([bg, icon, text]);
+    btn.setSize(w, h);
+    btn.setInteractive({ useHandCursor: true });
+
+    btn.on('pointerover', () => btn.setScale(1.04));
+    btn.on('pointerout', () => btn.setScale(1.0));
+    btn.on('pointerdown', onClick);
+
+    return btn;
+  }
+
   private showFloatingText(
     x: number,
     y: number,
@@ -471,7 +584,7 @@ export class FarmScene extends Phaser.Scene {
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3,
-    }).setOrigin(0.5).setScale(scale);
+    }).setOrigin(0.5).setScale(scale).setDepth(25);
 
     this.tweens.add({
       targets: text,
@@ -498,20 +611,21 @@ export class FarmScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, 800, 600);
 
     // Camera mode toggle button in Top HUD bar
-    const toggleContainer = this.add.container(440, 77);
+    const toggleContainer = this.add.container(450, 71).setDepth(11);
     const toggleBg = this.add.graphics();
     toggleBg.fillStyle(0x274328, 1);
     toggleBg.fillRoundedRect(-65, -13, 130, 26, 6);
     toggleBg.lineStyle(1, 0x5a8b5e, 0.8);
     toggleBg.strokeRoundedRect(-65, -13, 130, 26, 6);
 
-    this.cameraToggleText = this.add.text(0, 0, '🌐 Góc rộng (Web)', {
+    const cameraIcon = this.add.image(-48, 0, ASSETS.HUD_CAMERA_ICON).setScale(0.55).setOrigin(0.5);
+    this.cameraToggleText = this.add.text(8, 0, 'Góc rộng (Web)', {
       fontSize: '11px',
       color: '#e4dcc4',
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    toggleContainer.add([toggleBg, this.cameraToggleText]);
+    toggleContainer.add([toggleBg, cameraIcon, this.cameraToggleText]);
     toggleContainer.setSize(130, 26);
     toggleContainer.setInteractive({ useHandCursor: true });
 
@@ -581,77 +695,7 @@ export class FarmScene extends Phaser.Scene {
     }
 
     if (this.cameraToggleText) {
-      this.cameraToggleText.setText(mode === 'FOCUS' ? '📐 Cận cảnh (Mobile)' : '🌐 Góc rộng (Web)');
+      this.cameraToggleText.setText(mode === 'FOCUS' ? 'Cận cảnh (Mobile)' : 'Góc rộng (Web)');
     }
-  }
-
-  private createPlaceholderTextures(): void {
-    if (this.textures.exists('plot_empty')) return;
-
-    const w = 150;
-    const h = 95;
-
-    // 1. PLOT EMPTY (Tilled soil)
-    const gEmpty = this.make.graphics({ x: 0, y: 0 });
-    gEmpty.fillStyle(0x3e240e, 1);
-    gEmpty.fillRoundedRect(0, 0, w, h, 8);
-    gEmpty.fillStyle(0x5c3716, 1);
-    gEmpty.fillRoundedRect(4, 4, w - 8, h - 8, 6);
-    // Soil furrows
-    gEmpty.fillStyle(0x452910, 1);
-    gEmpty.fillRoundedRect(14, 18, w - 28, 12, 4);
-    gEmpty.fillRoundedRect(14, 42, w - 28, 12, 4);
-    gEmpty.fillRoundedRect(14, 66, w - 28, 12, 4);
-    gEmpty.generateTexture('plot_empty', w, h);
-    gEmpty.destroy();
-
-    // 2. PLOT GROWING (Soil with fresh green sprout)
-    const gGrow = this.make.graphics({ x: 0, y: 0 });
-    gGrow.fillStyle(0x3e240e, 1);
-    gGrow.fillRoundedRect(0, 0, w, h, 8);
-    gGrow.fillStyle(0x5c3716, 1);
-    gGrow.fillRoundedRect(4, 4, w - 8, h - 8, 6);
-    // Sprout stem & leaves
-    gGrow.fillStyle(0x388e3c, 1);
-    gGrow.fillRoundedRect(w / 2 - 3, 30, 6, 30, 2);
-    gGrow.fillCircle(w / 2 - 12, 34, 10);
-    gGrow.fillCircle(w / 2 + 12, 34, 10);
-    gGrow.fillStyle(0x81c784, 1);
-    gGrow.fillCircle(w / 2 - 10, 32, 6);
-    gGrow.fillCircle(w / 2 + 10, 32, 6);
-    gGrow.generateTexture('plot_growing', w, h);
-    gGrow.destroy();
-
-    // 3. PLOT READY NORMAL (Mature wheat/corn)
-    const gReady = this.make.graphics({ x: 0, y: 0 });
-    gReady.fillStyle(0x3e240e, 1);
-    gReady.fillRoundedRect(0, 0, w, h, 8);
-    gReady.fillStyle(0x5c3716, 1);
-    gReady.fillRoundedRect(4, 4, w - 8, h - 8, 6);
-    // Golden-amber stalks
-    gReady.fillStyle(0xdca632, 1);
-    gReady.fillRoundedRect(w / 2 - 4, 20, 8, 45, 3);
-    gReady.fillCircle(w / 2, 22, 14);
-    gReady.fillCircle(w / 2 - 14, 32, 11);
-    gReady.fillCircle(w / 2 + 14, 32, 11);
-    gReady.fillStyle(0xffe082, 1);
-    gReady.fillCircle(w / 2, 20, 8);
-    gReady.generateTexture('plot_ready_normal', w, h);
-    gReady.destroy();
-
-    // 4. PLOT LOCKED (Dark soil with padlock indicator)
-    const gLocked = this.make.graphics({ x: 0, y: 0 });
-    gLocked.fillStyle(0x24180d, 1);
-    gLocked.fillRoundedRect(0, 0, w, h, 8);
-    gLocked.fillStyle(0x382414, 1);
-    gLocked.fillRoundedRect(4, 4, w - 8, h - 8, 6);
-    // Lock body
-    gLocked.fillStyle(0x8d6e63, 1);
-    gLocked.fillRoundedRect(w / 2 - 14, 32, 28, 22, 4);
-    // Lock shackle
-    gLocked.lineStyle(4, 0xbcaaa4, 1);
-    gLocked.strokeCircle(w / 2, 26, 10);
-    gLocked.generateTexture('plot_locked', w, h);
-    gLocked.destroy();
   }
 }

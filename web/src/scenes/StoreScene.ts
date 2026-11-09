@@ -4,6 +4,7 @@ import type {
   MerchantSnapshot,
 } from '../api';
 import { farmApi, merchantApi, ApiError } from '../api';
+import { ASSETS, applyAssetOrigin, preloadAllGameAssets } from '../assets';
 
 export class StoreScene extends Phaser.Scene {
   private farm: FarmSnapshot | null = null;
@@ -43,7 +44,9 @@ export class StoreScene extends Phaser.Scene {
 
   private offerContainer!: Phaser.GameObjects.Container;
   private offerSideBadge!: Phaser.GameObjects.Text;
+  private offerCropImage!: Phaser.GameObjects.Image;
   private offerCropText!: Phaser.GameObjects.Text;
+  private offerPriceCoin!: Phaser.GameObjects.Image;
   private offerPriceText!: Phaser.GameObjects.Text;
   private offerTimerText!: Phaser.GameObjects.Text;
   private offerReasonText!: Phaser.GameObjects.Text;
@@ -57,6 +60,10 @@ export class StoreScene extends Phaser.Scene {
     super('StoreScene');
   }
 
+  preload(): void {
+    preloadAllGameAssets(this);
+  }
+
   create(): void {
     this.sessionLost = false;
     this.isRecoveringSession = false;
@@ -64,14 +71,20 @@ export class StoreScene extends Phaser.Scene {
     this.lastRefreshedMilestoneMs = null;
     this.isSubmittingAction = false;
 
-    // 1. Draw Town Square Plaza Background
+    // 1. Draw Town Square Plaza Background with cobblestone ground
     const bg = this.add.graphics();
-    // Dark cobblestone plaza floor
-    bg.fillStyle(0x23272a, 1);
+    // Ambient dark floor
+    bg.fillStyle(0x1a1c1e, 1);
     bg.fillRect(0, 0, 800, 600);
 
-    // Inner Plaza Pavement
-    bg.fillStyle(0x36393f, 1);
+    // Modular cobblestone pavement tiles across the plaza (T-14 ground asset)
+    const tileLeft = this.add.image(235, 310, ASSETS.TOWN_SQUARE_GROUND).setScale(1.18).setAlpha(0.6);
+    applyAssetOrigin(tileLeft, ASSETS.TOWN_SQUARE_GROUND);
+    const tileRight = this.add.image(565, 310, ASSETS.TOWN_SQUARE_GROUND).setScale(1.18).setAlpha(0.6);
+    applyAssetOrigin(tileRight, ASSETS.TOWN_SQUARE_GROUND);
+
+    // Inner Plaza Pavement border
+    bg.fillStyle(0x272a2e, 0.45);
     bg.fillRoundedRect(40, 45, 720, 520, 16);
     bg.lineStyle(2, 0x4f545c, 0.8);
     bg.strokeRoundedRect(40, 45, 720, 520, 16);
@@ -94,7 +107,9 @@ export class StoreScene extends Phaser.Scene {
       fontSize: '13px',
       color: '#f3eed9',
       fontStyle: 'bold',
-    }).setOrigin(0.5);
+      stroke: '#000000',
+      strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(20);
 
     // 7. Initial Data Load
     this.refreshMerchantState();
@@ -156,7 +171,7 @@ export class StoreScene extends Phaser.Scene {
   }
 
   private createHeader(): void {
-    // Back to Farm Button
+    // Back to Farm Button with hud_cart_icon
     const backBtn = this.createButton(
       120,
       25,
@@ -175,6 +190,8 @@ export class StoreScene extends Phaser.Scene {
       fontSize: '20px',
       color: '#f5eed7',
       fontStyle: 'bold',
+      stroke: '#1b2e1c',
+      strokeThickness: 2,
     }).setOrigin(0.5);
 
     // API badge
@@ -196,13 +213,17 @@ export class StoreScene extends Phaser.Scene {
     hudBg.lineStyle(1, 0x5a626a, 0.6);
     hudBg.strokeRoundedRect(60, 55, 680, 40, 8);
 
-    this.playerGoldText = this.add.text(80, 75, '💰 Ví GOLD: 0', {
+    // Gold icon + text
+    this.add.image(80, 75, ASSETS.COIN_GOLD).setScale(0.55).setOrigin(0.5);
+    this.playerGoldText = this.add.text(98, 75, '0 GOLD', {
       fontSize: '14px',
       color: '#f3c969',
       fontStyle: 'bold',
     }).setOrigin(0, 0.5);
 
-    this.playerSiloText = this.add.text(260, 75, '🌾 Silo: 0 / 10 (Thường: 0 | Vàng: 0)', {
+    // Silo icon + text
+    this.add.image(260, 75, ASSETS.HUD_SILO_ICON).setScale(0.65).setOrigin(0.5);
+    this.playerSiloText = this.add.text(280, 75, 'Silo: 0 / 10 (Thường: 0 | Vàng: 0)', {
       fontSize: '13px',
       color: '#e4dcc4',
     }).setOrigin(0, 0.5);
@@ -218,47 +239,57 @@ export class StoreScene extends Phaser.Scene {
     const stallContainer = this.add.container(px, py);
 
     const bg = this.add.graphics();
-    bg.fillStyle(0x2f3136, 0.95);
+    bg.fillStyle(0x282b30, 0.95);
     bg.fillRoundedRect(0, 0, pw, ph, 12);
     bg.lineStyle(2, 0x5a626a, 0.8);
     bg.strokeRoundedRect(0, 0, pw, ph, 12);
 
     // Panel Title
-    const title = this.add.text(pw / 2, 24, '🐺 THƯƠNG NHÂN SÓI CA', {
+    const title = this.add.text(pw / 2, 20, '🐺 THƯƠNG NHÂN SÓI CA', {
       fontSize: '15px',
       color: '#e0a96d',
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
+    // Merchant Stall & Blue Wolf Character Sprite Artworks (T-14 approved assets)
+    const stallSprite = this.add.image(pw / 2 + 10, 115, ASSETS.MERCHANT_STALL).setScale(0.78);
+    applyAssetOrigin(stallSprite, ASSETS.MERCHANT_STALL);
+
+    const npcSprite = this.add.image(pw / 2 - 35, 115, ASSETS.NPC_MERCHANT).setScale(0.8);
+    applyAssetOrigin(npcSprite, ASSETS.NPC_MERCHANT);
+
+    const signboard = this.add.image(pw - 35, 105, ASSETS.STORE_SIGNBOARD).setScale(0.7);
+    applyAssetOrigin(signboard, ASSETS.STORE_SIGNBOARD);
+
     // Interactive callout badge on NPC
     const calloutBg = this.add.graphics();
     calloutBg.fillStyle(0x1565c0, 1);
-    calloutBg.fillRoundedRect(pw / 2 - 120, 48, 240, 24, 6);
-    const calloutText = this.add.text(pw / 2, 60, '💬 Bấm vào Thương Nhân để Giao Dịch', {
+    calloutBg.fillRoundedRect(pw / 2 - 120, 148, 240, 24, 6);
+    const calloutText = this.add.text(pw / 2, 160, '💬 Bấm vào Thương Nhân để Giao Dịch', {
       fontSize: '11px',
       color: '#ffffff',
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    // Details
+    // Details at y = 182..265
     const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
-      fontSize: '13px',
+      fontSize: '12px',
       color: '#dcddde',
     };
 
-    this.npcStatusText = this.add.text(25, 85, '• Trạng thái: Đang tải...', textStyle);
-    this.npcBudgetText = this.add.text(25, 114, '• Ngân sách: ...', textStyle);
-    this.npcInventoryText = this.add.text(25, 143, '• Kho hàng NPC: ...', textStyle);
-    this.npcDemandText = this.add.text(25, 172, '• Nhu cầu thị trường: ...', textStyle);
-    this.npcPricingText = this.add.text(25, 201, '• Hệ số giá: ...', textStyle);
+    this.npcStatusText = this.add.text(25, 185, '• Trạng thái: Đang tải...', textStyle);
+    this.npcBudgetText = this.add.text(25, 206, '• Ngân sách: ...', textStyle);
+    this.npcInventoryText = this.add.text(25, 227, '• Kho hàng: ...', textStyle);
+    this.npcDemandText = this.add.text(25, 248, '• Nhu cầu thị trường: ...', textStyle);
+    this.npcPricingText = this.add.text(25, 269, '• Hệ số giá: ...', textStyle);
 
-    // Rule summary box
+    // Rule summary box at y = 295..395
     const infoBg = this.add.graphics();
-    infoBg.fillStyle(0x202225, 0.8);
-    infoBg.fillRoundedRect(20, 235, pw - 40, 150, 8);
+    infoBg.fillStyle(0x1e2124, 0.85);
+    infoBg.fillRoundedRect(15, 296, pw - 30, 100, 8);
 
-    const ruleHeader = this.add.text(30, 245, '📖 Quy tắc C02 Lite:', {
-      fontSize: '12px',
+    const ruleHeader = this.add.text(25, 304, '📖 Quy tắc C02 Lite:', {
+      fontSize: '11px',
       color: '#f3c969',
       fontStyle: 'bold',
     });
@@ -266,21 +297,23 @@ export class StoreScene extends Phaser.Scene {
     const ruleText = [
       '• Thương nhân MUA nông sản của bạn',
       '  và BÁN nông sản của họ cho bạn.',
-      '• Hệ số giá biến động tự động theo',
-      '  ngân sách, kho hàng và nhu cầu.',
+      '• Hệ số biến động theo tồn kho & nhu cầu.',
       '• Chống đầu cơ: Giá bán tối thiểu 30G,',
       '  giá mua tối đa 25G (Không mua rẻ bán đắt lặp).',
     ].join('\n');
 
-    const ruleBody = this.add.text(30, 270, ruleText, {
-      fontSize: '11px',
+    const ruleBody = this.add.text(25, 322, ruleText, {
+      fontSize: '10px',
       color: '#b9bbbe',
-      lineSpacing: 4,
+      lineSpacing: 3,
     });
 
     stallContainer.add([
       bg,
       title,
+      stallSprite,
+      npcSprite,
+      signboard,
       calloutBg,
       calloutText,
       this.npcStatusText,
@@ -306,14 +339,14 @@ export class StoreScene extends Phaser.Scene {
     stallContainer.on('pointerover', () => {
       calloutBg.clear();
       calloutBg.fillStyle(0x1e88e5, 1);
-      calloutBg.fillRoundedRect(pw / 2 - 120, 48, 240, 24, 6);
+      calloutBg.fillRoundedRect(pw / 2 - 120, 148, 240, 24, 6);
       bg.lineStyle(2, 0x80cbc4, 1);
       bg.strokeRoundedRect(0, 0, pw, ph, 12);
     });
     stallContainer.on('pointerout', () => {
       calloutBg.clear();
       calloutBg.fillStyle(0x1565c0, 1);
-      calloutBg.fillRoundedRect(pw / 2 - 120, 48, 240, 24, 6);
+      calloutBg.fillRoundedRect(pw / 2 - 120, 148, 240, 24, 6);
       bg.lineStyle(2, 0x5a626a, 0.8);
       bg.strokeRoundedRect(0, 0, pw, ph, 12);
     });
@@ -330,13 +363,13 @@ export class StoreScene extends Phaser.Scene {
     const ph = 410;
 
     this.tradePanelBg = this.add.graphics();
-    this.tradePanelBg.fillStyle(0x2f3136, 0.95);
+    this.tradePanelBg.fillStyle(0x282b30, 0.95);
     this.tradePanelBg.fillRoundedRect(px, py, pw, ph, 12);
     this.tradePanelBg.lineStyle(2, 0x40444b, 0.8);
     this.tradePanelBg.strokeRoundedRect(px, py, pw, ph, 12);
 
     // Panel Title
-    this.tradePanelTitle = this.add.text(px + pw / 2 - 20, py + 24, '📋 BÁO GIÁ THỊ TRƯỜNG', {
+    this.tradePanelTitle = this.add.text(px + pw / 2 - 20, py + 22, '📋 BÁO GIÁ THỊ TRƯỜNG', {
       fontSize: '15px',
       color: '#80cbc4',
       fontStyle: 'bold',
@@ -345,7 +378,7 @@ export class StoreScene extends Phaser.Scene {
     // Close Dialog Button (✕ Đóng)
     this.closeTradeBtn = this.createButton(
       px + pw - 35,
-      py + 24,
+      py + 22,
       '✕',
       0x4f545c,
       () => this.closeTradeDialog(),
@@ -359,35 +392,41 @@ export class StoreScene extends Phaser.Scene {
     // Badge background
     const badgeBg = this.add.graphics();
     badgeBg.fillStyle(0x202225, 1);
-    badgeBg.fillRoundedRect(20, 60, pw - 40, 220, 10);
+    badgeBg.fillRoundedRect(20, 52, pw - 40, 240, 10);
     badgeBg.lineStyle(1, 0x5a626a, 0.6);
-    badgeBg.strokeRoundedRect(20, 60, pw - 40, 220, 10);
+    badgeBg.strokeRoundedRect(20, 52, pw - 40, 240, 10);
 
-    this.offerSideBadge = this.add.text(pw / 2, 85, 'ĐANG TẢI...', {
-      fontSize: '13px',
+    this.offerSideBadge = this.add.text(pw / 2, 75, 'ĐANG TẢI...', {
+      fontSize: '12px',
       fontStyle: 'bold',
       color: '#81c784',
     }).setOrigin(0.5);
 
-    this.offerCropText = this.add.text(pw / 2, 120, '1x Normal Crop', {
-      fontSize: '15px',
+    // Item Crop Icon Sprite (T-14 item asset)
+    this.offerCropImage = this.add.image(pw / 2, 120, ASSETS.CROP_NORMAL).setScale(0.85);
+    applyAssetOrigin(this.offerCropImage, ASSETS.CROP_NORMAL);
+
+    this.offerCropText = this.add.text(pw / 2, 162, '1x Normal Crop', {
+      fontSize: '14px',
       fontStyle: 'bold',
       color: '#ffffff',
     }).setOrigin(0.5);
 
-    this.offerPriceText = this.add.text(pw / 2, 155, '💰 Giá: 15 GOLD', {
-      fontSize: '18px',
+    // Price container with gold coin icon
+    this.offerPriceCoin = this.add.image(pw / 2 - 50, 192, ASSETS.COIN_GOLD).setScale(0.6).setOrigin(0.5);
+    this.offerPriceText = this.add.text(pw / 2 - 32, 192, '15 GOLD', {
+      fontSize: '17px',
       fontStyle: 'bold',
       color: '#ffd54f',
-    }).setOrigin(0.5);
+    }).setOrigin(0, 0.5);
 
-    this.offerTimerText = this.add.text(pw / 2, 195, '⏳ Thời hạn: 20s', {
-      fontSize: '13px',
+    this.offerTimerText = this.add.text(pw / 2, 224, '⏳ Thời hạn: 20s', {
+      fontSize: '12px',
       color: '#90caf9',
     }).setOrigin(0.5);
 
-    this.offerReasonText = this.add.text(pw / 2, 235, '', {
-      fontSize: '12px',
+    this.offerReasonText = this.add.text(pw / 2, 255, '', {
+      fontSize: '11px',
       color: '#ff8a80',
       align: 'center',
     }).setOrigin(0.5);
@@ -395,7 +434,7 @@ export class StoreScene extends Phaser.Scene {
     // Accept Button
     this.acceptBtn = this.createButton(
       85,
-      308,
+      315,
       '✅ Chấp Nhận',
       0x2e7d32,
       () => this.handleAcceptOffer(),
@@ -406,7 +445,7 @@ export class StoreScene extends Phaser.Scene {
     // Reject Button
     this.rejectBtn = this.createButton(
       245,
-      308,
+      315,
       '❌ Từ Chối',
       0xc62828,
       () => this.handleRejectOffer(),
@@ -417,7 +456,9 @@ export class StoreScene extends Phaser.Scene {
     this.offerContainer.add([
       badgeBg,
       this.offerSideBadge,
+      this.offerCropImage,
       this.offerCropText,
+      this.offerPriceCoin,
       this.offerPriceText,
       this.offerTimerText,
       this.offerReasonText,
@@ -435,7 +476,7 @@ export class StoreScene extends Phaser.Scene {
     // BUG-07: Refresh state button (placed directly in scene at visible panel bottom)
     this.refreshBtn = this.createButton(
       px + pw / 2,
-      py + 365,
+      py + 370,
       '🔄 Tải Lại Dữ Liệu',
       0x455a64,
       () => {
@@ -584,15 +625,15 @@ export class StoreScene extends Phaser.Scene {
 
     // 1. Update Player HUD
     const totalSilo = farm.silo.counts.NORMAL + farm.silo.counts.GOLDEN;
-    this.playerGoldText.setText(`💰 Ví GOLD: ${farm.gold}`);
+    this.playerGoldText.setText(`${farm.gold} GOLD`);
     this.playerSiloText.setText(
-      `🌾 Silo: ${totalSilo} / ${farm.silo.capacity} (Thường: ${farm.silo.counts.NORMAL} | Vàng: ${farm.silo.counts.GOLDEN})`
+      `Silo: ${totalSilo} / ${farm.silo.capacity} (🌾 ${farm.silo.counts.NORMAL} | ✨ ${farm.silo.counts.GOLDEN})`
     );
 
     // 2. Update Merchant Panel
     const isOutOfBusiness = merchant.status === 'OUT_OF_BUSINESS';
     this.npcStatusText.setText(
-      `• Trạng thái: ${isOutOfBusiness ? '🛑 TẠM DỪNG KINH DOANH' : '🟢 Đang hoạt động'}`
+      `• Trạng thái: ${isOutOfBusiness ? '🛑 TẠM DỪNG' : '🟢 Hoạt động'}`
     );
     this.npcStatusText.setColor(isOutOfBusiness ? '#e57373' : '#81c784');
 
@@ -624,17 +665,23 @@ export class StoreScene extends Phaser.Scene {
       this.noOfferText.setVisible(false);
 
       if (activeOffer.side === 'BUY') {
-        this.offerSideBadge.setText('📥 NPC MUA LẠI NÔNG SẢN CỦA BẠN');
+        this.offerSideBadge.setText('📥 NPC MUA LẠI CỦA BẠN');
         this.offerSideBadge.setColor('#81c784');
       } else {
-        this.offerSideBadge.setText('📤 NPC BÁN NÔNG SẢN CHO BẠN');
+        this.offerSideBadge.setText('📤 NPC BÁN CHO BẠN');
         this.offerSideBadge.setColor('#ffb74d');
       }
 
-      const cropName =
-        activeOffer.crop === 'GOLDEN' ? '✨ Golden Crop (Lúa vàng)' : '🌾 Normal Crop (Lúa thường)';
-      this.offerCropText.setText(`Số lượng: 1x ${cropName}`);
-      this.offerPriceText.setText(`💰 Giá giao dịch: ${activeOffer.priceGold} GOLD`);
+      // Update crop item visual
+      if (activeOffer.crop === 'GOLDEN') {
+        this.offerCropImage.setTexture(ASSETS.CROP_GOLDEN);
+        this.offerCropText.setText('1x Golden Crop (Lúa vàng ✨)');
+      } else {
+        this.offerCropImage.setTexture(ASSETS.CROP_NORMAL);
+        this.offerCropText.setText('1x Normal Crop (Lúa thường 🌾)');
+      }
+
+      this.offerPriceText.setText(`${activeOffer.priceGold} GOLD`);
 
       // Can accept or block reason
       if (activeOffer.canAccept) {
@@ -647,6 +694,7 @@ export class StoreScene extends Phaser.Scene {
         this.offerReasonText.setText(`⚠️ ${reasonMsg}`);
         this.offerReasonText.setColor('#ff8a80');
       }
+
       // BUG-12: Restore Reject button alpha to 1.0 when active offer is available
       this.rejectBtn.setAlpha(1.0);
     } else {
