@@ -2,6 +2,7 @@ import type { Pool, PoolClient } from 'pg';
 import type {
   CropVariant, FarmErrorCode, FarmPlot, FarmSnapshot, PlotActionRequest, QuickSellRequest,
 } from '../../shared/farm.mts';
+import { createMerchantState } from './merchant-state.js';
 
 const GROW_TIME_MS = 10_000;
 const GOLDEN_CHANCE = 0.1;
@@ -9,7 +10,7 @@ const SILO_CAPACITY = 10;
 const QUICK_SELL_GOLD = { NORMAL: 10, GOLDEN: 30 };
 const PLOT_UNLOCK_COSTS = [0, 0, 20, 20, 20, 20];
 
-interface FarmRow {
+export interface FarmRow {
   revision: number;
   gold: number;
   normal_count: number;
@@ -29,7 +30,7 @@ export type FarmAction =
 
 type MutationResult = { farm: FarmSnapshot; harvested?: CropVariant } | { error: FarmErrorCode };
 
-async function transact<T>(database: Pool, run: (client: PoolClient) => Promise<T>): Promise<T> {
+export async function transact<T>(database: Pool, run: (client: PoolClient) => Promise<T>): Promise<T> {
   const client = await database.connect();
   let discard = false;
   try {
@@ -66,7 +67,7 @@ function snapshot(farm: FarmRow, plots: PlotRow[], now: number): FarmSnapshot {
   };
 }
 
-export async function readFarm(database: Pool, id: string, clock: () => number): Promise<FarmSnapshot | undefined> {
+export async function readFarm(database: Pool | PoolClient, id: string, clock: () => number): Promise<FarmSnapshot | undefined> {
   const { rows } = await database.query<FarmRow & PlotRow>(`
     SELECT f.revision, f.gold, f.normal_count, f.golden_count,
            p.id, p.unlocked, p.unlock_cost_gold, p.ready_at
@@ -88,7 +89,9 @@ export function createFarm(database: Pool, id: string, clock: () => number): Pro
       FROM unnest($2::integer[]) WITH ORDINALITY AS initial(cost, position)
       RETURNING id, unlocked, unlock_cost_gold, ready_at
     `, [id, PLOT_UNLOCK_COSTS]);
-    return snapshot(farm, plots.sort((left, right) => left.id - right.id), clock());
+    const now = clock();
+    await createMerchantState(client, id, now);
+    return snapshot(farm, plots.sort((left, right) => left.id - right.id), now);
   });
 }
 

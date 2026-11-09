@@ -27,6 +27,7 @@ before(async () => {
   await admin.query(`CREATE SCHEMA ${schema}`);
   schemaCreated = true;
   await database.query(await readFile(new URL('../migrations/001_farm.sql', import.meta.url), 'utf8'));
+  await database.query(await readFile(new URL('../migrations/002_merchant.sql', import.meta.url), 'utf8'));
 });
 
 after(async () => {

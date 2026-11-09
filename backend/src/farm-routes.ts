@@ -27,7 +27,7 @@ const errorMessages: Record<FarmErrorCode, string> = {
   SERVICE_UNAVAILABLE: 'The Farm database is unavailable.',
 };
 
-function guestId(context: Context): string | undefined {
+export function guestId(context: Context): string | undefined {
   const id = getCookie(context, FARM_COOKIE);
   return id && UUID_V4.test(id) ? id : undefined;
 }
