@@ -13,6 +13,15 @@ export class StoreScene extends Phaser.Scene {
   private snapshotServerTimeMs = 0;
   private snapshotReceivedLocalMs = 0;
 
+  // Milestone refresh tracking (BUG-07)
+  private isFetching = false;
+  private lastRefreshedMilestoneMs: number | null = null;
+
+  // Session recovery tracking (BUG-08)
+  private sessionLost = false;
+  private isRecoveringSession = false;
+  private sessionLostModal!: Phaser.GameObjects.Container;
+
   // UI Elements
   private playerGoldText!: Phaser.GameObjects.Text;
   private playerSiloText!: Phaser.GameObjects.Text;
@@ -22,6 +31,13 @@ export class StoreScene extends Phaser.Scene {
   private npcInventoryText!: Phaser.GameObjects.Text;
   private npcDemandText!: Phaser.GameObjects.Text;
   private npcPricingText!: Phaser.GameObjects.Text;
+
+  // Trade Dialog (MVP Contract: click NPC/Stall to open)
+  private isTradeDialogOpen = true;
+  private tradePanelBg!: Phaser.GameObjects.Graphics;
+  private tradePanelTitle!: Phaser.GameObjects.Text;
+  private closeTradeBtn!: Phaser.GameObjects.Container;
+  private openTradePromptContainer!: Phaser.GameObjects.Container;
 
   private offerContainer!: Phaser.GameObjects.Container;
   private offerSideBadge!: Phaser.GameObjects.Text;
@@ -40,6 +56,11 @@ export class StoreScene extends Phaser.Scene {
   }
 
   create(): void {
+    this.sessionLost = false;
+    this.isRecoveringSession = false;
+    this.isFetching = false;
+    this.lastRefreshedMilestoneMs = null;
+
     // 1. Draw Town Square Plaza Background
     const bg = this.add.graphics();
     // Dark cobblestone plaza floor
@@ -58,23 +79,26 @@ export class StoreScene extends Phaser.Scene {
     // 3. Top Player HUD
     this.createPlayerHUD();
 
-    // 4. Panels: Merchant Panel (Left) & Active Offer Panel (Right)
+    // 4. Panels: Merchant NPC & Stall (Left) & Active Offer Panel (Right)
     this.createMerchantPanel();
     this.createOfferPanel();
 
-    // 5. Toast area
+    // 5. Session Lost Modal (BUG-08)
+    this.createSessionLostModal();
+
+    // 6. Toast area
     this.toastText = this.add.text(400, 540, '', {
       fontSize: '13px',
       color: '#f3eed9',
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    // 6. Initial Data Load
+    // 7. Initial Data Load
     this.refreshMerchantState();
   }
 
   update(): void {
-    if (!this.merchant || !this.farm) return;
+    if (this.sessionLost || !this.merchant || !this.farm) return;
 
     const currentServerTime = this.getEstimatedServerTime();
     const activeOffer = this.merchant.offers.find((o) => o.expiresAtMs > currentServerTime);
@@ -84,18 +108,39 @@ export class StoreScene extends Phaser.Scene {
       const seconds = (remainingMs / 1000).toFixed(1);
       this.offerTimerText.setText(`⏳ Thời hạn: ${seconds}s`);
 
+      // BUG-07: Handle offer timeout (lock buttons & auto-refresh once)
       if (remainingMs <= 0) {
-        // Expired -> trigger refresh
-        this.refreshMerchantState();
+        this.acceptBtn.setAlpha(0.45);
+        this.offerReasonText.setText('⚠️ Báo giá đã hết hạn, đang tải báo giá mới...');
+        this.triggerMilestoneRefresh(activeOffer.expiresAtMs);
       }
-    } else if (this.merchant.cooldownUntilMs && this.merchant.cooldownUntilMs > currentServerTime) {
-      const cooldownMs = Math.max(0, this.merchant.cooldownUntilMs - currentServerTime);
-      const seconds = (cooldownMs / 1000).toFixed(1);
-      this.noOfferText.setText(`⏳ Thương nhân đang nghỉ giữa hiệp (${seconds}s)...`);
-      if (cooldownMs <= 0) {
-        this.refreshMerchantState();
+    } else {
+      // BUG-07: Auto-refresh when cooldown or nextOfferAtMs elapses
+      if (this.merchant.cooldownUntilMs) {
+        if (currentServerTime >= this.merchant.cooldownUntilMs) {
+          this.noOfferText.setText('⏳ Hết thời gian nghỉ, đang tải báo giá mới...');
+          this.triggerMilestoneRefresh(this.merchant.cooldownUntilMs);
+        } else {
+          const remaining = Math.max(0, (this.merchant.cooldownUntilMs - currentServerTime) / 1000).toFixed(1);
+          this.noOfferText.setText(`⏳ Thương nhân đang nghỉ giữa hiệp (${remaining}s)...`);
+        }
+      } else if (this.merchant.nextOfferAtMs) {
+        if (currentServerTime >= this.merchant.nextOfferAtMs) {
+          this.noOfferText.setText('⏳ Đang tải báo giá mới...');
+          this.triggerMilestoneRefresh(this.merchant.nextOfferAtMs);
+        } else {
+          const remaining = Math.max(0, (this.merchant.nextOfferAtMs - currentServerTime) / 1000).toFixed(1);
+          this.noOfferText.setText(`⏳ Báo giá tiếp theo sau ${remaining}s...`);
+        }
       }
     }
+  }
+
+  // BUG-07: Trigger auto-refresh once per milestone to prevent duplicate GET spam
+  private triggerMilestoneRefresh(milestoneMs: number): void {
+    if (this.isFetching || this.lastRefreshedMilestoneMs === milestoneMs) return;
+    this.lastRefreshedMilestoneMs = milestoneMs;
+    this.refreshMerchantState();
   }
 
   private createHeader(): void {
@@ -157,22 +202,31 @@ export class StoreScene extends Phaser.Scene {
     const pw = 330;
     const ph = 410;
 
+    // Interactive Stall & NPC Container (MVP Contract requirement)
+    const stallContainer = this.add.container(px, py);
+
     const bg = this.add.graphics();
     bg.fillStyle(0x2f3136, 0.95);
-    bg.fillRoundedRect(px, py, pw, ph, 12);
-    bg.lineStyle(1, 0x40444b, 0.8);
-    bg.strokeRoundedRect(px, py, pw, ph, 12);
+    bg.fillRoundedRect(0, 0, pw, ph, 12);
+    bg.lineStyle(2, 0x5a626a, 0.8);
+    bg.strokeRoundedRect(0, 0, pw, ph, 12);
 
     // Panel Title
-    this.add.text(px + pw / 2, py + 24, '🐺 THƯƠNG NHÂN SÓI CA', {
+    const title = this.add.text(pw / 2, 24, '🐺 THƯƠNG NHÂN SÓI CA', {
       fontSize: '15px',
       color: '#e0a96d',
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    // Divider
-    bg.lineStyle(1, 0x4f545c, 0.5);
-    bg.lineBetween(px + 20, py + 45, px + pw - 20, py + 45);
+    // Interactive callout badge on NPC
+    const calloutBg = this.add.graphics();
+    calloutBg.fillStyle(0x1565c0, 1);
+    calloutBg.fillRoundedRect(pw / 2 - 120, 48, 240, 24, 6);
+    const calloutText = this.add.text(pw / 2, 60, '💬 Bấm vào Thương Nhân để Giao Dịch', {
+      fontSize: '11px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
 
     // Details
     const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
@@ -180,18 +234,18 @@ export class StoreScene extends Phaser.Scene {
       color: '#dcddde',
     };
 
-    this.npcStatusText = this.add.text(px + 25, py + 65, '• Trạng thái: Đang tải...', textStyle);
-    this.npcBudgetText = this.add.text(px + 25, py + 98, '• Ngân sách: ...', textStyle);
-    this.npcInventoryText = this.add.text(px + 25, py + 131, '• Kho hàng NPC: ...', textStyle);
-    this.npcDemandText = this.add.text(px + 25, py + 164, '• Nhu cầu thị trường: ...', textStyle);
-    this.npcPricingText = this.add.text(px + 25, py + 197, '• Hệ số giá: ...', textStyle);
+    this.npcStatusText = this.add.text(25, 85, '• Trạng thái: Đang tải...', textStyle);
+    this.npcBudgetText = this.add.text(25, 114, '• Ngân sách: ...', textStyle);
+    this.npcInventoryText = this.add.text(25, 143, '• Kho hàng NPC: ...', textStyle);
+    this.npcDemandText = this.add.text(25, 172, '• Nhu cầu thị trường: ...', textStyle);
+    this.npcPricingText = this.add.text(25, 201, '• Hệ số giá: ...', textStyle);
 
     // Rule summary box
     const infoBg = this.add.graphics();
     infoBg.fillStyle(0x202225, 0.8);
-    infoBg.fillRoundedRect(px + 20, py + 235, pw - 40, 150, 8);
+    infoBg.fillRoundedRect(20, 235, pw - 40, 150, 8);
 
-    this.add.text(px + 30, py + 245, '📖 Quy tắc C02 Lite:', {
+    const ruleHeader = this.add.text(30, 245, '📖 Quy tắc C02 Lite:', {
       fontSize: '12px',
       color: '#f3c969',
       fontStyle: 'bold',
@@ -206,10 +260,45 @@ export class StoreScene extends Phaser.Scene {
       '  giá mua tối đa 25G (Không mua rẻ bán đắt lặp).',
     ].join('\n');
 
-    this.add.text(px + 30, py + 270, ruleText, {
+    const ruleBody = this.add.text(30, 270, ruleText, {
       fontSize: '11px',
       color: '#b9bbbe',
       lineSpacing: 4,
+    });
+
+    stallContainer.add([
+      bg,
+      title,
+      calloutBg,
+      calloutText,
+      this.npcStatusText,
+      this.npcBudgetText,
+      this.npcInventoryText,
+      this.npcDemandText,
+      this.npcPricingText,
+      infoBg,
+      ruleHeader,
+      ruleBody,
+    ]);
+
+    // Make NPC Stall Clickable to open/focus Trade Dialog (MVP Contract)
+    stallContainer.setSize(pw, ph);
+    stallContainer.setInteractive({ useHandCursor: true });
+    stallContainer.on('pointerover', () => {
+      stallContainer.setScale(1.015);
+      calloutBg.clear();
+      calloutBg.fillStyle(0x1e88e5, 1);
+      calloutBg.fillRoundedRect(pw / 2 - 120, 48, 240, 24, 6);
+    });
+    stallContainer.on('pointerout', () => {
+      stallContainer.setScale(1.0);
+      calloutBg.clear();
+      calloutBg.fillStyle(0x1565c0, 1);
+      calloutBg.fillRoundedRect(pw / 2 - 120, 48, 240, 24, 6);
+    });
+    stallContainer.on('pointerdown', () => {
+      this.openTradeDialog();
+      this.showToast('Đã mở Quầy Giao Dịch cùng Thương Nhân Sói Ca!', '#81c784');
     });
   }
 
@@ -219,22 +308,29 @@ export class StoreScene extends Phaser.Scene {
     const pw = 330;
     const ph = 410;
 
-    const bg = this.add.graphics();
-    bg.fillStyle(0x2f3136, 0.95);
-    bg.fillRoundedRect(px, py, pw, ph, 12);
-    bg.lineStyle(1, 0x40444b, 0.8);
-    bg.strokeRoundedRect(px, py, pw, ph, 12);
+    this.tradePanelBg = this.add.graphics();
+    this.tradePanelBg.fillStyle(0x2f3136, 0.95);
+    this.tradePanelBg.fillRoundedRect(px, py, pw, ph, 12);
+    this.tradePanelBg.lineStyle(2, 0x40444b, 0.8);
+    this.tradePanelBg.strokeRoundedRect(px, py, pw, ph, 12);
 
     // Panel Title
-    this.add.text(px + pw / 2, py + 24, '📋 BÁO GIÁ THỊ TRƯỜNG', {
+    this.tradePanelTitle = this.add.text(px + pw / 2 - 20, py + 24, '📋 BÁO GIÁ THỊ TRƯỜNG', {
       fontSize: '15px',
       color: '#80cbc4',
       fontStyle: 'bold',
     }).setOrigin(0.5);
 
-    // Divider
-    bg.lineStyle(1, 0x4f545c, 0.5);
-    bg.lineBetween(px + 20, py + 45, px + pw - 20, py + 45);
+    // Close Dialog Button (✕ Đóng)
+    this.closeTradeBtn = this.createButton(
+      px + pw - 35,
+      py + 24,
+      '✕',
+      0x4f545c,
+      () => this.closeTradeDialog(),
+      30,
+      24
+    );
 
     // Offer Container (Visible when active offer exists)
     this.offerContainer = this.add.container(px, py);
@@ -316,23 +412,140 @@ export class StoreScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Refresh state button
-    this.createButton(
+    const refreshBtn = this.createButton(
       px + pw / 2,
       py + 360,
       '🔄 Tải Lại Dữ Liệu',
       0x455a64,
-      () => this.refreshMerchantState(),
+      () => {
+        this.lastRefreshedMilestoneMs = null;
+        this.refreshMerchantState();
+      },
       160,
       34
     );
+
+    // Open Trade Prompt Container (Shown when dialog is closed)
+    this.openTradePromptContainer = this.add.container(px, py);
+    const promptBg = this.add.graphics();
+    promptBg.fillStyle(0x2f3136, 0.9);
+    promptBg.fillRoundedRect(0, 0, pw, ph, 12);
+    promptBg.lineStyle(1, 0x4f545c, 0.8);
+    promptBg.strokeRoundedRect(0, 0, pw, ph, 12);
+
+    const promptText = this.add.text(
+      pw / 2,
+      ph / 2 - 40,
+      '🐺 Thương Nhân Sói Ca đang ở sạp hàng.\n\nBấm vào Thương Nhân bên trái\nhoặc bấm nút dưới đây để giao dịch!',
+      {
+        fontSize: '13px',
+        color: '#dcddde',
+        align: 'center',
+        lineSpacing: 6,
+      }
+    ).setOrigin(0.5);
+
+    const openBtn = this.createButton(
+      pw / 2,
+      ph / 2 + 50,
+      '🛍️ Mở Quầy Giao Dịch',
+      0x1565c0,
+      () => this.openTradeDialog(),
+      180,
+      38
+    );
+
+    this.openTradePromptContainer.add([promptBg, promptText, openBtn]);
+    this.openTradePromptContainer.setVisible(false);
+
+    // Store references
+    this.offerContainer.add(refreshBtn);
+  }
+
+  private openTradeDialog(): void {
+    this.isTradeDialogOpen = true;
+    this.tradePanelBg.setVisible(true);
+    this.tradePanelTitle.setVisible(true);
+    this.closeTradeBtn.setVisible(true);
+    this.openTradePromptContainer.setVisible(false);
+    if (this.merchant) {
+      this.updateOfferVisibility();
+    }
+  }
+
+  private closeTradeDialog(): void {
+    this.isTradeDialogOpen = false;
+    this.tradePanelBg.setVisible(false);
+    this.tradePanelTitle.setVisible(false);
+    this.closeTradeBtn.setVisible(false);
+    this.offerContainer.setVisible(false);
+    this.noOfferText.setVisible(false);
+    this.openTradePromptContainer.setVisible(true);
+  }
+
+  // BUG-08: Dedicated Session Lost Modal stopping recursive retries
+  private createSessionLostModal(): void {
+    this.sessionLostModal = this.add.container(400, 300);
+    this.sessionLostModal.setDepth(100);
+
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.8);
+    overlay.fillRect(-400, -300, 800, 600);
+
+    const box = this.add.graphics();
+    box.fillStyle(0x26292d, 1);
+    box.fillRoundedRect(-200, -110, 400, 220, 12);
+    box.lineStyle(2, 0xe53935, 1);
+    box.strokeRoundedRect(-200, -110, 400, 220, 12);
+
+    const title = this.add.text(0, -65, '⚠️ PHIÊN CHƠI HẾT HẠN (401)', {
+      fontSize: '16px',
+      color: '#ff5252',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    const msg = this.add.text(
+      0,
+      -15,
+      'Phiên chơi Guest chưa được khởi tạo hoặc cookie đã mất.\nVui lòng trở về Nông Trại để bắt đầu phiên mới.',
+      {
+        fontSize: '12px',
+        color: '#e0e0e0',
+        align: 'center',
+        lineSpacing: 6,
+      }
+    ).setOrigin(0.5);
+
+    const recoverBtn = this.createButton(
+      0,
+      55,
+      '🌾 Khôi Phục Tại Nông Trại',
+      0x2e7d32,
+      () => {
+        this.scene.start('FarmScene');
+      },
+      220,
+      40
+    );
+
+    this.sessionLostModal.add([overlay, box, title, msg, recoverBtn]);
+    this.sessionLostModal.setVisible(false);
   }
 
   private async refreshMerchantState(): Promise<void> {
+    if (this.sessionLost || this.isFetching) return;
+    this.isFetching = true;
+
     try {
       const response = await merchantApi.getMerchantState();
+      this.isRecoveringSession = false;
+      this.sessionLost = false;
+      this.sessionLostModal.setVisible(false);
       this.setSnapshots(response.farm, response.merchant);
     } catch (err: unknown) {
       await this.handleApiError(err, 'Không thể tải trạng thái cửa hàng');
+    } finally {
+      this.isFetching = false;
     }
   }
 
@@ -370,8 +583,15 @@ export class StoreScene extends Phaser.Scene {
     );
 
     // 3. Update Offers Panel
+    this.updateOfferVisibility();
+  }
+
+  private updateOfferVisibility(): void {
+    if (!this.merchant || !this.isTradeDialogOpen) return;
+
     const currentServerTime = this.getEstimatedServerTime();
-    const activeOffer = merchant.offers.find((o) => o.expiresAtMs > currentServerTime);
+    const activeOffer = this.merchant.offers.find((o) => o.expiresAtMs > currentServerTime);
+    const isOutOfBusiness = this.merchant.status === 'OUT_OF_BUSINESS';
 
     if (activeOffer) {
       this.offerContainer.setVisible(true);
@@ -405,9 +625,12 @@ export class StoreScene extends Phaser.Scene {
       this.offerContainer.setVisible(false);
       this.noOfferText.setVisible(true);
 
-      if (merchant.cooldownUntilMs && merchant.cooldownUntilMs > currentServerTime) {
-        const remaining = Math.max(0, (merchant.cooldownUntilMs - currentServerTime) / 1000).toFixed(1);
+      if (this.merchant.cooldownUntilMs && this.merchant.cooldownUntilMs > currentServerTime) {
+        const remaining = Math.max(0, (this.merchant.cooldownUntilMs - currentServerTime) / 1000).toFixed(1);
         this.noOfferText.setText(`⏳ Thương nhân đang nghỉ giữa hiệp (${remaining}s)...`);
+      } else if (this.merchant.nextOfferAtMs && this.merchant.nextOfferAtMs > currentServerTime) {
+        const remaining = Math.max(0, (this.merchant.nextOfferAtMs - currentServerTime) / 1000).toFixed(1);
+        this.noOfferText.setText(`⏳ Báo giá tiếp theo sau ${remaining}s...`);
       } else if (isOutOfBusiness) {
         this.noOfferText.setText('🛑 Thương nhân đã hết vốn và tạm dừng giao dịch.');
       } else {
@@ -436,6 +659,7 @@ export class StoreScene extends Phaser.Scene {
         this.farm.revision,
         this.merchant.revision
       );
+      this.lastRefreshedMilestoneMs = null;
       this.setSnapshots(result.farm, result.merchant);
       const isBuy = activeOffer.side === 'BUY';
       const actionMsg = isBuy
@@ -462,6 +686,7 @@ export class StoreScene extends Phaser.Scene {
         this.farm.revision,
         this.merchant.revision
       );
+      this.lastRefreshedMilestoneMs = null;
       this.setSnapshots(result.farm, result.merchant);
       this.showToast('Đã từ chối báo giá này.', '#ffd54f');
     } catch (err: unknown) {
@@ -494,14 +719,39 @@ export class StoreScene extends Phaser.Scene {
     return this.snapshotServerTimeMs + elapsedLocalMs;
   }
 
+  // BUG-08: Stop recursive 401 loops, attempt single recovery via Farm, or halt and display modal
   private async handleApiError(err: unknown, fallbackMsg: string): Promise<void> {
     if (err instanceof ApiError) {
       const codeStr = err.code ? `[${err.code}] ` : '';
       const displayMsg = `${codeStr}${err.message}`;
       this.showToast(displayMsg, '#ff5252');
 
-      // Refresh on 401 or 409
-      if (err.status === 401 || err.status === 409) {
+      if (err.status === 401) {
+        if (!this.isRecoveringSession) {
+          this.isRecoveringSession = true;
+          try {
+            // Attempt single recovery: get Farm snapshot to create session cookie
+            await farmApi.getFarm();
+            const res = await merchantApi.getMerchantState();
+            this.sessionLost = false;
+            this.isRecoveringSession = false;
+            this.sessionLostModal.setVisible(false);
+            this.setSnapshots(res.farm, res.merchant);
+            return;
+          } catch {
+            // Recovery failed
+          }
+        }
+
+        // STOP retries completely! Show session lost modal
+        this.sessionLost = true;
+        this.sessionLostModal.setVisible(true);
+        return;
+      }
+
+      // Refresh on 409 (STALE_FARM / STALE_MERCHANT)
+      if (err.status === 409) {
+        this.lastRefreshedMilestoneMs = null;
         await this.refreshMerchantState();
       }
     } else {

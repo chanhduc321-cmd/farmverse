@@ -520,36 +520,105 @@ class MerchantApiClient {
       this.mockSnapshot.cooldownUntilMs = null;
     }
 
-    // Refresh mock offer if none active and not on cooldown
-    if (
-      !this.mockSnapshot.cooldownUntilMs &&
-      (this.mockSnapshot.offers.length === 0 || this.mockSnapshot.offers[0].expiresAtMs <= now)
-    ) {
-      const hasNormal = farm.silo.counts.NORMAL > 0;
-      const canAccept =
-        hasNormal &&
-        this.mockSnapshot.goldBudget >= 15 &&
-        this.mockSnapshot.inventory.counts.NORMAL + this.mockSnapshot.inventory.counts.GOLDEN < 10;
+    // Clear expired offers
+    if (this.mockSnapshot.offers.length > 0 && this.mockSnapshot.offers[0].expiresAtMs <= now) {
+      this.mockSnapshot.offers = [];
+    }
 
-      const offer: MerchantOffer = {
-        id: `mock-offer-${Date.now()}`,
-        side: 'BUY',
-        crop: 'NORMAL',
-        quantity: 1,
-        currency: 'GOLD',
-        priceGold: 15,
-        expiresAtMs: now + 20000,
-        canAccept: canAccept as true,
-        unavailableReason: canAccept
-          ? null
-          : hasNormal
-            ? 'MERCHANT_INSUFFICIENT_GOLD'
-            : 'CROP_UNAVAILABLE',
-      } as MerchantOffer;
+    // Generate a new mock offer if none active and not on cooldown
+    if (!this.mockSnapshot.cooldownUntilMs && this.mockSnapshot.offers.length === 0) {
+      const mInv = this.mockSnapshot.inventory.counts;
+      const mInvTotal = mInv.NORMAL + mInv.GOLDEN;
+      const pSiloTotal = farm.silo.counts.NORMAL + farm.silo.counts.GOLDEN;
 
-      this.mockSnapshot.offers = [offer];
+      // Choose side: alternate between BUY and SELL when conditions allow
+      const canSell = mInvTotal > 0 && farm.gold >= 30 && pSiloTotal < farm.silo.capacity;
+      const isSell = canSell && this.mockSnapshot.revision % 2 === 1;
+
+      if (isSell) {
+        // NPC SELLS to player (C02 anti-arbitrage price: Normal 30G, Golden 90G)
+        const crop: CropVariant = mInv.GOLDEN > 0 && farm.gold >= 90 ? 'GOLDEN' : 'NORMAL';
+        const price = crop === 'GOLDEN' ? 90 : 30;
+        this.mockSnapshot.offers = [
+          {
+            id: `mock-offer-${Date.now()}`,
+            side: 'SELL',
+            crop,
+            quantity: 1,
+            currency: 'GOLD',
+            priceGold: price,
+            expiresAtMs: now + 20000,
+            canAccept: true as true,
+            unavailableReason: null,
+          },
+        ];
+      } else {
+        // NPC BUYS from player (Normal 15G, Golden 25G)
+        const offerCrop: CropVariant = farm.silo.counts.GOLDEN > 0 ? 'GOLDEN' : 'NORMAL';
+        const price = offerCrop === 'GOLDEN' ? 25 : 15;
+        this.mockSnapshot.offers = [
+          {
+            id: `mock-offer-${Date.now()}`,
+            side: 'BUY',
+            crop: offerCrop,
+            quantity: 1,
+            currency: 'GOLD',
+            priceGold: price,
+            expiresAtMs: now + 20000,
+            canAccept: true as true,
+            unavailableReason: null,
+          },
+        ];
+      }
+
       this.mockSnapshot.revision++;
       this.saveMock();
+    }
+
+    // BUG-09: Dynamically re-evaluate canAccept and unavailableReason against current snapshot
+    if (this.mockSnapshot.offers.length > 0) {
+      const offer = this.mockSnapshot.offers[0];
+      const mInvTotal = this.mockSnapshot.inventory.counts.NORMAL + this.mockSnapshot.inventory.counts.GOLDEN;
+      const pSiloTotal = farm.silo.counts.NORMAL + farm.silo.counts.GOLDEN;
+
+      if (offer.side === 'BUY') {
+        const hasCrop = farm.silo.counts[offer.crop] > 0;
+        const hasBudget = this.mockSnapshot.goldBudget >= offer.priceGold;
+        const hasSpace = mInvTotal < this.mockSnapshot.inventory.capacity;
+
+        if (!hasCrop) {
+          (offer as { canAccept: boolean; unavailableReason: string | null }).canAccept = false;
+          (offer as { canAccept: boolean; unavailableReason: string | null }).unavailableReason = 'CROP_UNAVAILABLE';
+        } else if (!hasBudget) {
+          (offer as { canAccept: boolean; unavailableReason: string | null }).canAccept = false;
+          (offer as { canAccept: boolean; unavailableReason: string | null }).unavailableReason = 'MERCHANT_INSUFFICIENT_GOLD';
+        } else if (!hasSpace) {
+          (offer as { canAccept: boolean; unavailableReason: string | null }).canAccept = false;
+          (offer as { canAccept: boolean; unavailableReason: string | null }).unavailableReason = 'MERCHANT_FULL';
+        } else {
+          (offer as { canAccept: boolean; unavailableReason: string | null }).canAccept = true;
+          (offer as { canAccept: boolean; unavailableReason: string | null }).unavailableReason = null;
+        }
+      } else {
+        // SELL
+        const mHasCrop = this.mockSnapshot.inventory.counts[offer.crop] > 0;
+        const pHasGold = farm.gold >= offer.priceGold;
+        const pHasSpace = pSiloTotal < farm.silo.capacity;
+
+        if (!mHasCrop) {
+          (offer as { canAccept: boolean; unavailableReason: string | null }).canAccept = false;
+          (offer as { canAccept: boolean; unavailableReason: string | null }).unavailableReason = 'MERCHANT_CROP_UNAVAILABLE';
+        } else if (!pHasGold) {
+          (offer as { canAccept: boolean; unavailableReason: string | null }).canAccept = false;
+          (offer as { canAccept: boolean; unavailableReason: string | null }).unavailableReason = 'INSUFFICIENT_GOLD';
+        } else if (!pHasSpace) {
+          (offer as { canAccept: boolean; unavailableReason: string | null }).canAccept = false;
+          (offer as { canAccept: boolean; unavailableReason: string | null }).unavailableReason = 'SILO_FULL';
+        } else {
+          (offer as { canAccept: boolean; unavailableReason: string | null }).canAccept = true;
+          (offer as { canAccept: boolean; unavailableReason: string | null }).unavailableReason = null;
+        }
+      }
     }
 
     return {
