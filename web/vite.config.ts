@@ -1,16 +1,16 @@
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
-const BACKEND_URL = process.env.VITE_BACKEND_URL || 'http://127.0.0.1:8080';
+const proxy = {
+  '/api': {
+    target: process.env.VITE_BACKEND_URL ?? 'http://127.0.0.1:8092',
+    changeOrigin: true,
+    rewrite: (path: string) => path.replace(/^\/api/, ''),
+  },
+};
 
 export default defineConfig({
-  server: {
-    port: 5173,
-    proxy: {
-      '/api': {
-        target: BACKEND_URL,
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      },
-    },
-  },
+  publicDir: fileURLToPath(new URL('../image', import.meta.url)),
+  server: { host: '127.0.0.1', port: 5195, strictPort: true, proxy },
+  preview: { host: '127.0.0.1', port: 5195, strictPort: true, proxy },
 });
