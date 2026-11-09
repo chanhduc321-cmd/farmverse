@@ -1,10 +1,10 @@
-import { readFileSync } from 'node:fs';
+﻿import { readFileSync } from 'node:fs';
 import { randomInt } from 'node:crypto';
 import { ripeAt } from '../../shared/farm.mts';
 import type { Crop, Farm, FarmAction } from '../../shared/farm.mts';
 
 const names = [
-  'Dâu tây', 'Ngô', 'Củ cải trắng', 'Cà rốt', 'Khoai t�y',
+  'Dâu tây', 'Ngô', 'Củ cải trắng', 'Cà rốt', 'Khoai tây',
   'Cà tím', 'Cà chua', 'Đậu xanh', 'Ớt', 'Bí đỏ',
   'Táo', 'Dưa hấu', 'Chuối', 'Đào', 'Dứa',
 ];
