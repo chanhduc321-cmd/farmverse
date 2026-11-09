@@ -312,10 +312,15 @@ export class FarmScene extends Phaser.Scene {
 
   private createActionBar(): void {
     const bottomY = 535;
+    const isMock = farmApi.isUsingMock();
+
+    const normalX = isMock ? 140 : 180;
+    const goldenX = isMock ? 295 : 375;
+    const storeX = isMock ? 470 : 595;
 
     // Quick Sell Normal Button
     this.sellNormalBtn = this.createButton(
-      220,
+      normalX,
       bottomY,
       'Bán Thường (+10 G)',
       0x4a6b47,
@@ -323,16 +328,18 @@ export class FarmScene extends Phaser.Scene {
         try {
           const farm = await farmApi.quickSell('NORMAL', this.farm.revision);
           this.setFarmSnapshot(farm);
-          this.showFloatingText(220, bottomY - 30, '+10 GOLD 💰', '#ffd54f');
+          this.showFloatingText(normalX, bottomY - 30, '+10 GOLD 💰', '#ffd54f');
         } catch (err: unknown) {
-          await this.handleApiError(err, 'Không có Crop Thường để bán!', 220, bottomY - 30);
+          await this.handleApiError(err, 'Không có Crop Thường để bán!', normalX, bottomY - 30);
         }
-      }
+      },
+      140,
+      40
     );
 
     // Quick Sell Golden Button
     this.sellGoldenBtn = this.createButton(
-      410,
+      goldenX,
       bottomY,
       'Bán Vàng (+30 G)',
       0x8c6d23,
@@ -340,20 +347,43 @@ export class FarmScene extends Phaser.Scene {
         try {
           const farm = await farmApi.quickSell('GOLDEN', this.farm.revision);
           this.setFarmSnapshot(farm);
-          this.showFloatingText(410, bottomY - 30, '+30 GOLD 💰✨', '#ffd700');
+          this.showFloatingText(goldenX, bottomY - 30, '+30 GOLD 💰✨', '#ffd700');
         } catch (err: unknown) {
-          await this.handleApiError(err, 'Không có Crop Vàng để bán!', 410, bottomY - 30);
+          await this.handleApiError(err, 'Không có Crop Vàng để bán!', goldenX, bottomY - 30);
         }
-      }
+      },
+      140,
+      40
+    );
+
+    // Navigation to Town Square / Store Scene (T-11)
+    this.createButton(
+      storeX,
+      bottomY,
+      '🏪 Đến Cửa Hàng (Store)',
+      0x1565c0,
+      () => {
+        this.scene.start('StoreScene');
+      },
+      180,
+      40
     );
 
     // BUG-03: Only display Reset Test Loop in mock mode!
-    if (farmApi.isUsingMock()) {
-      this.createButton(610, bottomY, 'Reset Test Loop', 0x3d3d3d, () => {
-        const mockFarm = farmApi.resetMockSession();
-        this.setFarmSnapshot(mockFarm);
-        this.showToast('Đã đặt lại phiên chơi mock (0 GOLD, 2 ô trống, silo 0/10)', '#aed581');
-      });
+    if (isMock) {
+      this.createButton(
+        660,
+        bottomY,
+        'Reset Mock',
+        0x3d3d3d,
+        () => {
+          const mockFarm = farmApi.resetMockSession();
+          this.setFarmSnapshot(mockFarm);
+          this.showToast('Đã đặt lại phiên chơi mock (0 GOLD, 2 ô trống, silo 0/10)', '#aed581');
+        },
+        130,
+        40
+      );
     }
   }
 
@@ -399,15 +429,17 @@ export class FarmScene extends Phaser.Scene {
     y: number,
     label: string,
     bgColor: number,
-    onClick: () => void
+    onClick: () => void,
+    w = 170,
+    h = 40
   ): Phaser.GameObjects.Container {
     const btn = this.add.container(x, y);
 
     const bg = this.add.graphics();
     bg.fillStyle(bgColor, 1);
-    bg.fillRoundedRect(-85, -20, 170, 40, 6);
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 6);
     bg.lineStyle(1, 0xffffff, 0.3);
-    bg.strokeRoundedRect(-85, -20, 170, 40, 6);
+    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 6);
 
     const text = this.add.text(0, 0, label, {
       fontSize: '12px',
@@ -416,7 +448,7 @@ export class FarmScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     btn.add([bg, text]);
-    btn.setSize(170, 40);
+    btn.setSize(w, h);
     btn.setInteractive({ useHandCursor: true });
 
     btn.on('pointerover', () => btn.setScale(1.04));
