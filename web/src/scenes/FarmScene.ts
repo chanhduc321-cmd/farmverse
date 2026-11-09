@@ -26,6 +26,11 @@ export class FarmScene extends Phaser.Scene {
   private sellGoldenBtn!: Phaser.GameObjects.Container;
   private toastText!: Phaser.GameObjects.Text;
 
+  // Responsive camera mode (Overview / Focus)
+  private cameraMode: 'OVERVIEW' | 'FOCUS' = 'OVERVIEW';
+  private isManualCameraOverride = false;
+  private cameraToggleText!: Phaser.GameObjects.Text;
+
   constructor() {
     super('FarmScene');
   }
@@ -121,8 +126,12 @@ export class FarmScene extends Phaser.Scene {
         container.setScale(1.0);
       });
 
-      // Click action
-      sprite.on('pointerdown', () => this.handlePlotClick(pos.id));
+      // Click action (using pointerup with drag threshold to support drag-to-pan)
+      sprite.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+        const dragDist = Phaser.Math.Distance.Between(pointer.downX, pointer.downY, pointer.upX, pointer.upY);
+        if (dragDist > 8) return;
+        this.handlePlotClick(pos.id);
+      });
 
       this.plotVisuals.set(pos.id, {
         id: pos.id,
@@ -136,7 +145,10 @@ export class FarmScene extends Phaser.Scene {
     // 4. Action Bar / Quick Sell Buttons
     this.createActionBar();
 
-    // 5. Initial Data Load
+    // 5. Responsive Camera Controls (Overview / Focus & Touch Pan)
+    this.createCameraControls();
+
+    // 6. Initial Data Load
     await this.refreshFarm();
   }
 
@@ -448,6 +460,97 @@ export class FarmScene extends Phaser.Scene {
         this.toastText.setText('');
       }
     });
+  }
+
+  private createCameraControls(): void {
+    this.cameras.main.setBounds(0, 0, 800, 600);
+
+    // Camera mode toggle button in Top HUD bar
+    const toggleContainer = this.add.container(440, 77);
+    const toggleBg = this.add.graphics();
+    toggleBg.fillStyle(0x274328, 1);
+    toggleBg.fillRoundedRect(-65, -13, 130, 26, 6);
+    toggleBg.lineStyle(1, 0x5a8b5e, 0.8);
+    toggleBg.strokeRoundedRect(-65, -13, 130, 26, 6);
+
+    this.cameraToggleText = this.add.text(0, 0, '🌐 Góc rộng (Web)', {
+      fontSize: '11px',
+      color: '#e4dcc4',
+      fontStyle: 'bold',
+    }).setOrigin(0.5);
+
+    toggleContainer.add([toggleBg, this.cameraToggleText]);
+    toggleContainer.setSize(130, 26);
+    toggleContainer.setInteractive({ useHandCursor: true });
+
+    toggleContainer.on('pointerover', () => toggleContainer.setScale(1.05));
+    toggleContainer.on('pointerout', () => toggleContainer.setScale(1.0));
+    toggleContainer.on('pointerdown', () => {
+      this.isManualCameraOverride = true;
+      const nextMode = this.cameraMode === 'OVERVIEW' ? 'FOCUS' : 'OVERVIEW';
+      this.setCameraMode(nextMode, true);
+      this.showToast(
+        nextMode === 'FOCUS' ? '📐 Chế độ Cận cảnh (Mobile focus)' : '🌐 Chế độ Góc rộng (Web overview)',
+        '#d4ccb8'
+      );
+    });
+
+    // Drag-to-pan in Focus mode
+    let isDragging = false;
+    this.input.on('pointerdown', () => {
+      if (this.cameraMode === 'FOCUS') {
+        isDragging = true;
+      }
+    });
+
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (!isDragging || !pointer.isDown) return;
+      const zoom = this.cameras.main.zoom;
+      const dx = (pointer.x - pointer.prevPosition.x) / zoom;
+      const dy = (pointer.y - pointer.prevPosition.y) / zoom;
+      this.cameras.main.scrollX -= dx;
+      this.cameras.main.scrollY -= dy;
+    });
+
+    this.input.on('pointerup', () => {
+      isDragging = false;
+    });
+
+    // Initial detection & Resize listener
+    const isPortrait = window.innerWidth < window.innerHeight;
+    this.setCameraMode(isPortrait ? 'FOCUS' : 'OVERVIEW', false);
+
+    const onResize = () => {
+      if (this.isManualCameraOverride) return;
+      const portrait = window.innerWidth < window.innerHeight;
+      const desiredMode = portrait ? 'FOCUS' : 'OVERVIEW';
+      if (desiredMode !== this.cameraMode) {
+        this.setCameraMode(desiredMode, true);
+      }
+    };
+    window.addEventListener('resize', onResize);
+    this.events.once('shutdown', () => {
+      window.removeEventListener('resize', onResize);
+    });
+  }
+
+  private setCameraMode(mode: 'OVERVIEW' | 'FOCUS', smooth = true): void {
+    this.cameraMode = mode;
+    const targetZoom = mode === 'FOCUS' ? 1.3 : 1.0;
+    const targetCenterX = 400;
+    const targetCenterY = mode === 'FOCUS' ? 270 : 300;
+
+    if (smooth) {
+      this.cameras.main.zoomTo(targetZoom, 300, 'Sine.easeInOut');
+      this.cameras.main.pan(targetCenterX, targetCenterY, 300, 'Sine.easeInOut');
+    } else {
+      this.cameras.main.setZoom(targetZoom);
+      this.cameras.main.centerOn(targetCenterX, targetCenterY);
+    }
+
+    if (this.cameraToggleText) {
+      this.cameraToggleText.setText(mode === 'FOCUS' ? '📐 Cận cảnh (Mobile)' : '🌐 Góc rộng (Web)');
+    }
   }
 
   private createPlaceholderTextures(): void {
