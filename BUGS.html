@@ -155,6 +155,78 @@
     "repro": "Mở live Farm ở viewport 390×844. Camera tự chọn FOCUS 1,3x.",
     "actual": "Tiêu đề và hai nút Quick Sell nằm ngoài khung hình ban đầu. HUD di chuyển cùng camera khi kéo. Muốn thấy nút bán phải kéo camera hoặc đổi góc nhìn.",
     "expected": "HUD, nút Quick Sell và thông báo luôn thấy và bấm được ở camera cận cảnh. Kiểm tra lại cả thao tác kéo và đổi góc nhìn."
+  },
+  {
+    "id": "BUG-07",
+    "phase": "P2",
+    "title": "Store kẹt ở báo giá hết hạn",
+    "owner": "Antigravity",
+    "severity": "HIGH",
+    "status": "FIXED",
+    "foundIn": "T-11 · e199044, bản sửa 92081ec · web/src/scenes/StoreScene.ts:104",
+    "repro": "Trong live, cho GET merchant tại mốc làm mới trả 503 một lần rồi phục hồi API. Trong ?mock=1, mở Store và đợi qua cửa sổ 20 giây.",
+    "actual": "Trên develop ở 31f64cb, GET báo giá trả 200 sau lần 503 khoảng 3,04 giây. Live tự đổi báo giá sau cooldown và timeout. Mock cũng tự mở cửa sổ mới.",
+    "expected": "Tải snapshot theo hạn offer, cooldown hoặc nextOfferAtMs. Tải lại được khi lỗi và tránh lặp request theo frame."
+  },
+  {
+    "id": "BUG-08",
+    "phase": "P2",
+    "title": "Mất phiên Guest làm Store gọi API 401 liên tục",
+    "owner": "Antigravity",
+    "severity": "HIGH",
+    "status": "FIXED",
+    "foundIn": "T-11 · e199044, bản sửa 6cd953d",
+    "repro": "Mở Farm live, xóa cookie farmverse_guest trong phiên thử nghiệm rồi bấm Đến Cửa Hàng. Thử tiếp ca GET merchant trả 401 sau khôi phục.",
+    "actual": "Trên develop ở 31f64cb, chuỗi 401 → GET Farm 200 → GET merchant 200 khôi phục được Store. Nếu GET merchant lần hai vẫn 401, Store dừng ở modal và nút khôi phục đưa về Farm.",
+    "expected": "Tối đa một lần khôi phục tự động. Lỗi 401 tiếp theo dừng và hiển thị đường về Farm."
+  },
+  {
+    "id": "BUG-09",
+    "phase": "P2",
+    "title": "Mock giữ trạng thái không thể bán sau khi đã có crop",
+    "owner": "Antigravity",
+    "severity": "MEDIUM",
+    "status": "FIXED",
+    "foundIn": "T-11 · e199044, bản sửa 6cd953d · web/src/api.ts:485",
+    "repro": "Trong ?mock=1, đọc báo giá BUY khi silo trống. Thêm một crop Normal rồi đọc lại cùng báo giá trước khi hết hạn.",
+    "actual": "Client trên develop ở 31f64cb đổi canAccept sang true và giữ ID, giá, hạn dùng. BUY Normal +15 và SELL Golden -90 mỗi lượt chuyển đúng một crop.",
+    "expected": "Tính khả năng chấp nhận từ snapshot hiện tại và giữ nguyên báo giá trong cùng cửa sổ."
+  },
+  {
+    "id": "BUG-10",
+    "phase": "P2",
+    "title": "Vùng bấm NPC lệch khỏi nút hiển thị",
+    "owner": "Antigravity",
+    "severity": "MEDIUM",
+    "status": "FIXED",
+    "foundIn": "T-11 · 6cd953d, bản sửa 5407ea4 · web/src/scenes/StoreScene.ts:301",
+    "repro": "Mở Store, đóng bảng bằng nút X rồi bấm phần phải của dải xanh NPC. Bấm phần trái của cùng dải để đối chiếu.",
+    "actual": "5407ea4 qua kiểm tra trái, tâm và phải. Trên develop ở 31f64cb, bấm lại đúng điểm bên phải từng lỗi mở được bảng sau khi đóng.",
+    "expected": "Vùng bấm NPC khớp với dải chỉ dẫn và mở được quầy."
+  },
+  {
+    "id": "BUG-11",
+    "phase": "P2",
+    "title": "Bấm đúp Chấp Nhận báo lỗi dù giao dịch đã thành công",
+    "owner": "Antigravity",
+    "severity": "MEDIUM",
+    "status": "FIXED",
+    "foundIn": "T-11 · 6cd953d, bản sửa 92081ec · web/src/scenes/StoreScene.ts:666",
+    "repro": "Trong Store live, bấm đúp Chấp Nhận hoặc Từ Chối trên offer hợp lệ. Thử accept với phản hồi bị trì hoãn.",
+    "actual": "Trên develop ở 31f64cb, mỗi lần bấm đúp chỉ gửi một POST. Gửi lại request cũ trực tiếp trả 409 và giữ nguyên 82 GOLD cùng 1 Normal.",
+    "expected": "Khóa gửi quyết định trong lúc xử lý, đồng bộ snapshot và báo lỗi khi có xung đột thật."
+  },
+  {
+    "id": "BUG-12",
+    "phase": "P2",
+    "title": "Nút Từ Chối vẫn mờ khi báo giá mới đã dùng được",
+    "owner": "Antigravity",
+    "severity": "LOW",
+    "status": "FIXED",
+    "foundIn": "T-11 · 92081ec, bản sửa 5407ea4 · web/src/scenes/StoreScene.ts:651",
+    "repro": "Để một báo giá hết hạn hoặc hoàn tất một giao dịch. Đợi Store tự nhận báo giá mới.",
+    "actual": "Trên develop ở 31f64cb, nút Từ Chối sáng lại khi có báo giá mới. Bấm đúp gửi một POST trả 200 và GOLD cùng silo giữ nguyên.",
+    "expected": "Nút sáng và bấm được khi báo giá mới còn hạn."
   }
 ]
 </script>
