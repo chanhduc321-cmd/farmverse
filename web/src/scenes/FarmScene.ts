@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import type { FarmPlot, FarmSnapshot } from '../api';
-import { farmApi } from '../api';
+import { farmApi, ApiError } from '../api';
 
 interface PlotVisual {
   id: number;
@@ -13,6 +13,10 @@ interface PlotVisual {
 export class FarmScene extends Phaser.Scene {
   private farm!: FarmSnapshot;
   private plotVisuals: Map<number, PlotVisual> = new Map();
+
+  // Time tracking for monotonic countdown (BUG-04)
+  private snapshotServerTimeMs = 0;
+  private snapshotReceivedLocalMs = 0;
 
   // HUD elements
   private goldText!: Phaser.GameObjects.Text;
@@ -67,7 +71,7 @@ export class FarmScene extends Phaser.Scene {
       color: '#e4dcc4',
     }).setOrigin(0, 0.5);
 
-    this.apiBadgeText = this.add.text(700, 77, 'Engine: C01 Local', {
+    this.apiBadgeText = this.add.text(700, 77, 'API: Live Hono Server', {
       fontSize: '12px',
       color: '#8ec489',
     }).setOrigin(1, 0.5);
@@ -139,11 +143,13 @@ export class FarmScene extends Phaser.Scene {
   update(): void {
     if (!this.farm) return;
 
-    const now = Date.now();
+    // BUG-04: Monotonic countdown based on serverTimeMs + performance.now() elapsed time
+    const currentServerTime = this.getEstimatedServerTime();
+
     for (let i = 0; i < this.farm.plots.length; i++) {
       const plot = this.farm.plots[i];
       if (plot.state === 'GROWING') {
-        const remainingMs = Math.max(0, plot.readyAtMs - now);
+        const remainingMs = Math.max(0, plot.readyAtMs - currentServerTime);
         const visual = this.plotVisuals.get(plot.id);
         if (visual) {
           if (remainingMs > 0) {
@@ -160,12 +166,24 @@ export class FarmScene extends Phaser.Scene {
     }
   }
 
+  private setFarmSnapshot(farm: FarmSnapshot): void {
+    this.farm = farm;
+    this.snapshotServerTimeMs = farm.serverTimeMs;
+    this.snapshotReceivedLocalMs = performance.now();
+    this.renderFarmState();
+  }
+
+  private getEstimatedServerTime(): number {
+    const elapsed = performance.now() - this.snapshotReceivedLocalMs;
+    return this.snapshotServerTimeMs + elapsed;
+  }
+
   private async refreshFarm(): Promise<void> {
     try {
-      this.farm = await farmApi.getFarm();
-      this.renderFarmState();
-    } catch (err) {
-      this.showToast('Không thể tải trạng thái nông trại', '#e57373');
+      const farm = await farmApi.getFarm();
+      this.setFarmSnapshot(farm);
+    } catch (err: unknown) {
+      await this.handleApiError(err, 'Không thể tải trạng thái nông trại');
     }
   }
 
@@ -178,7 +196,7 @@ export class FarmScene extends Phaser.Scene {
     );
 
     if (farmApi.isUsingMock()) {
-      this.apiBadgeText.setText('Mode: Client Engine (C01)');
+      this.apiBadgeText.setText('Mode: Client Mock Engine');
       this.apiBadgeText.setColor('#79b5f2');
     } else {
       this.apiBadgeText.setText('API: Live Hono Server');
@@ -204,7 +222,8 @@ export class FarmScene extends Phaser.Scene {
       visual.statusText.setColor('#c2b89d');
     } else if (plot.state === 'GROWING') {
       visual.sprite.setTexture('plot_growing');
-      const remaining = Math.max(0, (plot.readyAtMs - Date.now()) / 1000).toFixed(1);
+      const currentServerTime = this.getEstimatedServerTime();
+      const remaining = Math.max(0, (plot.readyAtMs - currentServerTime) / 1000).toFixed(1);
       visual.statusText.setText(`GROWING\n${remaining}s`);
       visual.statusText.setColor('#8eed82');
     } else if (plot.state === 'READY') {
@@ -230,14 +249,15 @@ export class FarmScene extends Phaser.Scene {
     if (plot.state === 'EMPTY') {
       // Plant action (Free)
       try {
-        this.farm = await farmApi.plant(plotId, this.farm.revision);
+        const farm = await farmApi.plant(plotId, this.farm.revision);
+        this.setFarmSnapshot(farm);
         this.showFloatingText(x, y - 20, '🌱 Gieo hạt!', '#8eed82');
-        this.renderFarmState();
-      } catch {
-        this.showToast('Gieo hạt thất bại', '#e57373');
+      } catch (err: unknown) {
+        await this.handleApiError(err, 'Gieo hạt thất bại', x, y - 20);
       }
     } else if (plot.state === 'GROWING') {
-      const remaining = Math.max(0, (plot.readyAtMs - Date.now()) / 1000).toFixed(1);
+      const currentServerTime = this.getEstimatedServerTime();
+      const remaining = Math.max(0, (plot.readyAtMs - currentServerTime) / 1000).toFixed(1);
       this.showFloatingText(x, y - 20, `⏳ Còn ${remaining}s`, '#ffffff');
     } else if (plot.state === 'READY') {
       // Harvest action
@@ -250,19 +270,14 @@ export class FarmScene extends Phaser.Scene {
 
       try {
         const result = await farmApi.harvest(plotId, this.farm.revision);
-        this.farm = result.farm;
+        this.setFarmSnapshot(result.farm);
         if (result.harvested === 'GOLDEN') {
           this.showFloatingText(x, y - 20, '✨ GOLDEN CROP! ✨', '#ffd700', 1.3);
         } else {
           this.showFloatingText(x, y - 20, '+1 Normal Crop', '#ffffff');
         }
-        this.renderFarmState();
       } catch (err: unknown) {
-        if ((err as Error)?.message === 'SILO_FULL') {
-          this.showFloatingText(x, y - 20, '⚠️ Silo đầy!', '#ff9800');
-        } else {
-          this.showToast('Thu hoạch thất bại', '#e57373');
-        }
+        await this.handleApiError(err, 'Thu hoạch thất bại', x, y - 20);
       }
     } else if (plot.state === 'LOCKED') {
       // Unlock action
@@ -273,12 +288,12 @@ export class FarmScene extends Phaser.Scene {
       }
 
       try {
-        this.farm = await farmApi.unlock(plotId, this.farm.revision);
+        const farm = await farmApi.unlock(plotId, this.farm.revision);
+        this.setFarmSnapshot(farm);
         this.showFloatingText(x, y - 20, `🔓 Mở ô #${plotId}! -${plot.unlockCostGold} G`, '#76ff03');
         this.showToast(`Đã mở thành công ô #${plotId}!`, '#76ff03');
-        this.renderFarmState();
-      } catch {
-        this.showToast('Mở ô thất bại', '#e57373');
+      } catch (err: unknown) {
+        await this.handleApiError(err, 'Mở ô thất bại', x, y - 20);
       }
     }
   }
@@ -294,11 +309,11 @@ export class FarmScene extends Phaser.Scene {
       0x4a6b47,
       async () => {
         try {
-          this.farm = await farmApi.quickSell('NORMAL', this.farm.revision);
+          const farm = await farmApi.quickSell('NORMAL', this.farm.revision);
+          this.setFarmSnapshot(farm);
           this.showFloatingText(220, bottomY - 30, '+10 GOLD 💰', '#ffd54f');
-          this.renderFarmState();
-        } catch {
-          this.showToast('Không có Crop Thường để bán!', '#e57373');
+        } catch (err: unknown) {
+          await this.handleApiError(err, 'Không có Crop Thường để bán!', 220, bottomY - 30);
         }
       }
     );
@@ -311,21 +326,23 @@ export class FarmScene extends Phaser.Scene {
       0x8c6d23,
       async () => {
         try {
-          this.farm = await farmApi.quickSell('GOLDEN', this.farm.revision);
+          const farm = await farmApi.quickSell('GOLDEN', this.farm.revision);
+          this.setFarmSnapshot(farm);
           this.showFloatingText(410, bottomY - 30, '+30 GOLD 💰✨', '#ffd700');
-          this.renderFarmState();
-        } catch {
-          this.showToast('Không có Crop Vàng để bán!', '#e57373');
+        } catch (err: unknown) {
+          await this.handleApiError(err, 'Không có Crop Vàng để bán!', 410, bottomY - 30);
         }
       }
     );
 
-    // Reset Session Button (Helpful for test script)
-    this.createButton(610, bottomY, 'Reset Test Loop', 0x3d3d3d, () => {
-      this.farm = farmApi.resetMockSession();
-      this.showToast('Đã đặt lại phiên chơi (0 GOLD, 2 ô trống, silo 0/10)', '#aed581');
-      this.renderFarmState();
-    });
+    // BUG-03: Only display Reset Test Loop in mock mode!
+    if (farmApi.isUsingMock()) {
+      this.createButton(610, bottomY, 'Reset Test Loop', 0x3d3d3d, () => {
+        const mockFarm = farmApi.resetMockSession();
+        this.setFarmSnapshot(mockFarm);
+        this.showToast('Đã đặt lại phiên chơi mock (0 GOLD, 2 ô trống, silo 0/10)', '#aed581');
+      });
+    }
   }
 
   private updateQuickSellButtons(): void {
@@ -335,6 +352,34 @@ export class FarmScene extends Phaser.Scene {
 
     this.sellNormalBtn.setAlpha(hasNormal ? 1.0 : 0.45);
     this.sellGoldenBtn.setAlpha(hasGolden ? 1.0 : 0.45);
+  }
+
+  private async handleApiError(
+    err: unknown,
+    fallbackMsg: string,
+    floatingX?: number,
+    floatingY?: number
+  ): Promise<void> {
+    if (err instanceof ApiError) {
+      const codeStr = err.code ? `[${err.code}] ` : '';
+      const displayMsg = `${codeStr}${err.message}`;
+      this.showToast(displayMsg, '#ff5252');
+
+      if (floatingX !== undefined && floatingY !== undefined) {
+        this.showFloatingText(floatingX, floatingY, `⚠️ ${err.code || 'Lỗi'}`, '#ff5252');
+      }
+
+      // BUG-02 Requirement: For 401 or 409, reload Farm from server before retrying
+      if (err.status === 401 || err.status === 409) {
+        await this.refreshFarm();
+      }
+    } else {
+      const message = (err as Error)?.message || fallbackMsg;
+      this.showToast(message, '#ff5252');
+      if (floatingX !== undefined && floatingY !== undefined) {
+        this.showFloatingText(floatingX, floatingY, '⚠️ Lỗi', '#ff5252');
+      }
+    }
   }
 
   private createButton(
@@ -398,7 +443,7 @@ export class FarmScene extends Phaser.Scene {
     this.toastText.setText(message);
     this.toastText.setColor(color);
 
-    this.time.delayedCall(3500, () => {
+    this.time.delayedCall(4000, () => {
       if (this.toastText.text === message) {
         this.toastText.setText('');
       }
