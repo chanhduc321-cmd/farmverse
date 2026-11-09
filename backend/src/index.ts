@@ -4,6 +4,7 @@ import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import pg from 'pg';
 import type { HealthResponse } from '../../shared/health.ts';
+import { createFarmRoutes } from './farm-routes.js';
 
 if (existsSync('.env')) loadEnvFile('.env');
 
@@ -18,6 +19,7 @@ const database = databaseUrl ? new pg.Pool({
 database?.on('error', () => console.warn('An idle PostgreSQL connection was lost.'));
 
 const app = new Hono();
+app.route('/', createFarmRoutes(database));
 
 app.get('/health', async (context) => {
   context.header('Cache-Control', 'no-store');
