@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+vendor/
+
+# Build outputs
+/web/dist/
+/backend/dist/
+/backend/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.tsbuildinfo
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+*.local
+*.key
+*.pem
+*.near-credentials/
+
+# IDE & OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
