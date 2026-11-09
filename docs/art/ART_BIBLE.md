@@ -5,6 +5,7 @@ Use this guide whenever Codex or Antigravity generates, edits, or integrates Far
 ## Approved Style Reference
 
 - **Status:** **APPROVED** by Project Owner (2026-11-09).
+- The project owner reconfirmed this reference during Codex review on 2026-11-09. Its brighter palette supersedes the earlier muted-palette direction in the Phaser guide.
 - **Master Reference File:** [`docs/art/approved_style.png`](approved_style.png) *(Source: `art/source/style_candidate_farmery.jpg`)*
 
 ![FarmVerse Master Style Reference](approved_style.png)

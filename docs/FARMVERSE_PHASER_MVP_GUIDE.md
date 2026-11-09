@@ -33,7 +33,7 @@ Build a **browser-playable** casual farming game: **Farm → Harvest → Town Sq
 ## 3. Visual direction [LOCKED]
 
 - Reference mood: classic cheerful social-farming games, upgraded with more refined **hand-painted 2.5D** assets.
-- Palette: moss/olive greens, warm earth browns, muted gold; avoid oversaturated candy colors.
+- Palette follows the owner-approved [Art Bible](art/ART_BIBLE.md), including brighter grass greens, warm earth browns, and golden crops.
 - Light: warm afternoon; slightly deeper soft shadows and restrained ambient depth.
 - Mood: cozy, premium casual, lightly mature; **not** dark fantasy, photorealistic or pixel art.
 - Fixed projection/camera and consistent visual scale across all generated assets.
