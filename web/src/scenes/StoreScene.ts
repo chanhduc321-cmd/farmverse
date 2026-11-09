@@ -16,6 +16,7 @@ export class StoreScene extends Phaser.Scene {
   // Milestone refresh tracking (BUG-07)
   private isFetching = false;
   private lastRefreshedMilestoneMs: number | null = null;
+  private isSubmittingAction = false;
 
   // Session recovery tracking (BUG-08)
   private sessionLost = false;
@@ -37,6 +38,7 @@ export class StoreScene extends Phaser.Scene {
   private tradePanelBg!: Phaser.GameObjects.Graphics;
   private tradePanelTitle!: Phaser.GameObjects.Text;
   private closeTradeBtn!: Phaser.GameObjects.Container;
+  private refreshBtn!: Phaser.GameObjects.Container;
   private openTradePromptContainer!: Phaser.GameObjects.Container;
 
   private offerContainer!: Phaser.GameObjects.Container;
@@ -60,6 +62,7 @@ export class StoreScene extends Phaser.Scene {
     this.isRecoveringSession = false;
     this.isFetching = false;
     this.lastRefreshedMilestoneMs = null;
+    this.isSubmittingAction = false;
 
     // 1. Draw Town Square Plaza Background
     const bg = this.add.graphics();
@@ -101,18 +104,22 @@ export class StoreScene extends Phaser.Scene {
     if (this.sessionLost || !this.merchant || !this.farm) return;
 
     const currentServerTime = this.getEstimatedServerTime();
-    const activeOffer = this.merchant.offers.find((o) => o.expiresAtMs > currentServerTime);
+    const hasOffer = this.merchant.offers.length > 0;
+    const currentOffer = hasOffer ? this.merchant.offers[0] : null;
 
-    if (activeOffer) {
-      const remainingMs = Math.max(0, activeOffer.expiresAtMs - currentServerTime);
-      const seconds = (remainingMs / 1000).toFixed(1);
-      this.offerTimerText.setText(`⏳ Thời hạn: ${seconds}s`);
-
-      // BUG-07: Handle offer timeout (lock buttons & auto-refresh once)
-      if (remainingMs <= 0) {
+    if (currentOffer) {
+      if (currentOffer.expiresAtMs > currentServerTime) {
+        const remainingMs = currentOffer.expiresAtMs - currentServerTime;
+        const seconds = (remainingMs / 1000).toFixed(1);
+        this.offerTimerText.setText(`⏳ Thời hạn: ${seconds}s`);
+      } else {
+        // BUG-07: Offer expired — disable action buttons and trigger milestone refresh
+        this.offerTimerText.setText('⏳ Thời hạn: 0.0s (Hết hạn)');
         this.acceptBtn.setAlpha(0.45);
+        this.rejectBtn.setAlpha(0.45);
         this.offerReasonText.setText('⚠️ Báo giá đã hết hạn, đang tải báo giá mới...');
-        this.triggerMilestoneRefresh(activeOffer.expiresAtMs);
+        this.offerReasonText.setColor('#ff8a80');
+        this.triggerMilestoneRefresh(currentOffer.expiresAtMs);
       }
     } else {
       // BUG-07: Auto-refresh when cooldown or nextOfferAtMs elapses
@@ -132,6 +139,11 @@ export class StoreScene extends Phaser.Scene {
           const remaining = Math.max(0, (this.merchant.nextOfferAtMs - currentServerTime) / 1000).toFixed(1);
           this.noOfferText.setText(`⏳ Báo giá tiếp theo sau ${remaining}s...`);
         }
+      } else if (this.merchant.status === 'OUT_OF_BUSINESS') {
+        this.noOfferText.setText('🛑 Thương nhân đã hết vốn và tạm dừng giao dịch.');
+      } else {
+        this.noOfferText.setText('⏳ Đang chờ thương nhân tính toán báo giá mới...');
+        this.triggerMilestoneRefresh(Math.floor(currentServerTime / 5000) * 5000);
       }
     }
   }
@@ -281,20 +293,27 @@ export class StoreScene extends Phaser.Scene {
       ruleBody,
     ]);
 
-    // Make NPC Stall Clickable to open/focus Trade Dialog (MVP Contract)
+    // BUG-10: Make entire NPC Stall (0, 0, pw, ph) clickable to open Trade Dialog
     stallContainer.setSize(pw, ph);
-    stallContainer.setInteractive({ useHandCursor: true });
+    stallContainer.setInteractive({
+      hitArea: new Phaser.Geom.Rectangle(0, 0, pw, ph),
+      hitAreaCallback: Phaser.Geom.Rectangle.Contains,
+      useHandCursor: true,
+    });
+
     stallContainer.on('pointerover', () => {
-      stallContainer.setScale(1.015);
       calloutBg.clear();
       calloutBg.fillStyle(0x1e88e5, 1);
       calloutBg.fillRoundedRect(pw / 2 - 120, 48, 240, 24, 6);
+      bg.lineStyle(2, 0x80cbc4, 1);
+      bg.strokeRoundedRect(0, 0, pw, ph, 12);
     });
     stallContainer.on('pointerout', () => {
-      stallContainer.setScale(1.0);
       calloutBg.clear();
       calloutBg.fillStyle(0x1565c0, 1);
       calloutBg.fillRoundedRect(pw / 2 - 120, 48, 240, 24, 6);
+      bg.lineStyle(2, 0x5a626a, 0.8);
+      bg.strokeRoundedRect(0, 0, pw, ph, 12);
     });
     stallContainer.on('pointerdown', () => {
       this.openTradeDialog();
@@ -374,23 +393,23 @@ export class StoreScene extends Phaser.Scene {
     // Accept Button
     this.acceptBtn = this.createButton(
       85,
-      320,
+      308,
       '✅ Chấp Nhận',
       0x2e7d32,
       () => this.handleAcceptOffer(),
       120,
-      38
+      36
     );
 
     // Reject Button
     this.rejectBtn = this.createButton(
       245,
-      320,
+      308,
       '❌ Từ Chối',
       0xc62828,
       () => this.handleRejectOffer(),
       120,
-      38
+      36
     );
 
     this.offerContainer.add([
@@ -411,10 +430,10 @@ export class StoreScene extends Phaser.Scene {
       align: 'center',
     }).setOrigin(0.5);
 
-    // Refresh state button
-    const refreshBtn = this.createButton(
+    // BUG-07: Refresh state button (placed directly in scene at visible panel bottom)
+    this.refreshBtn = this.createButton(
       px + pw / 2,
-      py + 360,
+      py + 365,
       '🔄 Tải Lại Dữ Liệu',
       0x455a64,
       () => {
@@ -424,6 +443,7 @@ export class StoreScene extends Phaser.Scene {
       160,
       34
     );
+    this.refreshBtn.setDepth(5);
 
     // Open Trade Prompt Container (Shown when dialog is closed)
     this.openTradePromptContainer = this.add.container(px, py);
@@ -457,9 +477,6 @@ export class StoreScene extends Phaser.Scene {
 
     this.openTradePromptContainer.add([promptBg, promptText, openBtn]);
     this.openTradePromptContainer.setVisible(false);
-
-    // Store references
-    this.offerContainer.add(refreshBtn);
   }
 
   private openTradeDialog(): void {
@@ -467,6 +484,7 @@ export class StoreScene extends Phaser.Scene {
     this.tradePanelBg.setVisible(true);
     this.tradePanelTitle.setVisible(true);
     this.closeTradeBtn.setVisible(true);
+    this.refreshBtn.setVisible(true);
     this.openTradePromptContainer.setVisible(false);
     if (this.merchant) {
       this.updateOfferVisibility();
@@ -478,6 +496,7 @@ export class StoreScene extends Phaser.Scene {
     this.tradePanelBg.setVisible(false);
     this.tradePanelTitle.setVisible(false);
     this.closeTradeBtn.setVisible(false);
+    this.refreshBtn.setVisible(false);
     this.offerContainer.setVisible(false);
     this.noOfferText.setVisible(false);
     this.openTradePromptContainer.setVisible(true);
@@ -544,6 +563,11 @@ export class StoreScene extends Phaser.Scene {
       this.setSnapshots(response.farm, response.merchant);
     } catch (err: unknown) {
       await this.handleApiError(err, 'Không thể tải trạng thái cửa hàng');
+      // BUG-07: On error (such as 503 or transient network issue),
+      // reset milestone tracker after 3s so update() can auto-retry without spinning
+      this.time.delayedCall(3000, () => {
+        this.lastRefreshedMilestoneMs = null;
+      });
     } finally {
       this.isFetching = false;
     }
@@ -640,7 +664,8 @@ export class StoreScene extends Phaser.Scene {
   }
 
   private async handleAcceptOffer(): Promise<void> {
-    if (!this.merchant || !this.farm) return;
+    // BUG-11: Guard against double-click concurrent requests
+    if (this.isSubmittingAction || !this.merchant || !this.farm) return;
     const currentServerTime = this.getEstimatedServerTime();
     const activeOffer = this.merchant.offers.find((o) => o.expiresAtMs > currentServerTime);
     if (!activeOffer) {
@@ -652,6 +677,10 @@ export class StoreScene extends Phaser.Scene {
       this.showToast(`Chưa đủ điều kiện: ${this.formatBlockReason(activeOffer.unavailableReason)}`, '#ff8a80');
       return;
     }
+
+    this.isSubmittingAction = true;
+    this.acceptBtn.setAlpha(0.45);
+    this.rejectBtn.setAlpha(0.45);
 
     try {
       const result = await merchantApi.acceptOffer(
@@ -668,17 +697,25 @@ export class StoreScene extends Phaser.Scene {
       this.showToast(actionMsg, '#81c784');
     } catch (err: unknown) {
       await this.handleApiError(err, 'Chấp nhận báo giá thất bại');
+    } finally {
+      this.isSubmittingAction = false;
+      this.updateOfferVisibility();
     }
   }
 
   private async handleRejectOffer(): Promise<void> {
-    if (!this.merchant || !this.farm) return;
+    // BUG-11: Guard against double-click concurrent requests
+    if (this.isSubmittingAction || !this.merchant || !this.farm) return;
     const currentServerTime = this.getEstimatedServerTime();
     const activeOffer = this.merchant.offers.find((o) => o.expiresAtMs > currentServerTime);
     if (!activeOffer) {
       this.showToast('Báo giá đã hết hạn!', '#ff8a80');
       return;
     }
+
+    this.isSubmittingAction = true;
+    this.acceptBtn.setAlpha(0.45);
+    this.rejectBtn.setAlpha(0.45);
 
     try {
       const result = await merchantApi.rejectOffer(
@@ -691,6 +728,9 @@ export class StoreScene extends Phaser.Scene {
       this.showToast('Đã từ chối báo giá này.', '#ffd54f');
     } catch (err: unknown) {
       await this.handleApiError(err, 'Từ chối báo giá thất bại');
+    } finally {
+      this.isSubmittingAction = false;
+      this.updateOfferVisibility();
     }
   }
 
