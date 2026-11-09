@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+﻿import Phaser from 'phaser';
 import { ripeAt, stageAt } from '../../shared/farm.mts';
 import type { Crop, FarmAction, FarmResponse, Plot } from '../../shared/farm.mts';
 import './style.css';
@@ -7,7 +7,8 @@ const width = 800;
 const height = 600;
 const tileWidth = 220;
 const tileHeight = 108;
-const cropScale = .97;
+const cropScale = .52;
+const getCropScale = (cropId: number) => (cropId <= 5 ? .52 : .95);
 const toPosition = ([column, row]: number[]) => [
   400 + (column - row) * tileWidth / 2,
   214 + (column + row) * tileHeight / 2,
@@ -330,7 +331,7 @@ class FarmScene extends Phaser.Scene {
       this.ground.add(gate);
     }
     this.visuals = positions.map(([x, y]) => {
-      const plant = this.add.image(x, y - 20, 'crop-1-0').setScale(cropScale).setVisible(false);
+      const plant = this.add.image(x, y - 6, 'crop-1-0').setOrigin(.5, .84).setScale(cropScale).setVisible(false);
       const label = this.add.text(x, y + 16, '', {
         fontFamily: 'system-ui, sans-serif',
         fontSize: '15px',
@@ -496,7 +497,7 @@ class FarmScene extends Phaser.Scene {
       const crop = crops[plot.cropId - 1];
       const stage = stageAt(crop, plot, now);
       const frame = `crop-${crop.id}-${plot.harvested ? 'end' : stage}`;
-      if (visual.plant.texture.key !== frame) visual.plant.setTexture(frame);
+      if (visual.plant.texture.key !== frame) visual.plant.setTexture(frame); visual.plant.setScale(getCropScale(crop.id));
       const remaining = Math.ceil((ripeAt(crop, plot) - now) / 1_000);
       if (plot.harvested) status = 'Cần dọn đất';
       else if (stage === crop.stages) status = 'Đã chín';
