@@ -147,14 +147,14 @@
   {
     "id": "BUG-06",
     "phase": "P3",
-    "title": "Camera cận cảnh làm Quick Sell và tiêu đề ra ngoài khung dọc",
+    "title": "Camera cận cảnh cắt tiêu đề và nhóm nút cuối Farm trên màn hình dọc",
     "owner": "Antigravity",
     "severity": "MEDIUM",
     "status": "OPEN",
     "foundIn": "T-06 · b96b4ea · web/src/scenes/FarmScene.ts:537",
     "repro": "Mở live Farm ở viewport 390×844. Camera tự chọn FOCUS 1,3x.",
-    "actual": "Tiêu đề và hai nút Quick Sell nằm ngoài khung hình ban đầu. HUD di chuyển cùng camera khi kéo. Muốn thấy nút bán phải kéo camera hoặc đổi góc nhìn.",
-    "expected": "HUD, nút Quick Sell và thông báo luôn thấy và bấm được ở camera cận cảnh. Kiểm tra lại cả thao tác kéo và đổi góc nhìn."
+    "actual": "Tái hiện ở T-15 b89fe8a. Tiêu đề, hai nút Quick Sell và nút Đến Cửa Hàng nằm ngoài khung ban đầu. Chuyển Góc rộng đưa các nút trở lại.",
+    "expected": "HUD, Quick Sell, nút Đến Cửa Hàng và thông báo luôn thấy và bấm được ở camera cận cảnh. Kiểm tra lại cả thao tác kéo và đổi góc nhìn."
   },
   {
     "id": "BUG-07",
@@ -227,6 +227,42 @@
     "repro": "Để một báo giá hết hạn hoặc hoàn tất một giao dịch. Đợi Store tự nhận báo giá mới.",
     "actual": "Trên develop ở 31f64cb, nút Từ Chối sáng lại khi có báo giá mới. Bấm đúp gửi một POST trả 200 và GOLD cùng silo giữ nguyên.",
     "expected": "Nút sáng và bấm được khi báo giá mới còn hạn."
+  },
+  {
+    "id": "BUG-13",
+    "phase": "P3",
+    "title": "Nút camera che số lúa vàng trong HUD Silo",
+    "owner": "Antigravity",
+    "severity": "MEDIUM",
+    "status": "OPEN",
+    "foundIn": "T-15 · b89fe8a · web/src/scenes/FarmScene.ts:614",
+    "repro": "Mở Farm ở Góc rộng trên desktop với một lúa thường trong Silo.",
+    "actual": "Nhãn Silo và nút camera chồng lên nhau. Giá trị sau G: và dấu ngoặc bị che.",
+    "expected": "Đọc được tổng số, số lúa thường và lúa vàng, kể cả khi Silo đầy, ở cả hai chế độ camera."
+  },
+  {
+    "id": "BUG-14",
+    "phase": "P3",
+    "title": "Nhãn Gieo hạt và Thu hoạch nằm ngoài vùng bấm",
+    "owner": "Antigravity",
+    "severity": "MEDIUM",
+    "status": "OPEN",
+    "foundIn": "T-15 · b89fe8a · web/src/scenes/FarmScene.ts:116",
+    "repro": "Bấm trực tiếp vào [Gieo hạt] của ô EMPTY hoặc [Thu hoạch] của ô READY. Sau đó bấm phần hình của cùng ô.",
+    "actual": "Bấm nhãn không gửi yêu cầu. Bấm hình trồng và thu hoạch thành công.",
+    "expected": "Bấm phần hình hoặc nhãn thao tác đều gửi đúng một yêu cầu cho cùng ô. Kiểm tra trên desktop và viewport dọc."
+  },
+  {
+    "id": "BUG-15",
+    "phase": "P3",
+    "title": "Mái quầy hàng che tên thương nhân",
+    "owner": "Antigravity",
+    "severity": "LOW",
+    "status": "OPEN",
+    "foundIn": "T-15 · b89fe8a · web/src/scenes/StoreScene.ts:255",
+    "repro": "Mở Store trên desktop và nhìn tiêu đề thẻ NPC.",
+    "actual": "Mái quầy đè lên giữa dòng THƯƠNG NHÂN SÓI CA. Vùng bấm mở quầy vẫn hoạt động.",
+    "expected": "Tên thương nhân đọc được đầy đủ. Giữ vùng bấm ở cả hai đầu dải xanh để mở quầy."
   }
 ]
 </script>
