@@ -1,6 +1,6 @@
 {
   "task": "T-14",
-  "approval": "REVIEW",
+  "approval": "APPROVED",
   "generator": "OpenAI imagegen (built-in)",
   "styleReference": "docs/art/approved_style.png",
   "credits": "FarmVerse sprite artwork generated with OpenAI imagegen using the project owner’s approved style reference.",
@@ -17,7 +17,7 @@
       ],
       "source": "art/source/t14/plot_empty.png",
       "export": "web/public/assets/plot_empty.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -34,7 +34,7 @@
       ],
       "source": "art/source/t14/plot_growing.png",
       "export": "web/public/assets/plot_growing.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png",
         "plot_empty.png"
@@ -52,7 +52,7 @@
       ],
       "source": "art/source/t14/plot_ready_normal.png",
       "export": "web/public/assets/plot_ready_normal.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png",
         "plot_empty.png"
@@ -70,7 +70,7 @@
       ],
       "source": "art/source/t14/plot_ready_golden.png",
       "export": "web/public/assets/plot_ready_golden.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png",
         "plot_ready_normal.png"
@@ -88,7 +88,7 @@
       ],
       "source": "art/source/t14/plot_locked.png",
       "export": "web/public/assets/plot_locked.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png",
         "plot_empty.png"
@@ -106,7 +106,7 @@
       ],
       "source": "art/source/t14/farmhouse_tier1.png",
       "export": "web/public/assets/farmhouse_tier1.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -123,7 +123,7 @@
       ],
       "source": "art/source/t14/silo_tier1.png",
       "export": "web/public/assets/silo_tier1.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -140,7 +140,7 @@
       ],
       "source": "art/source/t14/fish_pond.png",
       "export": "web/public/assets/fish_pond.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -157,7 +157,7 @@
       ],
       "source": "art/source/t14/fence_locked.png",
       "export": "web/public/assets/fence_locked.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png",
         "initial generated fence study"
@@ -175,7 +175,7 @@
       ],
       "source": "art/source/t14/fence_open.png",
       "export": "web/public/assets/fence_open.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png",
         "fence_locked.png"
@@ -193,7 +193,7 @@
       ],
       "source": "art/source/t14/merchant_stall.png",
       "export": "web/public/assets/merchant_stall.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -210,7 +210,7 @@
       ],
       "source": "art/source/t14/npc_merchant_idle.png",
       "export": "web/public/assets/npc_merchant_idle.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -227,7 +227,7 @@
       ],
       "source": "art/source/t14/town_square_ground.png",
       "export": "web/public/assets/town_square_ground.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -244,7 +244,7 @@
       ],
       "source": "art/source/t14/store_signboard.png",
       "export": "web/public/assets/store_signboard.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -261,7 +261,7 @@
       ],
       "source": "art/source/t14/crop_normal.png",
       "export": "web/public/assets/crop_normal.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -278,7 +278,7 @@
       ],
       "source": "art/source/t14/crop_golden.png",
       "export": "web/public/assets/crop_golden.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png",
         "crop_normal.png"
@@ -296,7 +296,7 @@
       ],
       "source": "art/source/t14/coin_gold.png",
       "export": "web/public/assets/coin_gold.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -313,7 +313,7 @@
       ],
       "source": "art/source/t14/token_near.png",
       "export": "web/public/assets/token_near.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -330,7 +330,7 @@
       ],
       "source": "art/source/t14/hud_silo_icon.png",
       "export": "web/public/assets/hud_silo_icon.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -347,7 +347,7 @@
       ],
       "source": "art/source/t14/hud_cart_icon.png",
       "export": "web/public/assets/hud_cart_icon.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -364,7 +364,7 @@
       ],
       "source": "art/source/t14/hud_camera_icon.png",
       "export": "web/public/assets/hud_camera_icon.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -381,7 +381,7 @@
       ],
       "source": "art/source/t14/icon_lock.png",
       "export": "web/public/assets/icon_lock.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
@@ -398,7 +398,7 @@
       ],
       "source": "art/source/t14/sparkle_effect.png",
       "export": "web/public/assets/sparkle_effect.png",
-      "approval": "REVIEW",
+      "approval": "APPROVED",
       "references": [
         "docs/art/approved_style.png"
       ],
