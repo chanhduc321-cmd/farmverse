@@ -23,4 +23,5 @@ Các file dùng chung ở root, lockfile và cấu hình deploy có đúng một
 1. Chủ dự án review và duyệt bản phân rã phase trước khi Codex cập nhật kế hoạch trong `TASKS.md`. Codex ghi ID, owner, scope, branch, phụ thuộc và tiêu chí nghiệm thu. Khi owner nhận việc, Codex chuyển `TODO` sang `DOING`.
 2. Owner báo `BLOCKED` kèm lý do và bước cần hỗ trợ. Khi hoàn thành, owner bàn giao branch hoặc commit, diff, các lệnh kiểm tra thực sự đã chạy và kết quả. Codex ghi `REVIEW`.
 3. Codex tích hợp vào `develop` và kiểm tra các luồng liên quan. Chuyển `DONE` sau khi bản tích hợp đạt nghiệm thu. Mọi thay đổi trạng thái đều đi qua `TASKS.md`.
-4. Sau mỗi lần cập nhật `TASKS.md`, chạy `node tools/build-task-dashboard.mjs`. Mở `TASKS.html` để xem hoặc lọc việc. Dùng `node tools/build-task-dashboard.mjs --check` để kiểm tra bản HTML khớp với bảng nguồn trước khi bàn giao.
+4. Khi review phát hiện lỗi đã tái hiện, Codex ghi vào [BUGS.md](../../BUGS.md) và tham chiếu ID lỗi từ task liên quan. Chuyển `FIXED` sau khi kiểm tra lại trên bản tích hợp.
+5. Sau mỗi lần cập nhật `TASKS.md` hoặc `BUGS.md`, chạy `node tools/build-task-dashboard.mjs` để đồng bộ `TASKS.html` và `BUGS.html`. Dùng `node tools/build-task-dashboard.mjs --check` để kiểm tra hai bản HTML khớp với nguồn trước khi bàn giao.

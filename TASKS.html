@@ -24,6 +24,7 @@
     .metric { padding: 12px 14px; }
     .metric strong { display: block; font-size: 23px; line-height: 1.1; }
     .metric span, .meta dt, .results, footer { color: var(--muted); font-size: 13px; }
+    .plan-note { margin-bottom: 10px; }
     .section-title { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 10px; }
     h2 { font-size: 22px; }
     .filters { display: grid; grid-template-columns: minmax(0, 2fr) repeat(3, minmax(0, 1fr)) auto; gap: 12px; align-items: end; padding: 14px; }
@@ -68,7 +69,7 @@
       <div>
         <p class="eyebrow">FARMVERSE / DEVELOP</p>
         <h1>Bảng công việc</h1>
-        <p>Theo dõi từ dựng nền đến khi chơi trọn vòng Farm.</p>
+        <p>Theo dõi từ dựng nền Farm đến ngày nộp bài.</p>
       </div>
       <div>
         <div class="progress-label"><label for="progress">Tiến độ tích hợp</label><span id="progress-text"></span></div>
@@ -80,11 +81,12 @@
 
     <section aria-labelledby="tasks-title">
       <div class="section-title">
-        <h2 id="tasks-title">Công việc P0 và P1</h2>
+        <h2 id="tasks-title">Công việc P0–P5</h2>
         <p id="results" class="results" role="status"></p>
       </div>
+      <p class="results plan-note">Mốc theo giờ Việt Nam. Phân công P2–P5 đang chờ review. <a href="BUGS.html">Mở dashboard lỗi</a></p>
       <form id="filters" class="filters" role="search" aria-label="Lọc công việc">
-        <label class="search">Tìm việc<input id="query" type="search" placeholder="ID, tên việc, scope hoặc branch"></label>
+        <label class="search">Tìm việc<input id="query" type="search" placeholder="ID, tên việc, ngày hoặc nhánh"></label>
         <label>Phase<select id="phase"><option value="">Tất cả phase</option></select></label>
         <label>Phụ trách<select id="owner"><option value="">Tất cả người</option></select></label>
         <label>Trạng thái<select id="status"><option value="">Tất cả trạng thái</option></select></label>
@@ -121,61 +123,67 @@
   {
     "id": "T-01",
     "phase": "P0",
+    "target": "09/11",
     "title": "Chốt giao diện kiểm tra API",
     "owner": "Codex",
     "scope": "shared/",
     "branch": "feat/p0-backend",
-    "status": "TODO",
+    "status": "DONE",
     "dependsOn": "—",
     "acceptance": "Ghi giao diện đã duyệt trong shared/. Hono phục vụ GET /health với 200 {\"status\":\"ok\"} hoặc 503 {\"status\":\"unavailable\"}. Web gọi qua /api/health."
   },
   {
     "id": "T-02",
     "phase": "P0",
+    "target": "09/11",
     "title": "Dựng khung Phaser và Vite",
     "owner": "Antigravity",
     "scope": "web/",
     "branch": "feat/p0-web",
-    "status": "TODO",
+    "status": "DONE",
     "dependsOn": "Giao diện P0 đã duyệt",
     "acceptance": "pnpm dev mở Farm canvas có hai ô đất với sprite tạm. Vite proxy chuyển /api/health đến /health của Hono."
   },
   {
     "id": "T-03",
     "phase": "P0",
+    "target": "09/11",
     "title": "Dựng khung Hono và kết nối PostgreSQL",
     "owner": "Codex",
     "scope": "backend/",
     "branch": "feat/p0-backend",
-    "status": "TODO",
+    "status": "DONE",
     "dependsOn": "Giao diện T-01 có trong shared/",
     "acceptance": "pnpm dev khởi động Hono. Cấu hình kết nối bằng DATABASE_URL. GET /health trả 200 khi kiểm tra DB thành công và 503 khi DB chưa sẵn sàng."
   },
   {
     "id": "T-04",
     "phase": "P0",
+    "target": "09/11",
     "title": "Tích hợp web và API",
     "owner": "Codex",
     "scope": "Tích hợp diff T-01–T-03",
     "branch": "develop",
-    "status": "TODO",
-    "dependsOn": "T-01–T-03 ở REVIEW",
+    "status": "DONE",
+    "dependsOn": "T-01–T-03 đã bàn giao",
     "acceptance": "Ghi lệnh chạy web và API từ bản tích hợp. Mở Farm trong trình duyệt và xác minh request /api/health trả 200 {\"status\":\"ok\"} từ Hono."
   },
   {
     "id": "T-07",
     "phase": "P1",
+    "target": "10/11",
     "title": "Chốt giao diện API Farm",
     "owner": "Codex",
     "scope": "shared/",
     "branch": "feat/farm-contract",
-    "status": "TODO",
+    "status": "DONE",
     "dependsOn": "T-04 DONE",
     "acceptance": "Request, response và lỗi cho trạng thái Farm, Plant, Harvest, Quick Sell và Unlock được ghi rõ và tích hợp vào develop."
   },
   {
     "id": "T-05",
     "phase": "P1",
+    "target": "10/11",
     "title": "Làm API Farm và lưu tiến độ",
     "owner": "Codex",
     "scope": "backend/",
@@ -187,6 +195,7 @@
   {
     "id": "T-06",
     "phase": "P1",
+    "target": "10/11",
     "title": "Làm Farm scene và thao tác chơi",
     "owner": "Antigravity",
     "scope": "web/",
@@ -198,6 +207,7 @@
   {
     "id": "T-08",
     "phase": "P1",
+    "target": "10/11",
     "title": "Nghiệm thu vòng chơi Farm",
     "owner": "Codex",
     "scope": "Tích hợp diff T-05 và T-06",
@@ -205,6 +215,174 @@
     "status": "TODO",
     "dependsOn": "T-05 và T-06 ở REVIEW",
     "acceptance": "Từ Guest đến mở Plot #3 trong kịch bản 45 giây. Reload giữ tiến độ, bấm thu hoạch hai lần chỉ nhận một crop, silo đầy giữ cây READY và mở ô chỉ trừ GOLD một lần."
+  },
+  {
+    "id": "T-09",
+    "phase": "P2",
+    "target": "11/11",
+    "title": "Chốt giao diện merchant",
+    "owner": "Codex",
+    "scope": "shared/",
+    "branch": "feat/merchant-contract",
+    "status": "TODO",
+    "dependsOn": "T-08 DONE",
+    "acceptance": "Chốt schema trạng thái merchant, báo giá, mua, bán và lỗi để hai bên phát triển theo cùng giao diện."
+  },
+  {
+    "id": "T-10",
+    "phase": "P2",
+    "target": "11/11",
+    "title": "Làm API merchant và giao dịch GOLD",
+    "owner": "Codex",
+    "scope": "backend/",
+    "branch": "feat/merchant-api",
+    "status": "TODO",
+    "dependsOn": "T-09 DONE",
+    "acceptance": "Kiểm tra giá, cập nhật GOLD và tồn kho trong cùng giao dịch, xử lý offer tối đa một lần và kiểm tra quy tắc phục hồi C02 Lite."
+  },
+  {
+    "id": "T-11",
+    "phase": "P2",
+    "target": "11/11",
+    "title": "Dựng Town Square và cửa hàng",
+    "owner": "Antigravity",
+    "scope": "web/src/",
+    "branch": "feat/merchant-web",
+    "status": "TODO",
+    "dependsOn": "T-09 DONE",
+    "acceptance": "Đi qua lại Farm ↔ Store, đọc được báo giá, ngân sách, tồn kho và nhu cầu. Mua hoặc bán cập nhật trạng thái hiển thị và báo lỗi rõ ràng."
+  },
+  {
+    "id": "T-12",
+    "phase": "P2",
+    "target": "11/11",
+    "title": "Nghiệm thu merchant",
+    "owner": "Codex",
+    "scope": "Tích hợp diff T-10 và T-11",
+    "branch": "develop",
+    "status": "TODO",
+    "dependsOn": "T-10 và T-11 ở REVIEW",
+    "acceptance": "Từ trình duyệt, mua và bán làm thay đổi GOLD và đúng một vật phẩm. Reload giữ tiến độ, giao dịch lặp không áp dụng lại."
+  },
+  {
+    "id": "T-13",
+    "phase": "P3",
+    "target": "10/11",
+    "title": "Chốt mẫu art",
+    "owner": "Antigravity",
+    "scope": "docs/art/, art/source/",
+    "branch": "feat/art-style",
+    "status": "TODO",
+    "dependsOn": "Brief art được giao",
+    "acceptance": "Chủ dự án duyệt góc nhìn, tỷ lệ và ánh sáng. Lưu approved_style.png và các thông số đã chốt trong Art Bible."
+  },
+  {
+    "id": "T-14",
+    "phase": "P3",
+    "target": "10–12/11",
+    "title": "Tạo bộ sprite cho hai cảnh",
+    "owner": "Antigravity",
+    "scope": "art/source/, web/public/assets/",
+    "branch": "feat/art-assets",
+    "status": "TODO",
+    "dependsOn": "T-13 DONE",
+    "acceptance": "Bàn giao sprite Farm, Store, merchant, crop và icon HUD đã duyệt. Kiểm tra kích thước, anchor, độ trong suốt và ghi nguồn hoặc credits."
+  },
+  {
+    "id": "T-15",
+    "phase": "P3",
+    "target": "12/11",
+    "title": "Tích hợp và kiểm tra art",
+    "owner": "Antigravity",
+    "scope": "web/src/",
+    "branch": "feat/art-integration",
+    "status": "TODO",
+    "dependsOn": "T-12 và T-14 DONE",
+    "acceptance": "Farm và Store dùng asset đã duyệt. Kiểm tra tỷ lệ, vùng bấm và độ rõ của trạng thái ở kích thước chơi thực tế."
+  },
+  {
+    "id": "T-16",
+    "phase": "P4",
+    "target": "12/11",
+    "title": "Thử giao dịch NEAR và chốt API demo",
+    "owner": "Codex",
+    "scope": "backend/, shared/",
+    "branch": "feat/near-contract",
+    "status": "TODO",
+    "dependsOn": "T-12 DONE",
+    "acceptance": "Gửi một native transfer testnet giữa hai tài khoản demo. Xác minh thực thi qua RPC và ghi hash, explorer link cùng schema trạng thái cho Store."
+  },
+  {
+    "id": "T-17",
+    "phase": "P4",
+    "target": "13/11",
+    "title": "Làm API NEAR Testnet Demo",
+    "owner": "Codex",
+    "scope": "backend/",
+    "branch": "feat/near-api",
+    "status": "TODO",
+    "dependsOn": "T-16 DONE",
+    "acceptance": "API gửi lượng testnet NEAR cố định, giữ khóa ký phía server, chống yêu cầu lặp và trả trạng thái theo kết quả thực thi RPC."
+  },
+  {
+    "id": "T-18",
+    "phase": "P4",
+    "target": "13/11",
+    "title": "Nối nút NEAR vào Store",
+    "owner": "Antigravity",
+    "scope": "web/src/",
+    "branch": "feat/near-web",
+    "status": "TODO",
+    "dependsOn": "T-16 DONE",
+    "acceptance": "Hiển thị pending, thành công đã xác minh hoặc lỗi. Có network, hash và explorer link khi có giao dịch."
+  },
+  {
+    "id": "T-19",
+    "phase": "P4",
+    "target": "13/11",
+    "title": "Nghiệm thu C03 trong trình duyệt",
+    "owner": "Codex",
+    "scope": "Tích hợp diff T-17 và T-18",
+    "branch": "develop",
+    "status": "TODO",
+    "dependsOn": "T-17 và T-18 ở REVIEW",
+    "acceptance": "Bấm nút Store tạo giao dịch thật và mở được explorer. Kiểm tra bấm lặp, xử lý lỗi và đối chiếu GOLD cùng inventory trước và sau."
+  },
+  {
+    "id": "T-20",
+    "phase": "P5",
+    "target": "13–14/11",
+    "title": "QA bản tích hợp và chuẩn bị hồ sơ",
+    "owner": "Codex",
+    "scope": "README.md, LICENSE, docs/",
+    "branch": "feat/release-qa",
+    "status": "TODO",
+    "dependsOn": "T-15 và T-19 DONE",
+    "acceptance": "Chạy walkthrough 60–90 giây từ trình duyệt sạch. Kiểm tra lệnh setup, README, giao dịch mẫu, ảnh hoặc video, credits và license đã được chủ dự án chốt."
+  },
+  {
+    "id": "T-21",
+    "phase": "P5",
+    "target": "14/11",
+    "title": "Duyệt bản chạy và kiểm tra link public",
+    "owner": "Codex",
+    "scope": "Bản phát hành và cấu hình deploy theo brief",
+    "branch": "develop → main sau khi duyệt",
+    "status": "TODO",
+    "dependsOn": "T-20 DONE, chủ dự án duyệt release",
+    "acceptance": "Mở demo từ trình duyệt sạch qua URL public. Repo public, README trỏ đúng demo và explorer. Ghi lại phiên bản đã kiểm tra."
+  },
+  {
+    "id": "T-22",
+    "phase": "P5",
+    "target": "14/11 · 22:00",
+    "title": "Đăng demo và nộp bài",
+    "owner": "Chủ dự án",
+    "scope": "Bài đăng X và form hackathon",
+    "branch": "—",
+    "status": "TODO",
+    "dependsOn": "T-21 DONE",
+    "acceptance": "Bài đăng công khai có video hoặc ảnh, tag @NEARProtocol và #NEARHackathon. Nộp URL repo và bài đăng, lưu xác nhận nộp."
   }
 ]
 </script>
@@ -250,7 +428,7 @@
       });
       const cards = visible.map((task) => {
         const card = byId('task-card').content.cloneNode(true);
-        const fields = { ...task, key: `${task.id} · ${task.phase}`, badge: statuses[task.status] };
+        const fields = { ...task, key: `${task.id} · ${task.phase} · ${task.target}`, badge: statuses[task.status] };
         for (const element of card.querySelectorAll('[data-field]')) element.textContent = fields[element.dataset.field];
         card.querySelector('.badge').classList.add(task.status.toLowerCase());
         return card;

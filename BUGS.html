@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FarmVerse · Sổ lỗi</title>
+  <style>
+    :root { color-scheme: light; --paper: #f5f2e8; --card: #fffdf7; --ink: #223229; --muted: #515e51; --line: #dadfcd; --green: #234f3a; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.55 system-ui, sans-serif; }
+    main { width: min(1000px, calc(100% - 36px)); margin: 30px auto; }
+    h1, h2, p, dl, dd { margin: 0; }
+    nav { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-bottom: 14px; }
+    a { color: var(--green); text-underline-offset: 3px; }
+    header { padding: 25px 29px; background: var(--green); color: #fffdf3; border-radius: 20px; }
+    h1 { font-size: clamp(26px, 5vw, 40px); line-height: 1.2; margin-bottom: 6px; }
+    header p { color: #e5eee3; }
+    #summary { margin-block: 16px 8px; font-weight: 700; }
+    form, .bug, .empty { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+    form { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+    label { display: grid; gap: 4px; font-size: 13px; font-weight: 650; min-width: 0; }
+    input, select { min-width: 0; width: 100%; min-height: 40px; border: 1px solid #a9b5a4; border-radius: 8px; background: white; color: var(--ink); font: inherit; padding: 7px 9px; }
+    :focus-visible { outline: 3px solid #196644; outline-offset: 2px; }
+    #results, .meta { color: var(--muted); font-size: 13px; }
+    #results { margin-block: 12px 6px; }
+    .bug { margin-bottom: 12px; }
+    .bug-top { display: flex; align-items: center; justify-content: space-between; gap: 8px 14px; flex-wrap: wrap; }
+    .key { color: var(--green); font-weight: 750; }
+    .badges { display: flex; gap: 6px; }
+    .badge { padding: 2px 9px; border-radius: 18px; font-size: 12px; font-weight: 750; background: #e9ede5; color: #384636; }
+    .medium, .doing { background: #f7e3b7; color: #65470f; }
+    .high, .blocked { background: #f8e4dd; color: #853524; }
+    .review { background: #e1ebf8; color: #254976; }
+    .fixed { background: #dfefdc; color: #285a34; }
+    h2 { font-size: 19px; line-height: 1.3; margin-block: 7px; }
+    dl { display: grid; gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+    dt { font-weight: 700; color: var(--green); }
+    [hidden] { display: none !important; }
+    @media (max-width: 560px) {
+      main { width: calc(100% - 24px); margin-top: 14px; }
+      header { padding: 19px; }
+      form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      form label:first-child { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <nav aria-label="Điều hướng FarmVerse">
+      <a href="TASKS.html">← Dashboard công việc</a>
+      <a href="BUGS.md">Sổ lỗi Markdown</a>
+    </nav>
+    <header>
+      <h1>Sổ lỗi FarmVerse</h1>
+      <p>Lỗi đã tái hiện, mốc xử lý và cách kiểm tra lại.</p>
+    </header>
+    <p id="summary"></p>
+    <form id="filters" role="search" aria-label="Lọc lỗi">
+      <label>Tìm lỗi<input id="query" type="search" placeholder="ID, tên lỗi hoặc phase"></label>
+      <label>Mức độ<select id="severity"><option value="">Tất cả</option></select></label>
+      <label>Trạng thái<select id="status"><option value="">Tất cả</option></select></label>
+    </form>
+    <p id="results" role="status"></p>
+    <div id="bugs"></div>
+    <p id="empty" class="empty" hidden>Không tìm thấy lỗi phù hợp với bộ lọc.</p>
+    <noscript><p class="empty">Mở BUGS.md để xem sổ lỗi khi JavaScript bị tắt.</p></noscript>
+  </main>
+
+  <template id="bug-card">
+    <article class="bug">
+      <div class="bug-top">
+        <span class="key" data-field="key"></span>
+        <div class="badges"><span class="badge" data-field="severityLabel"></span><span class="badge" data-field="statusLabel"></span></div>
+      </div>
+      <h2 data-field="title"></h2>
+      <p class="meta" data-field="meta"></p>
+      <dl>
+        <div><dt>Cách tái hiện</dt><dd data-field="repro"></dd></div>
+        <div><dt>Hiện tại</dt><dd data-field="actual"></dd></div>
+        <div><dt>Mong đợi và nghiệm thu</dt><dd data-field="expected"></dd></div>
+      </dl>
+    </article>
+  </template>
+
+  <script id="bug-data" type="application/json">
+[
+  {
+    "id": "BUG-01",
+    "phase": "P3",
+    "title": "Canvas Farm bị cắt hai bên trên màn hình hẹp",
+    "owner": "Antigravity (dự kiến)",
+    "severity": "MEDIUM",
+    "status": "OPEN",
+    "foundIn": "T-02 · 035ef37 · web/index.html:24",
+    "repro": "Mở Farm qua pnpm dev, mở Edge DevTools và đặt viewport rộng 390 px.",
+    "actual": "Khung game vẫn rộng 800 px, tràn từ −205 px đến 595 px. Canvas bị cắt ở hai bên. Bản desktop 1024×768 đạt review P0.",
+    "expected": "Khung game vừa viewport và giữ tỷ lệ 4:3. Ở 390 px và 1024×768, thấy trọn hai ô đất cùng HUD."
+  }
+]
+</script>
+  <script>
+    const byId = (id) => document.getElementById(id);
+    const bugs = JSON.parse(byId('bug-data').textContent);
+    const statuses = { OPEN: 'Đang mở', DOING: 'Đang xử lý', BLOCKED: 'Đang vướng', REVIEW: 'Chờ kiểm tra', FIXED: 'Đã sửa' };
+    const severities = { LOW: 'Thấp', MEDIUM: 'Trung bình', HIGH: 'Cao' };
+    const fixed = bugs.filter((bug) => bug.status === 'FIXED').length;
+    byId('summary').textContent = `${bugs.length - fixed} lỗi đang theo dõi · ${fixed} đã sửa`;
+
+    for (const [id, options] of [['severity', severities], ['status', statuses]]) {
+      for (const [value, label] of Object.entries(options)) byId(id).add(new Option(label, value));
+    }
+
+    function normalize(value) {
+      return value.toLocaleLowerCase('vi').normalize('NFD').replace(/\p{M}/gu, '').replaceAll('đ', 'd');
+    }
+
+    function render() {
+      const query = normalize(byId('query').value.trim());
+      const visible = bugs.filter((bug) => ['severity', 'status'].every((field) => !byId(field).value || byId(field).value === bug[field])
+        && normalize(Object.values(bug).join(' ')).includes(query));
+      const cards = visible.map((bug) => {
+        const card = byId('bug-card').content.cloneNode(true);
+        card.querySelector('article').id = bug.id;
+        const fields = {
+          ...bug,
+          key: `${bug.id} · ${bug.phase}`,
+          severityLabel: severities[bug.severity],
+          statusLabel: statuses[bug.status],
+          meta: `${bug.owner} · Phát hiện ở ${bug.foundIn}`,
+        };
+        for (const element of card.querySelectorAll('[data-field]')) element.textContent = fields[element.dataset.field];
+        card.querySelector('[data-field="severityLabel"]').classList.add(bug.severity.toLowerCase());
+        card.querySelector('[data-field="statusLabel"]').classList.add(bug.status.toLowerCase());
+        return card;
+      });
+      byId('bugs').replaceChildren(...cards);
+      byId('results').textContent = `Hiển thị ${visible.length}/${bugs.length} lỗi`;
+      byId('empty').hidden = visible.length !== 0;
+    }
+
+    byId('filters').addEventListener('submit', (event) => event.preventDefault());
+    byId('filters').addEventListener('input', render);
+    render();
+  </script>
+</body>
+</html>
