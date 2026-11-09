@@ -20,14 +20,25 @@
         justify-content: center;
         min-height: 100vh;
         overflow: hidden;
+        padding: 10px;
       }
       #game-container {
-        width: 800px;
-        height: 600px;
+        width: 100%;
+        max-width: 800px;
+        aspect-ratio: 4 / 3;
+        max-height: 95vh;
         box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
         border-radius: 8px;
         overflow: hidden;
         background: #2f482d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      #game-container canvas {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain;
       }
     </style>
   </head>

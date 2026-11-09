@@ -6,10 +6,10 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api/health': {
+      '/api': {
         target: BACKEND_URL,
         changeOrigin: true,
-        rewrite: () => '/health',
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
     },
   },
