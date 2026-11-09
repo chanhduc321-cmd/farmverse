@@ -125,6 +125,28 @@ farmverse/
 
 **Submission gate (P5):** Make the repository public and include a `LICENSE` file. Publish a public demo post on X with a video or screenshots, tag `@NEARProtocol` and `#NEARHackathon`, then submit the repository and post links by 2026-11-14 23:59 UTC. The organizers accept testnet-only projects. See the [official submission rules](https://nearhackathon.com/HACKATHON.md).
 
+### Run the integrated P0 build locally
+
+Use a `develop` checkout with Docker Desktop running, Node.js 20.12 or newer, and pnpm. In the first PowerShell window, start from the repository root and run the database and API.
+
+```powershell
+cd backend
+if (!(Test-Path -LiteralPath '.env')) { Copy-Item -LiteralPath '.env.example' -Destination '.env' }
+docker compose up -d --wait postgres
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+In a second PowerShell window, start from the same repository root and run the web app.
+
+```powershell
+cd web
+pnpm install --frozen-lockfile
+pnpm dev --host 127.0.0.1
+```
+
+Open the URL printed by Vite. The Farm should show two empty plots and `API: OK (200)`. In the browser Network panel, `/api/health` should return `200 {"status":"ok"}` through Hono on port 8080. If another worktree uses 8080, set `$env:PORT = '8081'` in the backend terminal and `$env:VITE_BACKEND_URL = 'http://127.0.0.1:8081'` in the web terminal before starting the servers.
+
 ## 9. Acceptance checklist (cross-contract)
 
 - [ ] **GAME-01:** Open public URL and begin playing immediately; no account/wallet gate.

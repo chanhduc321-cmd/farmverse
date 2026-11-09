@@ -7,7 +7,7 @@ Các mốc dưới đây là **mục tiêu nội bộ**, tính theo giờ Việt
 | Phase | Mốc mục tiêu | Tiêu chí hoàn thành | Trạng thái |
 |---|---|---|---|
 | Chuẩn bị | 09/11 | Có cấu trúc repo, MVP Contract, stack, README cho giám khảo, quy tắc phối hợp và Art Bible. | Đã chốt |
-| **P0 — Dựng nền Farm** | 09/11 | Web Phaser/Vite và API Hono chạy bằng lệnh đã ghi lại. PostgreSQL kết nối được. Có sprite tạm. Browser gọi được `GET /health` từ bản tích hợp trên `develop`. | Chờ |
+| **P0 — Dựng nền Farm** | 09/11 | Web Phaser/Vite và API Hono chạy bằng lệnh đã ghi lại. PostgreSQL kết nối được. Có sprite tạm. Browser gọi được `GET /api/health` từ bản tích hợp trên `develop`. | Hoàn thành |
 | **P1 — Farm (C01)** | 10/11 | Guest trồng hai ô, thu hoạch, Quick Sell đủ 20 GOLD và mở Plot #3. Luồng có kịch bản kiểm tra trong 45 giây. Kiểm tra cả hai loại crop, giữ nguyên cây READY khi silo đầy và trừ GOLD đúng một lần khi mở ô. | Chờ |
 | **P2 — Town Square và merchant (C02 Lite)** | 11/11 | Đi qua lại Farm và Store rồi reload vẫn giữ tiến độ. NPC mua và bán bằng GOLD, mỗi lần chuyển đúng một vật phẩm và cập nhật tồn kho, ngân sách, nhu cầu. Kiểm tra công thức giá, giới hạn giao dịch, offer chỉ xử lý một lần và các quy tắc phục hồi của NPC. | Chờ |
 | **P3 — Art và phản hồi** | 09–12/11, song song P0–P2 | Duyệt ảnh mẫu và Art Bible trước khi gen theo lô. Tích hợp bộ sprite Farm, Store, merchant và crop. Kiểm tra tỷ lệ, anchor, độ rõ của trạng thái và vùng bấm trên trình duyệt. | Chờ |
