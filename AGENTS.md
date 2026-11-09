@@ -14,6 +14,8 @@ Codex is the Lead. Google Antigravity is the Collaborator. Read the guide for yo
 
 ## Shared working rules
 
+- Follow the approved [collaboration workflow](docs/agents/workflow.md) and read the [task dashboard source](TASKS.md) before starting work. Codex is the sole writer of the task dashboard and updates its HTML view after each change.
 - Agree on the task, file ownership, and acceptance checks before edits. Each shared file has one writer at a time. Raise an out-of-scope change with the Lead before editing.
-- Use separate Git worktrees or checkouts when both agents are editing in parallel. Preserve existing user changes and check the diff before handoff.
+- Use separate Git worktrees or checkouts from the agreed `develop` commit when both agents edit in parallel. Integrate and verify on `develop`. The project owner approves promotion to `main`.
+- Preserve existing user changes and check the diff before handoff.
 - Keep signing secrets server-side and outside version control. Keep the NEAR testnet demo separate from gameplay balances and inventory.

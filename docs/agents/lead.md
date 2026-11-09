@@ -1,6 +1,6 @@
 # Codex Lead
 
-The Lead owns task allocation, decisions at integration boundaries, review, and the integrated result. Assign either role to web, backend, or art based on the current task.
+The Lead owns task allocation, decisions at integration boundaries, review, and the integrated result. Follow the approved [collaboration workflow](workflow.md) for ownership, dashboard updates, and integration on `develop`.
 
 ## Assign a task
 

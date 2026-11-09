@@ -114,11 +114,11 @@ farmverse/
 
 | Phase | Deliverable | Acceptance gate |
 |---|---|---|
-| P0 — Repo/contract setup | Phaser/Vite app, Node.js/Hono skeleton, run instructions, placeholder sprites, and a server-side NEAR testnet transfer spike | Frontend and backend start with documented commands. Verify a real transfer between the demo accounts and record its hash and explorer link. |
+| P0 — Farm foundation | Phaser/Vite app, Node.js/Hono skeleton, PostgreSQL connectivity, run instructions, and placeholder sprites | Frontend and backend start with documented commands. Verify that the browser calls `GET /health` through the web API path on the integrated `develop` branch. |
 | P1 — Farm vertical slice | Plant, growth, harvest, GOLD, silo, Quick Sell and plot unlock | C01 ACs demonstrable without wallet |
 | P2 — Town Square + Merchant | Farm/Store navigation, BUY/SELL GOLD, NPC Budget/Inventory/Demand and state transitions | C02 ACs and reload/session continuity pass |
 | P3 — Art calibration and polish | Master style reference; approved farm/store/merchant/crop sprites; feedback | Legible at target browser size; consistent art and click targets |
-| P4 — NEAR testnet micro | Wire the verified server-side transfer path into the Store with pending, success, and failure states | A Store action sends a real transfer and shows verified execution and an explorer link. C03 Micro acceptance criteria pass. |
+| P4 — NEAR testnet micro | Verify a server-side testnet transfer, then wire it into the Store with pending, success, and failure states | A Store action sends a real transfer and shows verified execution and an explorer link. C03 Micro acceptance criteria pass. |
 | P5 — QA & hackathon submission | Public URL, public repo, README/run steps, concise demo video/post | Another person can open and follow demo; no fake on-chain claims |
 
 **Parallelization:** Produce art while gameplay uses placeholder sprites. Do not block P1/P2 waiting for perfect artwork. Preserve time for integration, crash recovery and submission materials.
@@ -152,4 +152,8 @@ No Godot implementation for this web demo; no multiplayer or WebSocket position 
 
 **Approved 2026-11-09.** Replace the proposed Go service with Node.js, TypeScript, and Hono before P0. This lets the same API service use `near-api-js` for testnet signing and share request and response schemas with the web client.
 
-PostgreSQL remains the persistence layer. The amendment changes the service runtime and schedules a NEAR feasibility check in P0. The Store integration lands in P4 under the existing C03 Micro scope and acceptance criteria.
+PostgreSQL remains the persistence layer. Follow the current delivery order below for NEAR testnet work.
+
+### MVP-PLAN-01 — Farm-first delivery
+
+Complete the Farm foundation and playable loop first, then the merchant and Store. Verify the server-side NEAR transfer and integrate it in P4 before final QA. The [task dashboard](../TASKS.md) and [collaboration workflow](agents/workflow.md) define task ownership and integration.
