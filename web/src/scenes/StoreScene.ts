@@ -293,10 +293,12 @@ export class StoreScene extends Phaser.Scene {
       ruleBody,
     ]);
 
-    // BUG-10: Make entire NPC Stall (0, 0, pw, ph) clickable to open Trade Dialog
+    // BUG-10: Make entire NPC Stall clickable to open Trade Dialog.
+    // Phaser Container normalizes hit test coordinates by adding displayOriginX/Y (width*0.5, height*0.5).
+    // Therefore hitArea rectangle must start at (pw/2, ph/2) to map exactly to [0, pw] and [0, ph] in local bounds.
     stallContainer.setSize(pw, ph);
     stallContainer.setInteractive({
-      hitArea: new Phaser.Geom.Rectangle(0, 0, pw, ph),
+      hitArea: new Phaser.Geom.Rectangle(pw / 2, ph / 2, pw, ph),
       hitAreaCallback: Phaser.Geom.Rectangle.Contains,
       useHandCursor: true,
     });
@@ -645,6 +647,8 @@ export class StoreScene extends Phaser.Scene {
         this.offerReasonText.setText(`⚠️ ${reasonMsg}`);
         this.offerReasonText.setColor('#ff8a80');
       }
+      // BUG-12: Restore Reject button alpha to 1.0 when active offer is available
+      this.rejectBtn.setAlpha(1.0);
     } else {
       this.offerContainer.setVisible(false);
       this.noOfferText.setVisible(true);
