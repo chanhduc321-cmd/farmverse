@@ -1,7 +1,7 @@
 cropId=4
 name=ºúÂÜ²·
 pic=seed.png
-stageCount=4
+stageCount=5
 unitTime=16
 sellMoney=37
 seedMoney=19

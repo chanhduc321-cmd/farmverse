@@ -4,7 +4,7 @@ import { ripeAt } from '../../shared/farm.mts';
 import type { Crop, Farm, FarmAction } from '../../shared/farm.mts';
 
 const names = [
-  'Dâu tây', 'Ngô', 'Củ cải trắng', 'Cà rốt', 'Khoai lang',
+  'Dâu tây', 'Ngô', 'Củ cải trắng', 'Cà rốt', 'Khoai t�y',
   'Cà tím', 'Cà chua', 'Đậu xanh', 'Ớt', 'Bí đỏ',
   'Táo', 'Dưa hấu', 'Chuối', 'Đào', 'Dứa',
 ];
