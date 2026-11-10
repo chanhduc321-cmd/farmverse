@@ -414,6 +414,41 @@ button:disabled { cursor: default; opacity: .6; }
   transform: translateY(-2px);
 }
 
+/* On mobile view, secondary tools are accessible via top/side menus */
+.desktop-only {
+  display: none !important;
+}
+
+/* ─── DESKTOP / LARGE SCREEN RESPONSIVENESS (>= 768px) ─── */
+@media (min-width: 768px) {
+  .top-dropdown,
+  .side-drawer-right {
+    display: none !important;
+  }
+  .desktop-only {
+    display: flex !important;
+  }
+  .bottom-dock {
+    width: auto;
+    max-width: min(600px, calc(100% - 32px));
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: max(14px, env(safe-area-inset-bottom));
+    border-radius: 24px;
+    border: 2.5px solid #fffdf5;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    padding: 8px 18px;
+    gap: 10px;
+  }
+  .dock-btn {
+    max-width: 86px;
+    min-width: 68px;
+  }
+  .instructions {
+    bottom: calc(max(14px, env(safe-area-inset-bottom)) + 84px);
+  }
+}
+
 /* ─── FLOATING INSTRUCTIONS TOAST ─── */
 .instructions {
   position: absolute;
