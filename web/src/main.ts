@@ -13,8 +13,21 @@ const toPosition = ([column, row]: number[]) => [
   400 + (column - row) * tileWidth / 2,
   214 + (column + row) * tileHeight / 2,
 ];
-const positions = [[0, 1], [0, 0], [1, 0], [1, 1], [2, 0], [2, 1]].map(toPosition);
-const lockedPositions = [[0, 2], [1, 2], [2, 2]].map(toPosition);
+const defaultPositions = [[0, 1], [0, 0], [1, 0], [1, 1], [2, 0], [2, 1]].map(toPosition);
+const defaultLocked = [[0, 2], [1, 2], [2, 2]].map(toPosition);
+
+// Portrait 2-column vertical grid to maximize mobile screen space & visual size
+const portraitPositions = [
+  [295, 120], [505, 120],
+  [295, 230], [505, 230],
+  [295, 340], [505, 340],
+];
+const portraitLocked = [
+  [295, 450], [505, 450],
+  [400, 555],
+];
+let positions = defaultPositions;
+let lockedPositions = defaultLocked;
 const themes = [
   { file: 'web-wide-dock.png', fieldOffset: 0, bank: ['#a5b44b', '#778d2b'] },
   { file: 'web-theme-2.jpg', fieldOffset: .1, bank: ['#a8bc49', '#7f982e'] },
@@ -354,7 +367,10 @@ function attachControls(scene: FarmScene): void {
 class FarmScene extends Phaser.Scene {
   private background!: Phaser.GameObjects.Image;
   private ground!: Phaser.GameObjects.Container;
+  private bankImage!: Phaser.GameObjects.Image;
   private soilTiles: Phaser.GameObjects.Image[] = [];
+  private grassTiles: Phaser.GameObjects.Image[] = [];
+  private gates: Phaser.GameObjects.Image[] = [];
   private highlightedPlot?: number;
   private visuals: { plant: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text }[] = [];
 
@@ -379,18 +395,20 @@ class FarmScene extends Phaser.Scene {
     this.background = this.add.image(0, 0, `theme-${snapshot.farm.theme}`);
     this.ground = this.add.container(0, 0);
     this.paintFieldBank();
-    this.ground.add(this.add.image(0, 0, 'field-bank').setOrigin(0));
+    this.bankImage = this.add.image(0, 0, 'field-bank').setOrigin(0);
+    this.ground.add(this.bankImage);
     this.createPlotTextures();
     const soilScale = (tileWidth - 8) / this.textures.get('soil').getSourceImage().width;
-    this.soilTiles = positions.map(([x, y]) => this.add.image(x, y - 5, 'soil').setScale(soilScale));
+    this.soilTiles = defaultPositions.map(([x, y]) => this.add.image(x, y - 5, 'soil').setScale(soilScale));
     const grassScale = (tileWidth - 8) / this.textures.get('locked-grass').getSourceImage().width;
-    const grassTiles = lockedPositions.map(([x, y]) => this.add.image(x, y - 3, 'locked-grass').setScale(grassScale));
-    this.ground.add([...this.soilTiles, ...grassTiles].sort((a, b) => a.y - b.y));
-    for (const [x, y] of lockedPositions) {
+    this.grassTiles = defaultLocked.map(([x, y]) => this.add.image(x, y - 3, 'locked-grass').setScale(grassScale));
+    this.ground.add([...this.soilTiles, ...this.grassTiles].sort((a, b) => a.y - b.y));
+    for (const [x, y] of defaultLocked) {
       const gate = this.add.image(x - 40, y + 19, 'locked-gate').setOrigin(.5, .8);
+      this.gates.push(gate);
       this.ground.add(gate);
     }
-    this.visuals = positions.map(([x, y]) => {
+    this.visuals = defaultPositions.map(([x, y]) => {
       const plant = this.add.image(x, y - 6, 'crop-1-0').setOrigin(.5, .84).setScale(cropScale).setVisible(false);
       const label = this.add.text(x, y + 16, '', {
         fontFamily: 'system-ui, sans-serif',
@@ -524,13 +542,29 @@ class FarmScene extends Phaser.Scene {
   private layout(): void {
     const { width: viewWidth, height: viewHeight } = this.scale.gameSize;
     const isPortrait = viewWidth < viewHeight;
+    positions = isPortrait ? portraitPositions : defaultPositions;
+    lockedPositions = isPortrait ? portraitLocked : defaultLocked;
+
+    this.bankImage.setVisible(!isPortrait);
+
+    positions.forEach(([x, y], i) => {
+      this.soilTiles[i]?.setPosition(x, y - 5);
+      this.visuals[i]?.plant.setPosition(x, y - 6);
+      this.visuals[i]?.label.setPosition(x, y + 16);
+    });
+
+    lockedPositions.forEach(([x, y], i) => {
+      this.grassTiles[i]?.setPosition(x, y - 3);
+      this.gates[i]?.setPosition(x - 40, y + 19);
+    });
+
     const zoom = isPortrait
-      ? (viewWidth / width) * 1.15
+      ? (viewWidth / 460) * 0.94
       : Math.min(viewWidth / width, viewHeight / height, 1.25) * .84;
     const left = (viewWidth - width * zoom) / 2;
     const { fieldOffset } = themes[snapshot.farm.theme - 1];
     const top = isPortrait
-      ? (viewHeight - height * zoom) / 2 + viewHeight * 0.04
+      ? (viewHeight - 680 * zoom) / 2 + 10
       : (viewHeight - height * zoom) / 2 + viewHeight * fieldOffset;
     this.layoutBackground();
     this.ground.setPosition(left, top).setScale(zoom);
