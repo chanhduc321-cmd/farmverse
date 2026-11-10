@@ -1,44 +1,157 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="vi">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>FarmVerse</title>
-    <style>
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      body {
-        background: #1b261b;
-        color: #f5f2e9;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-        overflow: hidden;
-        padding: 10px;
-      }
-      #game-container {
-        width: 100%;
-        max-width: 800px;
-        aspect-ratio: 4 / 3;
-        max-height: 95vh;
-        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
-        border-radius: 8px;
-        overflow: hidden;
-        background: #2f482d;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-    </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <title>HappyFarm · Nông trại vui vẻ</title>
   </head>
   <body>
-    <div id="game-container"></div>
+    <main>
+      <h1 class="sr-only">HappyFarm · Nông trại vui vẻ</h1>
+      <section class="field" aria-label="Nông trại">
+        <div id="game"></div>
+
+        <!-- Top HUD: Player, XP, Coins, Plots -->
+        <header class="meters" aria-label="Thông tin nông trại">
+          <!-- Avatar with Lv badge -->
+          <div class="hud-avatar-box">
+            <img src="/face/1-1.GIF" alt="" class="hud-avatar-img">
+            <span class="hud-level-pill">Lv.<strong id="level">1</strong></span>
+          </div>
+
+          <!-- Player info & stats in 2 aligned rows -->
+          <div class="hud-player-stats">
+            <!-- Row 1: Player name & Coins -->
+            <div class="hud-top-row">
+              <span class="hud-name">Khách</span>
+              <div class="hud-gold-chip">
+                <span class="coin-icon" aria-hidden="true"></span>
+                <strong id="coins">—</strong> <span class="coin-unit">xu</span>
+              </div>
+            </div>
+
+            <!-- Row 2: XP bar & Field plots bar on the SAME line -->
+            <div class="hud-bottom-row">
+              <div class="hud-bar-capsule hud-xp-capsule">
+                <div class="hud-bar-fill xp-fill" id="xp-fill"></div>
+                <span class="hud-bar-star">⭐</span>
+                <span class="hud-bar-label" id="xp">0/200 XP</span>
+                <progress id="xp-bar" class="sr-only" max="200" value="0"></progress>
+              </div>
+
+              <div class="hud-bar-capsule hud-field-capsule">
+                <div class="hud-bar-fill field-fill" id="field-fill"></div>
+                <span class="hud-bar-sprout">🌱</span>
+                <span class="hud-bar-label" id="field-count">0/6 ô</span>
+                <progress id="field-bar" class="sr-only" max="6" value="0"></progress>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Hit areas overlay for Phaser plots -->
+        <div id="plot-targets" class="plot-targets"></div>
+
+        <!-- Left Menu: Top-down Dropdown (Secondary options, Themes) -->
+        <div class="top-dropdown top-dropdown-left" id="drawer-left" aria-label="Menu tùy chọn">
+          <button type="button" class="dropdown-toggle" id="toggle-left" aria-expanded="false" aria-controls="drawer-left-content" title="Tùy chọn nền">
+            <img class="dropdown-icon" src="/icon/topbutton%20(10).png" alt="">
+            <span class="dropdown-arrow">▾</span>
+          </button>
+          <div class="dropdown-menu-list" id="drawer-left-content">
+            <button type="button" class="menu-btn" data-tool="theme" disabled>
+              <img src="/icon/topbutton%20(10).png" alt="">
+              <span>Đổi nền</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Menu: Collapsible Drawer (Store, Bag, Warehouse) -->
+        <aside class="side-drawer side-drawer-right" id="drawer-right" aria-label="Menu cửa hàng và kho">
+          <button type="button" class="drawer-toggle" id="toggle-right" aria-expanded="false" aria-controls="drawer-right-content" title="Cửa hàng & Kho">
+            <span class="drawer-arrow">‹</span>
+            <span class="drawer-icon"><img src="/icon/topbutton%20(2).png" alt=""></span>
+          </button>
+          <div class="drawer-content" id="drawer-right-content">
+            <button type="button" class="menu-btn" data-tool="shop" disabled>
+              <img src="/icon/topbutton%20(2).png" alt="">
+              <span>Tiệm hạt</span>
+            </button>
+            <button type="button" class="menu-btn" data-tool="bag" disabled>
+              <img src="/icon/topbutton%20(12).png" alt="">
+              <span>Túi hạt</span>
+            </button>
+            <button type="button" class="menu-btn" data-tool="warehouse" disabled>
+              <img src="/icon/topbutton%20(8).png" alt="">
+              <span>Kho nông sản</span>
+            </button>
+          </div>
+        </aside>
+
+        <!-- Instructions Toast (Status & Tips) -->
+        <div class="instructions">
+          <p id="hint">Đang mở nông trại…</p>
+          <p id="feedback" role="status"></p>
+        </div>
+
+        <!-- Bottom Menu: Responsive Action Dock (Mobile core 3 tools / Desktop all 6 tools) -->
+        <nav class="bottom-dock" aria-label="Công cụ canh tác">
+          <button type="button" class="dock-btn desktop-only" data-tool="theme" disabled title="Đổi giao diện nền">
+            <img src="/icon/topbutton%20(10).png" alt="">
+            <span>Đổi nền</span>
+          </button>
+          <button type="button" class="dock-btn desktop-only" data-tool="shop" disabled title="Tiệm hạt giống">
+            <img src="/icon/topbutton%20(2).png" alt="">
+            <span>Tiệm hạt</span>
+          </button>
+          <button type="button" class="dock-btn desktop-only" data-tool="warehouse" disabled title="Kho nông sản">
+            <img src="/icon/topbutton%20(8).png" alt="">
+            <span>Kho</span>
+          </button>
+          <button type="button" class="dock-btn" data-tool="bag" disabled title="Túi hạt giống">
+            <img src="/icon/topbutton%20(12).png" alt="">
+            <span>Gieo hạt</span>
+          </button>
+          <button type="button" class="dock-btn" data-tool="clear" aria-pressed="false" disabled title="Dọn đất sau thu hoạch">
+            <img src="/icon/topbutton%20(6).png" alt="">
+            <span>Xẻng</span>
+          </button>
+          <button type="button" class="dock-btn" data-tool="harvest" aria-pressed="false" disabled title="Thu hoạch cây chín">
+            <img src="/icon/topbutton%20(4).png" alt="">
+            <span>Thu hoạch</span>
+          </button>
+        </nav>
+      </section>
+    </main>
+
+    <!-- Modal Popup for Shop / Bag / Warehouse -->
+    <dialog id="inventory" aria-labelledby="inventory-title">
+      <div class="dialog-wrapper">
+        <header class="inventory-header">
+          <div class="inventory-heading">
+            <img id="inventory-icon" src="/icon/topbutton%20(2).png" alt="">
+            <div>
+              <h2 id="inventory-title">Tiệm hạt giống</h2>
+              <p id="inventory-description">Mua hạt để bắt đầu gieo trồng</p>
+            </div>
+          </div>
+          <div class="inventory-actions">
+            <span class="wallet"><span class="coin-icon" aria-hidden="true"></span><strong id="inventory-coins">—</strong> xu</span>
+            <form method="dialog"><button class="inventory-close" type="submit" aria-label="Đóng cửa sổ" autofocus>×</button></form>
+          </div>
+        </header>
+
+        <nav class="inventory-nav" aria-label="Chuyển đổi danh mục">
+          <button type="button" data-panel="shop" aria-pressed="true">Tiệm hạt</button>
+          <button type="button" data-panel="bag" aria-pressed="false">Túi hạt</button>
+          <button type="button" data-panel="warehouse" aria-pressed="false">Kho nông sản</button>
+        </nav>
+
+        <div id="inventory-content" class="inventory-content"></div>
+        <p id="panel-feedback" role="status"></p>
+      </div>
+    </dialog>
+
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
