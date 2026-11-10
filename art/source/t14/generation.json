@@ -1,0 +1,408 @@
+{
+  "task": "T-14",
+  "approval": "APPROVED",
+  "generator": "OpenAI imagegen (built-in)",
+  "styleReference": "docs/art/approved_style.png",
+  "credits": "FarmVerse sprite artwork generated with OpenAI imagegen using the project owner’s approved style reference.",
+  "export": "PNG RGBA at manifest dimensions, fitted with transparent margins. Related plot and fence states share visible width and base alignment relative to their origin.",
+  "assets": [
+    {
+      "file": "plot_empty.png",
+      "usage": "Farm",
+      "width": 150,
+      "height": 95,
+      "origin": [
+        0.5,
+        0.7
+      ],
+      "source": "art/source/t14/plot_empty.png",
+      "export": "web/public/assets/plot_empty.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "Create one production-ready FarmVerse bitmap sprite: a single empty tilled wheat bed. Use the supplied owner-approved FarmVerse master art only as the style and camera reference. Redraw the asset in isolation; no part of the source scene background should remain. Fixed 2:1 dimetric projection (tile edges about 26.6 degrees from horizontal), long furrows along one receding axis, thick neat rectangular dark chocolate loam (#5c3716, #4a2c11), warm soil highlights (#7a4d2c). Readable broad furrows, warm upper-left afternoon light, soft hand-painted volume, crisp contour. The tilled bed fills the width with generous clean alpha margin, front corner centered near lower middle, no grass, foliage, stones, scenery, props, labels, white border, or backdrop. Preserve just enough edge thickness for the soil to feel grounded. One complete sprite with truly transparent surroundings. Target game canvas 150 × 95 pixels with origin (0.5, 0.7); generate at your normal high resolution. The same ground footprint will be reused for other crop states."
+    },
+    {
+      "file": "plot_growing.png",
+      "usage": "Farm",
+      "width": 150,
+      "height": 95,
+      "origin": [
+        0.5,
+        0.7
+      ],
+      "source": "art/source/t14/plot_growing.png",
+      "export": "web/public/assets/plot_growing.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png",
+        "plot_empty.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. Input 1 is the approved visual reference. Input 2 is the exact base plot sprite to edit. 2.5D isometric tilled soil farming plot with fresh young green seedling sprouts growing in the center, bright vibrant lime green leaves, rich brown earth furrow bed, pure isolated asset on clean transparent background, high resolution casual game asset, no background.\nEdit the second reference, the actual empty plot sprite. Retain exactly the full image framing, existing soil silhouette, furrow orientation, location of all corners, soil color and shadows. Add a few young green wheat sprouts across the center, firmly rooted in the furrows. Keep every soil boundary and the original ground contact unchanged.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 150×95 px, origin (0.5, 0.7); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "plot_ready_normal.png",
+      "usage": "Farm",
+      "width": 150,
+      "height": 115,
+      "origin": [
+        0.5,
+        0.75
+      ],
+      "source": "art/source/t14/plot_ready_normal.png",
+      "export": "web/public/assets/plot_ready_normal.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png",
+        "plot_empty.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. Input 1 is the approved visual reference. Input 2 is the exact base plot sprite to edit. 2.5D isometric farming plot with fully ripe golden wheat crop stalks full of grains ready to harvest, warm amber yellow wheat, clean dark soil base, pure isolated asset on clean transparent background, casual mobile game asset, no background.\nEdit the second reference, the actual empty plot sprite. Preserve the soil outline, corner positions, dimetric geometry, side faces, color and orientation. Add a neat cluster of tall ripe amber wheat planted in the furrows. Leave a visible strip of the original tilled soil around the crop. Extend transparent headroom as needed without shifting the bed.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 150×115 px, origin (0.5, 0.75); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "plot_ready_golden.png",
+      "usage": "Farm",
+      "width": 150,
+      "height": 120,
+      "origin": [
+        0.5,
+        0.75
+      ],
+      "source": "art/source/t14/plot_ready_golden.png",
+      "export": "web/public/assets/plot_ready_golden.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png",
+        "plot_ready_normal.png"
+      ],
+      "prompt": "FarmVerse hand-painted 2.5D game sprite. Reference 1 is the approved FarmVerse art direction, not part of the requested image. Reference 2 is the exact object to edit. Edit the second reference into the Golden Harvest variant. Preserve precisely its soil footprint, silhouette, width, point of contact, furrows, lighting, and framing. Transform ONLY the wheat into pure lustrous yellow gold, with a few crisp small four-point golden glints and a restrained close glow. Keep glints inside the same plot width, no rays or spill into the background. RGBA isolated one sprite, high-resolution source targeting 150×120, origin (0.5, 0.75). No captions, border, watermark, checkerboard, or background. Preserve softly painted warm shading and readable contour."
+    },
+    {
+      "file": "plot_locked.png",
+      "usage": "Farm",
+      "width": 150,
+      "height": 95,
+      "origin": [
+        0.5,
+        0.7
+      ],
+      "source": "art/source/t14/plot_locked.png",
+      "export": "web/public/assets/plot_locked.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png",
+        "plot_empty.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. Input 1 is the approved visual reference. Input 2 is the exact base plot sprite to edit. 2.5D isometric overgrown locked farm plot, dry weed patches, small brass lock emblem floating in center indicating locked area, pure isolated asset on clean transparent background, casual game asset.\nEdit the second reference, the actual empty plot sprite. Preserve the same soil footprint, corner positions, color and orientation. Add sparse dry weeds and a small readable antique brass lock hovering just above the center of the same tilled bed. Leave the outer soil silhouette untouched.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 150×95 px, origin (0.5, 0.7); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "farmhouse_tier1.png",
+      "usage": "Farm",
+      "width": 220,
+      "height": 240,
+      "origin": [
+        0.5,
+        0.85
+      ],
+      "source": "art/source/t14/farmhouse_tier1.png",
+      "export": "web/public/assets/farmhouse_tier1.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. 2.5D isometric cozy rustic wooden farmhouse cottage, warm red clay tiled roof, wooden stairs, cheerful flower pots, warm sunlight, charming mobile game building, pure isolated asset on clean transparent background, no ground, no background.\nUse the central terracotta roof wooden cottage as design inspiration. Only one compact cottage with steps, a flowerpot next to its door, and a coherent roof structure. Full building including base visible, centered. No silo or surrounding lawn.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 220×240 px, origin (0.5, 0.85); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "silo_tier1.png",
+      "usage": "Farm",
+      "width": 120,
+      "height": 180,
+      "origin": [
+        0.5,
+        0.85
+      ],
+      "source": "art/source/t14/silo_tier1.png",
+      "export": "web/public/assets/silo_tier1.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. 2.5D isometric rustic wooden grain silo, circular wood plank walls with metal iron bands, conical terracotta cap, farm grain storage building, pure isolated asset on clean transparent background, casual mobile game style, no background.\nUse the tall cylindrical timber silo with reddish terracotta conical cap visible beside the reference cottage. One silo in isolation, clear wooden vertical staves and a few iron bands, readable at sprite scale. No surrounding land.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 120×180 px, origin (0.5, 0.85); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "fish_pond.png",
+      "usage": "Farm",
+      "width": 180,
+      "height": 140,
+      "origin": [
+        0.5,
+        0.7
+      ],
+      "source": "art/source/t14/fish_pond.png",
+      "export": "web/public/assets/fish_pond.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. 2.5D isometric small clear garden koi pond, smooth rounded grey pebble stone rim, crystal clear azure blue water, pink water lilies with green floating pads, orange koi fish, pure isolated asset on clean transparent background, no grass border.\n\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 180×140 px, origin (0.5, 0.7); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "fence_locked.png",
+      "usage": "Farm",
+      "width": 160,
+      "height": 90,
+      "origin": [
+        0.5,
+        0.7
+      ],
+      "source": "art/source/t14/fence_locked.png",
+      "export": "web/public/assets/fence_locked.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png",
+        "initial generated fence study"
+      ],
+      "prompt": "FarmVerse hand-painted 2.5D game sprite. Reference 1 is the approved FarmVerse art direction, not part of the requested image. Reference 2 is the exact object to edit. Rotate the second reference fence design in space so its long rails follow the FarmVerse reference's receding isometric grid: rails visibly climb from lower left to upper right at about 26.6 degrees, with vertical posts, left feet lower in the image and right feet higher. It must be a real spatial 2:1 dimetric projection, with the width, top and right faces of the wood visible and the near end visibly closer. Four sturdy cedar posts, one short side fence on either end, closed central gate with padlock and chain, warm upper-left sun and subtle hand-painted texture. Remove decorative grass and flowers from the post feet. One complete fully visible isolated sprite with clean real alpha, no scene or ground. 160×90 game target, origin (0.5,0.7). No captions, border, watermark, checkerboard, or background. Preserve softly painted warm shading and readable contour."
+    },
+    {
+      "file": "fence_open.png",
+      "usage": "Farm",
+      "width": 160,
+      "height": 90,
+      "origin": [
+        0.5,
+        0.7
+      ],
+      "source": "art/source/t14/fence_open.png",
+      "export": "web/public/assets/fence_open.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png",
+        "fence_locked.png"
+      ],
+      "prompt": "FarmVerse game sprite edit. Reference 1 is owner-approved art direction. Edit reference 2, the exact final locked fence sprite. Keep the four timber posts and the two fixed rail segments exactly in their existing screen positions, scale, width, footprints, diagonal receding perspective and lighting. ONLY remove the lock and chain from the gate, and swing the same center wooden gate leaf visibly open to the back of the fence on its original near-side metal hinges, so there is an unobstructed opening between the two inner posts. Show one coherent open gate and the same four posts, with the right and left fixed rails untouched. Keep all edges inside the original outer footprint. No ground plane, shadow outside, scene, text, or additional foliage. One complete hand-painted 2.5D dimetric sprite on true transparent alpha. Keep the same framing and warm upper-left sunlight. 160×90 target game canvas and origin (0.5,0.7), high-resolution original."
+    },
+    {
+      "file": "merchant_stall.png",
+      "usage": "Store",
+      "width": 200,
+      "height": 180,
+      "origin": [
+        0.5,
+        0.85
+      ],
+      "source": "art/source/t14/merchant_stall.png",
+      "export": "web/public/assets/merchant_stall.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. 2.5D isometric wooden market merchant stall, vibrant red and white striped fabric canvas awning, wooden crates overflowing with fresh red apples and orange carrots, pure isolated asset on clean transparent background, mobile game art.\nUse the approved reference's cedar market stall and red-cream awning as the visual direction. Isolate a compact standalone timber stall with a canopy, short counter and two tidy produce crates integrated under it. Choose front facade oriented toward lower left; entire structure and foot contacts visible. No sign text or person, no separate ground plane.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 200×180 px, origin (0.5, 0.85); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "npc_merchant_idle.png",
+      "usage": "Store",
+      "width": 110,
+      "height": 140,
+      "origin": [
+        0.5,
+        0.85
+      ],
+      "source": "art/source/t14/npc_merchant_idle.png",
+      "export": "web/public/assets/npc_merchant_idle.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. Cute friendly anthropomorphic blue wolf farmer merchant character, standing pose, wearing denim dungarees and a straw sun hat, holding a wooden hoe, smiling cheerfully, pure isolated game sprite on clean transparent background.\nDesign one distinct friendly blue-grey wolf shopkeeper, with floppy straw sun hat and blue denim overalls over a cream shirt, holding a small wooden hoe near one side without obscuring his face. Full body, compact friendly silhouette, gentle grin, ears and feet visible, matching the approved scene's painted rendering. Three-quarter dimetric game sprite facing lower left, same viewing height and light as the market stall. No counter or scenery.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 110×140 px, origin (0.5, 0.85); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "town_square_ground.png",
+      "usage": "Store",
+      "width": 360,
+      "height": 240,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "art/source/t14/town_square_ground.png",
+      "export": "web/public/assets/town_square_ground.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. 2.5D isometric modular cobblestone pavement floor tile, smooth ancient rounded river stones, warm sunlight, crisp outer edges, pure isolated asset on clean transparent background.\nOne clean rectangular 2:1 dimetric cobbled plaza patch matching the warm beige irregular stones in the reference. Clean four straight outer diagonal boundaries, cobbles clipped exactly to shape, no soil thickness, no grass edging, no outline or border stones protruding. Designed as a standalone modular ground element.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 360×240 px, origin (0.5, 0.5); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "store_signboard.png",
+      "usage": "Store",
+      "width": 90,
+      "height": 70,
+      "origin": [
+        0.5,
+        0.8
+      ],
+      "source": "art/source/t14/store_signboard.png",
+      "export": "web/public/assets/store_signboard.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. 2.5D isometric rustic wooden signboard post with carved fruit basket icon, timber pole, pure isolated asset on clean transparent background.\nWooden signpost with a single carved basket pictogram readable without lettering. Three-quarter dimetric, matches cedar stall, base and post visible.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 90×70 px, origin (0.5, 0.8); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "crop_normal.png",
+      "usage": "Inventory and currency",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "art/source/t14/crop_normal.png",
+      "export": "web/public/assets/crop_normal.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. Game UI icon of a neat tied bundle of ripe golden wheat stalks with grains, vibrant warm colors, smooth casual mobile style, pure isolated icon on clean transparent background.\nUse a tied amber wheat sheaf with three bold ears and a distinct silhouette suitable for a 64 px HUD icon. Draw with hand-painted warm material shading, restrained detail.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 64×64 px, origin (0.5, 0.5); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "crop_golden.png",
+      "usage": "Inventory and currency",
+      "width": 64,
+      "height": 64,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "art/source/t14/crop_golden.png",
+      "export": "web/public/assets/crop_golden.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png",
+        "crop_normal.png"
+      ],
+      "prompt": "FarmVerse hand-painted 2.5D game sprite. Reference 1 is the approved FarmVerse art direction, not part of the requested image. Reference 2 is the exact object to edit. Edit the second reference into the rare Golden Crop HUD icon. Preserve its three wheat ears, orientation, framing, bundle scale, and ties. Turn the amber stalks into brilliant pure yellow-gold with two clearly readable four-point glints close to the upper grain, and change the red bow to golden amber so this is visually distinct from Normal. Clean transparent alpha, one bundle icon only, 64×64 game target, center origin. No captions, border, watermark, checkerboard, or background. Preserve softly painted warm shading and readable contour."
+    },
+    {
+      "file": "coin_gold.png",
+      "usage": "Inventory and currency",
+      "width": 48,
+      "height": 48,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "art/source/t14/coin_gold.png",
+      "export": "web/public/assets/coin_gold.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. Game UI icon of a shiny thick golden coin with embossed wheat sprout symbol, warm golden glow, casual stylized game icon, pure isolated icon on clean transparent background.\nOne thick golden coin with a clear raised wheat sprout stamp, turned slightly in three-quarter view. Strong silhouette at 48px. No additional coins, no letters.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 48×48 px, origin (0.5, 0.5); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "token_near.png",
+      "usage": "Inventory and currency",
+      "width": 48,
+      "height": 48,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "art/source/t14/token_near.png",
+      "export": "web/public/assets/token_near.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. Game UI icon of NEAR Protocol round crypto token badge, crisp stylized logo, pure isolated icon on clean transparent background.\nCreate a restrained NEAR badge: a round deep charcoal enamel disk with one crisp white stylized N-shaped NEAR glyph, clean contrasting edge, readable at 48 px. No words, no other marks, no decorative overlaid gold coin; this is a game demo badge.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 48×48 px, origin (0.5, 0.5); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "hud_silo_icon.png",
+      "usage": "HUD and effects",
+      "width": 40,
+      "height": 40,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "art/source/t14/hud_silo_icon.png",
+      "export": "web/public/assets/hud_silo_icon.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. Game UI icon of a cute compact wooden grain silo, storage icon, clean vector-like mobile game style, pure isolated icon on transparent background.\nA very small icon of the terracotta cap and cedar grain silo. Strong silhouette, few large details, consistent art finish. Readable at 40 px.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 40×40 px, origin (0.5, 0.5); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "hud_cart_icon.png",
+      "usage": "HUD and effects",
+      "width": 40,
+      "height": 40,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "art/source/t14/hud_cart_icon.png",
+      "export": "web/public/assets/hud_cart_icon.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. Game UI icon of a cute wooden wheelbarrow filled with harvested crops, market navigation icon, pure isolated icon on transparent background.\nA single recognizable wooden wheelbarrow carrying a few ripe golden wheat ears. Thick small silhouette details for 40 px. Match cedar and wheat palette.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 40×40 px, origin (0.5, 0.5); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "hud_camera_icon.png",
+      "usage": "HUD and effects",
+      "width": 36,
+      "height": 36,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "art/source/t14/hud_camera_icon.png",
+      "export": "web/public/assets/hud_camera_icon.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. Game UI icon of a brass telescope / camera viewfinder, crisp clean stylized icon on transparent background.\nA single compact brass telescope as a readable 36 px camera-mode icon. Large simple shape. Match warm painted metal and wood, no extra objects.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 36×36 px, origin (0.5, 0.5); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "icon_lock.png",
+      "usage": "HUD and effects",
+      "width": 36,
+      "height": 36,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "art/source/t14/icon_lock.png",
+      "export": "web/public/assets/icon_lock.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. Game UI icon of a small polished brass padlock, locked indicator, pure isolated icon on transparent background.\nOne small readable closed brass padlock, a rounded amber body, dark keyhole, thick shackle. Match warm material palette and broad shapes at 36 px.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 36×36 px, origin (0.5, 0.5); generate a high-resolution original with space for normalization."
+    },
+    {
+      "file": "sparkle_effect.png",
+      "usage": "HUD and effects",
+      "width": 48,
+      "height": 48,
+      "origin": [
+        0.5,
+        0.5
+      ],
+      "source": "art/source/t14/sparkle_effect.png",
+      "export": "web/public/assets/sparkle_effect.png",
+      "approval": "APPROVED",
+      "references": [
+        "docs/art/approved_style.png"
+      ],
+      "prompt": "FarmVerse 2.5D hand-painted casual farming game sprite. The supplied FarmVerse master illustration is the approved style reference only; render a new, isolated asset. Game VFX sprite of a 4-point shining golden star sparkle with soft glow, particle effect asset on transparent background.\nOne four-point star with strong golden center and a tight soft alpha falloff. Render on real transparent alpha so it composites over light or dark game scenes. No secondary sparks or background gradient.\nInvariants: warm upper-left afternoon sunlight, soft hand-painted texture and volumetric form, readable silhouettes, coherent cedar/terracotta/amber/lush-green palette. For world assets use fixed 2:1 dimetric camera, approximate 26.6° diagonal edges. For icons simplify detail at tiny display size. Exactly one fully visible sprite, isolated on true transparent alpha with clean margin. No embedded checkerboard, no background, no ground other than the requested object, no captions, no watermark. Final game target 48×48 px, origin (0.5, 0.5); generate a high-resolution original with space for normalization."
+    }
+  ]
+}

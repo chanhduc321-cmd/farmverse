@@ -33,7 +33,7 @@ Build a **browser-playable** casual farming game: **Farm → Harvest → Town Sq
 ## 3. Visual direction [LOCKED]
 
 - Reference mood: classic cheerful social-farming games, upgraded with more refined **hand-painted 2.5D** assets.
-- Palette: moss/olive greens, warm earth browns, muted gold; avoid oversaturated candy colors.
+- Palette follows the owner-approved [Art Bible](art/ART_BIBLE.md), including brighter grass greens, warm earth browns, and golden crops.
 - Light: warm afternoon; slightly deeper soft shadows and restrained ambient depth.
 - Mood: cozy, premium casual, lightly mature; **not** dark fantasy, photorealistic or pixel art.
 - Fixed projection/camera and consistent visual scale across all generated assets.
@@ -114,16 +114,38 @@ farmverse/
 
 | Phase | Deliverable | Acceptance gate |
 |---|---|---|
-| P0 — Repo/contract setup | Phaser/Vite app, Node.js/Hono skeleton, run instructions, placeholder sprites, and a server-side NEAR testnet transfer spike | Frontend and backend start with documented commands. Verify a real transfer between the demo accounts and record its hash and explorer link. |
+| P0 — Farm foundation | Phaser/Vite app, Node.js/Hono skeleton, PostgreSQL connectivity, run instructions, and placeholder sprites | Frontend and backend start with documented commands. Verify that the browser calls `GET /health` through the web API path on the integrated `develop` branch. |
 | P1 — Farm vertical slice | Plant, growth, harvest, GOLD, silo, Quick Sell and plot unlock | C01 ACs demonstrable without wallet |
 | P2 — Town Square + Merchant | Farm/Store navigation, BUY/SELL GOLD, NPC Budget/Inventory/Demand and state transitions | C02 ACs and reload/session continuity pass |
 | P3 — Art calibration and polish | Master style reference; approved farm/store/merchant/crop sprites; feedback | Legible at target browser size; consistent art and click targets |
-| P4 — NEAR testnet micro | Wire the verified server-side transfer path into the Store with pending, success, and failure states | A Store action sends a real transfer and shows verified execution and an explorer link. C03 Micro acceptance criteria pass. |
+| P4 — NEAR testnet micro | Verify a server-side testnet transfer, then wire it into the Store with pending, success, and failure states | A Store action sends a real transfer and shows verified execution and an explorer link. C03 Micro acceptance criteria pass. |
 | P5 — QA & hackathon submission | Public URL, public repo, README/run steps, concise demo video/post | Another person can open and follow demo; no fake on-chain claims |
 
 **Parallelization:** Produce art while gameplay uses placeholder sprites. Do not block P1/P2 waiting for perfect artwork. Preserve time for integration, crash recovery and submission materials.
 
 **Submission gate (P5):** Make the repository public and include a `LICENSE` file. Publish a public demo post on X with a video or screenshots, tag `@NEARProtocol` and `#NEARHackathon`, then submit the repository and post links by 2026-11-14 23:59 UTC. The organizers accept testnet-only projects. See the [official submission rules](https://nearhackathon.com/HACKATHON.md).
+
+### Run the integrated P0 build locally
+
+Use a `develop` checkout with Docker Desktop running, Node.js 20.12 or newer, and pnpm. In the first PowerShell window, start from the repository root and run the database and API.
+
+```powershell
+cd backend
+if (!(Test-Path -LiteralPath '.env')) { Copy-Item -LiteralPath '.env.example' -Destination '.env' }
+docker compose up -d --wait postgres
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+In a second PowerShell window, start from the same repository root and run the web app.
+
+```powershell
+cd web
+pnpm install --frozen-lockfile
+pnpm dev --host 127.0.0.1
+```
+
+Open the URL printed by Vite. The Farm should show two empty plots and `API: OK (200)`. In the browser Network panel, `/api/health` should return `200 {"status":"ok"}` through Hono on port 8080. If another worktree uses 8080, set `$env:PORT = '8081'` in the backend terminal and `$env:VITE_BACKEND_URL = 'http://127.0.0.1:8081'` in the web terminal before starting the servers.
 
 ## 9. Acceptance checklist (cross-contract)
 
@@ -152,4 +174,8 @@ No Godot implementation for this web demo; no multiplayer or WebSocket position 
 
 **Approved 2026-11-09.** Replace the proposed Go service with Node.js, TypeScript, and Hono before P0. This lets the same API service use `near-api-js` for testnet signing and share request and response schemas with the web client.
 
-PostgreSQL remains the persistence layer. The amendment changes the service runtime and schedules a NEAR feasibility check in P0. The Store integration lands in P4 under the existing C03 Micro scope and acceptance criteria.
+PostgreSQL remains the persistence layer. Follow the current delivery order below for NEAR testnet work.
+
+### MVP-PLAN-01 — Farm-first delivery
+
+Complete the Farm foundation and playable loop first, then the merchant and Store. Verify the server-side NEAR transfer and integrate it in P4 before final QA. The [task dashboard](../TASKS.md) and [collaboration workflow](agents/workflow.md) define task ownership and integration.
