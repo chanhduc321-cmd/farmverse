@@ -11,26 +11,41 @@
       <section class="field" aria-label="Nông trại">
         <div id="game"></div>
 
-        <!-- Top HUD Meters -->
+        <!-- Top HUD: Player, XP, Coins, Plots -->
         <header class="meters" aria-label="Thông tin nông trại">
-          <div class="profile">
-            <img src="/face/1-1.GIF" alt="Avatar">
-            <span class="profile-name">Khách</span>
+          <!-- Avatar with Lv badge -->
+          <div class="hud-avatar-box">
+            <img src="/face/1-1.GIF" alt="" class="hud-avatar-img">
+            <span class="hud-level-pill">Lv.<strong id="level">1</strong></span>
           </div>
-          <div class="balance">
-            <div class="gauge">
-              <label for="xp-bar" id="xp">0/200 XP</label>
-              <progress id="xp-bar" max="200" value="0"></progress>
+
+          <!-- Player name & XP Bar -->
+          <div class="hud-player-stats">
+            <div class="hud-top-row">
+              <span class="hud-name">Khách</span>
+              <div class="hud-gold-chip">
+                <span class="coin-icon" aria-hidden="true"></span>
+                <strong id="coins">—</strong> <span class="coin-unit">xu</span>
+              </div>
             </div>
-            <div class="gold-badge">
-              <span class="coin-icon" aria-hidden="true"></span>
-              <strong id="coins">—</strong> <span class="coin-unit">xu</span>
+
+            <!-- XP Capsule Bar -->
+            <div class="hud-bar-capsule hud-xp-capsule">
+              <div class="hud-bar-fill xp-fill" id="xp-fill"></div>
+              <span class="hud-bar-star">⭐</span>
+              <span class="hud-bar-label" id="xp">0/200 XP</span>
+              <progress id="xp-bar" class="sr-only" max="200" value="0"></progress>
             </div>
           </div>
-          <span class="level" aria-label="Cấp hiện tại">Lv.<strong id="level">—</strong></span>
-          <div class="gauge field-gauge">
-            <label for="field-bar" id="field-count">0/6 ô</label>
-            <progress id="field-bar" max="6" value="0"></progress>
+
+          <!-- Plots count capsule -->
+          <div class="hud-plots-box">
+            <div class="hud-bar-capsule hud-field-capsule">
+              <div class="hud-bar-fill field-fill" id="field-fill"></div>
+              <span class="hud-bar-sprout">🌱</span>
+              <span class="hud-bar-label" id="field-count">0/6 ô</span>
+              <progress id="field-bar" class="sr-only" max="6" value="0"></progress>
+            </div>
           </div>
         </header>
 

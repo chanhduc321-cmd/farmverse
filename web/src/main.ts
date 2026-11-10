@@ -87,7 +87,17 @@ function setSnapshot(next: FarmResponse): void {
   xpBar.value = next.farm.xp;
   xp.textContent = `${xpBar.value}/${xpBar.max} XP`;
   fieldBar.value = next.farm.plots.filter(Boolean).length;
-  fieldCount.textContent = `${fieldBar.value}/${fieldBar.max} ô đã gieo`;
+  fieldCount.textContent = `${fieldBar.value}/${fieldBar.max} ô`;
+  const xpFill = document.querySelector<HTMLElement>('#xp-fill');
+  if (xpFill) {
+    const pct = Math.min(100, Math.round((next.farm.xp / (next.farm.level * 200)) * 100));
+    xpFill.style.width = `${pct}%`;
+  }
+  const fieldFill = document.querySelector<HTMLElement>('#field-fill');
+  if (fieldFill) {
+    const pct = Math.min(100, Math.round((fieldBar.value / fieldBar.max) * 100));
+    fieldFill.style.width = `${pct}%`;
+  }
 }
 
 function updateToolHint(): void {
