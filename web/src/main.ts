@@ -16,18 +16,8 @@ const toPosition = ([column, row]: number[]) => [
 const defaultPositions = [[0, 1], [0, 0], [1, 0], [1, 1], [2, 0], [2, 1]].map(toPosition);
 const defaultLocked = [[0, 2], [1, 2], [2, 2]].map(toPosition);
 
-// Portrait 2-column vertical grid to maximize mobile screen space & visual size
-const portraitPositions = [
-  [295, 120], [505, 120],
-  [295, 230], [505, 230],
-  [295, 340], [505, 340],
-];
-const portraitLocked = [
-  [295, 450], [505, 450],
-  [400, 555],
-];
-let positions = defaultPositions;
-let lockedPositions = defaultLocked;
+const positions = defaultPositions;
+const lockedPositions = defaultLocked;
 const themes = [
   { file: 'web-wide-dock.png', fieldOffset: 0, bank: ['#a5b44b', '#778d2b'] },
   { file: 'web-theme-2.jpg', fieldOffset: .1, bank: ['#a8bc49', '#7f982e'] },
@@ -542,10 +532,8 @@ class FarmScene extends Phaser.Scene {
   private layout(): void {
     const { width: viewWidth, height: viewHeight } = this.scale.gameSize;
     const isPortrait = viewWidth < viewHeight;
-    positions = isPortrait ? portraitPositions : defaultPositions;
-    lockedPositions = isPortrait ? portraitLocked : defaultLocked;
 
-    this.bankImage.setVisible(!isPortrait);
+    this.bankImage.setVisible(true);
 
     positions.forEach(([x, y], i) => {
       this.soilTiles[i]?.setPosition(x, y - 5);
@@ -554,26 +542,30 @@ class FarmScene extends Phaser.Scene {
     });
 
     lockedPositions.forEach(([x, y], i) => {
-      this.grassTiles[i]?.setPosition(x, y - 3);
-      this.gates[i]?.setPosition(x - 40, y + 19);
+      this.grassTiles[i]?.setPosition(x, y - 3).setVisible(true);
+      this.gates[i]?.setPosition(x - 40, y + 19).setVisible(true);
     });
 
+    // Scale up 3x3 diamond on mobile portrait to fit width without being tiny
     const zoom = isPortrait
-      ? (viewWidth / 460) * 0.94
+      ? Math.min((viewWidth / 680) * 0.98, 0.65)
       : Math.min(viewWidth / width, viewHeight / height, 1.25) * .84;
     const left = (viewWidth - width * zoom) / 2;
     const { fieldOffset } = themes[snapshot.farm.theme - 1];
     const top = isPortrait
-      ? (viewHeight - 680 * zoom) / 2 + 10
+      ? (viewHeight - height * zoom) / 2 + 35
       : (viewHeight - height * zoom) / 2 + viewHeight * fieldOffset;
     this.layoutBackground();
     this.ground.setPosition(left, top).setScale(zoom);
     [...positions, ...lockedPositions].forEach(([x, y], index) => {
       const button = plotButtons[index];
-      button.style.left = `${left + x * zoom}px`;
-      button.style.top = `${top + y * zoom}px`;
-      button.style.width = `${tileWidth * zoom}px`;
-      button.style.height = `${tileHeight * zoom}px`;
+      if (button) {
+        button.style.display = 'block';
+        button.style.left = `${left + x * zoom}px`;
+        button.style.top = `${top + y * zoom}px`;
+        button.style.width = `${tileWidth * zoom}px`;
+        button.style.height = `${tileHeight * zoom}px`;
+      }
     });
   }
 
