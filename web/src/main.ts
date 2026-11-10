@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { ripeAt, stageAt } from '../../shared/farm.mts';
-import type { Crop, FarmAction, FarmResponse, Plot } from '../../shared/farm.mts';
+import type { Crop, Farm, FarmAction, FarmResponse, Plot } from '../../shared/farm.mts';
 import './style.css';
 
 const width = 800;
@@ -67,6 +67,111 @@ let receivedAt = 0;
 let crops: Crop[] = [];
 const plotButtons: HTMLButtonElement[] = [];
 
+const defaultCrops: Crop[] = [
+  { id: 1, name: 'Dâu tây', stages: 5, unitSeconds: 2, buyPrice: 10, sellPrice: 20, level: 1 },
+  { id: 2, name: 'Ngô', stages: 5, unitSeconds: 12, buyPrice: 15, sellPrice: 30, level: 1 },
+  { id: 3, name: 'Củ cải trắng', stages: 4, unitSeconds: 15, buyPrice: 18, sellPrice: 35, level: 1 },
+  { id: 4, name: 'Cà rốt', stages: 4, unitSeconds: 16, buyPrice: 19, sellPrice: 37, level: 1 },
+  { id: 5, name: 'Khoai lang', stages: 5, unitSeconds: 18, buyPrice: 20, sellPrice: 40, level: 2 },
+  { id: 6, name: 'Cà tím', stages: 5, unitSeconds: 19, buyPrice: 22, sellPrice: 42, level: 2 },
+  { id: 7, name: 'Cà chua', stages: 5, unitSeconds: 20, buyPrice: 24, sellPrice: 44, level: 2 },
+  { id: 8, name: 'Đậu xanh', stages: 5, unitSeconds: 22, buyPrice: 26, sellPrice: 46, level: 3 },
+  { id: 9, name: 'Ớt', stages: 5, unitSeconds: 24, buyPrice: 28, sellPrice: 48, level: 3 },
+  { id: 10, name: 'Bí đỏ', stages: 5, unitSeconds: 26, buyPrice: 30, sellPrice: 50, level: 4 },
+  { id: 11, name: 'Táo', stages: 6, unitSeconds: 28, buyPrice: 33, sellPrice: 55, level: 4 },
+  { id: 12, name: 'Dưa hấu', stages: 5, unitSeconds: 30, buyPrice: 35, sellPrice: 57, level: 5 },
+  { id: 13, name: 'Chuối', stages: 6, unitSeconds: 32, buyPrice: 37, sellPrice: 60, level: 5 },
+  { id: 14, name: 'Đào', stages: 5, unitSeconds: 34, buyPrice: 38, sellPrice: 62, level: 6 },
+  { id: 15, name: 'Dứa', stages: 6, unitSeconds: 36, buyPrice: 39, sellPrice: 64, level: 6 },
+];
+
+let isStandalone = false;
+let localFarm: Farm = {
+  coins: 200,
+  xp: 0,
+  level: 1,
+  theme: 1,
+  seeds: { 1: 6 },
+  produce: {},
+  plots: [null, null, null, null, null, null],
+};
+
+function getLocalFarm(): Farm {
+  try {
+    const saved = localStorage.getItem('farmverse_local_farm');
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return localFarm;
+}
+
+function saveLocalFarm(farm: Farm): void {
+  try {
+    localStorage.setItem('farmverse_local_farm', JSON.stringify(farm));
+  } catch {}
+}
+
+function applyLocalAction(farm: Farm, action: FarmAction): string {
+  const now = Date.now();
+  switch (action.type) {
+    case 'theme':
+      farm.theme = (farm.theme % 4) + 1;
+      return 'Đã đổi nền.';
+    case 'buy': {
+      const crop = crops[action.cropId - 1];
+      const cost = crop.buyPrice * action.quantity;
+      if (farm.coins < cost) throw new Error('Không đủ xu để mua hạt.');
+      farm.coins -= cost;
+      farm.seeds[crop.id] = (farm.seeds[crop.id] ?? 0) + action.quantity;
+      return `Đã mua ${action.quantity} hạt ${crop.name.toLowerCase()}.`;
+    }
+    case 'sell': {
+      const crop = crops[action.cropId - 1];
+      const available = farm.produce[crop.id] ?? 0;
+      if (available < action.quantity) throw new Error('Kho không đủ nông sản để bán.');
+      const income = crop.sellPrice * action.quantity;
+      farm.produce[crop.id] = available - action.quantity;
+      farm.coins += income;
+      return `Đã bán ${action.quantity} ${crop.name.toLowerCase()} · +${income} xu.`;
+    }
+    case 'plant': {
+      if (farm.plots[action.plot]) throw new Error('Chọn ô đất trống để gieo.');
+      const seeds = farm.seeds[action.cropId] ?? 0;
+      if (seeds === 0) throw new Error('Túi đã hết hạt giống này.');
+      farm.seeds[action.cropId] = seeds - 1;
+      farm.plots[action.plot] = { cropId: action.cropId, plantedAt: now, harvested: false };
+      farm.xp += 5;
+      if (farm.xp >= farm.level * 200) {
+        farm.xp -= farm.level * 200;
+        farm.level++;
+      }
+      return `Đã gieo ô ${action.plot + 1}.`;
+    }
+    case 'harvest': {
+      const plot = farm.plots[action.plot];
+      if (!plot) throw new Error('Ô này chưa có cây.');
+      const crop = crops[plot.cropId - 1];
+      if (stageAt(crop, plot, now) < crop.stages) throw new Error('Cây chưa chín.');
+      if (plot.harvested) throw new Error('Cây đã được thu hoạch.');
+      plot.harvested = true;
+      const amount = Math.floor(Math.random() * 2) + 2;
+      farm.produce[crop.id] = (farm.produce[crop.id] ?? 0) + amount;
+      farm.xp += 15;
+      if (farm.xp >= farm.level * 200) {
+        farm.xp -= farm.level * 200;
+        farm.level++;
+      }
+      return `Đã thu hoạch ${amount} ${crop.name.toLowerCase()} · Ô ${action.plot + 1}.`;
+    }
+    case 'clear': {
+      const plot = farm.plots[action.plot];
+      if (!plot) throw new Error('Ô này đang trống.');
+      if (!plot.harvested) throw new Error('Cần thu hoạch trước khi dọn đất.');
+      farm.plots[action.plot] = null;
+      return `Đã dọn sạch ô ${action.plot + 1}.`;
+    }
+  }
+}
+
 async function request<T>(path: string, action?: FarmAction): Promise<T> {
   const response = await fetch(`/api/${path}`, action && {
     method: 'POST',
@@ -123,7 +228,14 @@ async function send(action: FarmAction): Promise<FarmResponse | undefined> {
   if (busy) return;
   busy = true;
   try {
-    const result = await request<FarmResponse>('farm/actions', action);
+    let result: FarmResponse;
+    if (isStandalone) {
+      const message = applyLocalAction(localFarm, action);
+      saveLocalFarm(localFarm);
+      result = { farm: { ...localFarm, plots: [...localFarm.plots] }, serverTime: Date.now(), message };
+    } else {
+      result = await request<FarmResponse>('farm/actions', action);
+    }
     setSnapshot(result);
     feedback.textContent = result.message ?? '';
     if (dialog.open) {
@@ -603,12 +715,21 @@ class FarmScene extends Phaser.Scene {
 }
 
 async function start(): Promise<void> {
-  const [catalog, initial] = await Promise.all([
-    request<Crop[]>('crops'),
-    request<FarmResponse>('farm'),
-  ]);
-  crops = catalog;
-  setSnapshot(initial);
+  try {
+    const [catalog, initial] = await Promise.all([
+      request<Crop[]>('crops'),
+      request<FarmResponse>('farm'),
+    ]);
+    crops = catalog;
+    setSnapshot(initial);
+  } catch (err) {
+    console.info('Backend không khả dụng, chạy ở chế độ Standalone (Offline Mode):', err);
+    isStandalone = true;
+    crops = defaultCrops;
+    localFarm = getLocalFarm();
+    setSnapshot({ farm: localFarm, serverTime: Date.now() });
+  }
+
   new Phaser.Game({
     type: Phaser.CANVAS,
     parent: 'game',
@@ -620,6 +741,7 @@ async function start(): Promise<void> {
   });
 }
 
-void start().catch(() => {
-  hint.textContent = 'Chưa kết nối được máy chủ HappyFarm. Kiểm tra backend rồi tải lại trang.';
+void start().catch((error) => {
+  console.error('Lỗi khởi tạo game:', error);
+  hint.textContent = 'Gặp sự cố khi khởi động trò chơi. Hãy tải lại trang.';
 });
