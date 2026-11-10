@@ -355,6 +355,12 @@ button:disabled { cursor: default; opacity: .6; }
 }
 
 /* ─── BOTTOM MENU: SEAMLESS FULL-BLEED ACTION DOCK ─── */
+/* Hide floating side/top menus when all tools are unified in bottom dock */
+.top-dropdown,
+.side-drawer-right {
+  display: none !important;
+}
+
 .bottom-dock {
   position: absolute;
   bottom: 0;
@@ -365,8 +371,8 @@ button:disabled { cursor: default; opacity: .6; }
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(8px, 3vw, 16px);
-  padding: 8px 12px max(8px, env(safe-area-inset-bottom)) 12px;
+  gap: clamp(3px, 1.4vw, 8px);
+  padding: 6px 6px max(8px, env(safe-area-inset-bottom)) 6px;
   background: linear-gradient(180deg, rgba(255, 252, 242, 0.98) 0%, rgba(247, 237, 215, 0.98) 100%);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -376,26 +382,26 @@ button:disabled { cursor: default; opacity: .6; }
 }
 .dock-btn {
   flex: 1;
-  max-width: 105px;
-  min-width: 72px;
+  max-width: 86px;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  padding: 6px 4px 5px 4px;
+  gap: 1px;
+  padding: 5px 2px 4px 2px;
   background: linear-gradient(180deg, #ffffff 0%, #fbf5e6 100%);
   border: 1.5px solid #eedab3;
-  border-radius: 14px;
+  border-radius: 12px;
   color: #4a3317;
-  font-size: clamp(10px, 2.7vw, 12px);
+  font-size: clamp(9px, 2.4vw, 11px);
   font-weight: 850;
-  box-shadow: 0 2px 0 #caa971, 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 0 #caa971, 0 2px 5px rgba(0, 0, 0, 0.08);
   transition: all 0.15s cubic-bezier(0.18, 0.89, 0.32, 1.28);
 }
 .dock-btn img {
-  width: clamp(24px, 6.5vw, 32px);
-  height: clamp(24px, 6.5vw, 32px);
+  width: clamp(22px, 5.8vw, 28px);
+  height: clamp(22px, 5.8vw, 28px);
   object-fit: contain;
 }
 .dock-btn:hover:not(:disabled) {
@@ -414,20 +420,8 @@ button:disabled { cursor: default; opacity: .6; }
   transform: translateY(-2px);
 }
 
-/* On mobile view, secondary tools are accessible via top/side menus */
-.desktop-only {
-  display: none !important;
-}
-
 /* ─── DESKTOP / LARGE SCREEN RESPONSIVENESS (>= 768px) ─── */
 @media (min-width: 768px) {
-  .top-dropdown,
-  .side-drawer-right {
-    display: none !important;
-  }
-  .desktop-only {
-    display: flex !important;
-  }
   .bottom-dock {
     width: auto;
     max-width: min(600px, calc(100% - 32px));

@@ -515,7 +515,7 @@ class FarmScene extends Phaser.Scene {
     const { width: viewWidth, height: viewHeight } = this.scale.gameSize;
     const isPortrait = viewWidth < viewHeight;
     const zoom = isPortrait
-      ? (viewWidth / width) * 0.94
+      ? (viewWidth / width) * 1.15
       : Math.min(viewWidth / width, viewHeight / height, 1.25) * .84;
     const left = (viewWidth - width * zoom) / 2;
     const { fieldOffset } = themes[snapshot.farm.theme - 1];
