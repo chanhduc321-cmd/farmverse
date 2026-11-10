@@ -11,6 +11,6 @@ const proxy = {
 
 export default defineConfig({
   publicDir: fileURLToPath(new URL('../image', import.meta.url)),
-  server: { host: '127.0.0.1', port: Number(process.env.PORT ?? 5173), proxy },
-  preview: { host: '127.0.0.1', port: Number(process.env.PORT ?? 5173), proxy },
+  server: { host: '127.0.0.1', port: Number(process.env.PORT ?? 5174), proxy },
+  preview: { host: '127.0.0.1', port: Number(process.env.PORT ?? 5174), proxy },
 });

@@ -1,4 +1,4 @@
-﻿import Phaser from 'phaser';
+import Phaser from 'phaser';
 import { ripeAt, stageAt } from '../../shared/farm.mts';
 import type { Crop, FarmAction, FarmResponse, Plot } from '../../shared/farm.mts';
 import './style.css';
@@ -28,6 +28,16 @@ const dialog = document.querySelector<HTMLDialogElement>('#inventory')!;
 const panel = document.querySelector<HTMLDivElement>('#inventory-content')!;
 const panelTabs = [...dialog.querySelectorAll<HTMLButtonElement>('[data-panel]')];
 const panelCoins = dialog.querySelector<HTMLElement>('#inventory-coins')!;
+dialog.addEventListener('click', (event) => {
+  const rect = dialog.getBoundingClientRect();
+  const isInDialog = (
+    rect.top <= event.clientY &&
+    event.clientY <= rect.top + rect.height &&
+    rect.left <= event.clientX &&
+    event.clientX <= rect.left + rect.width
+  );
+  if (!isInDialog) dialog.close();
+});
 const plotTargets = document.querySelector<HTMLDivElement>('#plot-targets')!;
 const hint = document.querySelector<HTMLParagraphElement>('#hint')!;
 const feedback = document.querySelector<HTMLParagraphElement>('#feedback')!;
@@ -233,7 +243,47 @@ function showPanel(next: Panel): void {
   if (!dialog.open) dialog.showModal();
 }
 
+function initDrawers(): void {
+  const leftDrawer = document.querySelector<HTMLElement>('#drawer-left');
+  const rightDrawer = document.querySelector<HTMLElement>('#drawer-right');
+  const toggleLeft = document.querySelector<HTMLButtonElement>('#toggle-left');
+  const toggleRight = document.querySelector<HTMLButtonElement>('#toggle-right');
+
+  toggleLeft?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = leftDrawer?.classList.toggle('is-open');
+    toggleLeft.setAttribute('aria-expanded', String(isOpen));
+    if (isOpen) {
+      rightDrawer?.classList.remove('is-open');
+      toggleRight?.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  toggleRight?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = rightDrawer?.classList.toggle('is-open');
+    toggleRight.setAttribute('aria-expanded', String(isOpen));
+    if (isOpen) {
+      leftDrawer?.classList.remove('is-open');
+      toggleLeft?.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    if (leftDrawer?.classList.contains('is-open') && !leftDrawer.contains(target)) {
+      leftDrawer.classList.remove('is-open');
+      toggleLeft?.setAttribute('aria-expanded', 'false');
+    }
+    if (rightDrawer?.classList.contains('is-open') && !rightDrawer.contains(target)) {
+      rightDrawer.classList.remove('is-open');
+      toggleRight?.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
 function attachControls(scene: FarmScene): void {
+  initDrawers();
   for (const tab of panelTabs) tab.onclick = () => showPanel(tab.dataset.panel as Panel);
   for (const button of buttons) {
     button.disabled = false;
@@ -463,10 +513,15 @@ class FarmScene extends Phaser.Scene {
 
   private layout(): void {
     const { width: viewWidth, height: viewHeight } = this.scale.gameSize;
-    const zoom = Math.min(viewWidth / width, viewHeight / height, 1.25) * .84;
+    const isPortrait = viewWidth < viewHeight;
+    const zoom = isPortrait
+      ? (viewWidth / width) * 0.94
+      : Math.min(viewWidth / width, viewHeight / height, 1.25) * .84;
     const left = (viewWidth - width * zoom) / 2;
     const { fieldOffset } = themes[snapshot.farm.theme - 1];
-    const top = (viewHeight - height * zoom) / 2 + viewHeight * fieldOffset;
+    const top = isPortrait
+      ? (viewHeight - height * zoom) / 2 + viewHeight * 0.04
+      : (viewHeight - height * zoom) / 2 + viewHeight * fieldOffset;
     this.layoutBackground();
     this.ground.setPosition(left, top).setScale(zoom);
     [...positions, ...lockedPositions].forEach(([x, y], index) => {
