@@ -37,19 +37,19 @@
         <!-- Hit areas overlay for Phaser plots -->
         <div id="plot-targets" class="plot-targets"></div>
 
-        <!-- Left Menu: Collapsible Drawer (Secondary options, Themes) -->
-        <aside class="side-drawer side-drawer-left" id="drawer-left" aria-label="Menu mở rộng bên trái">
-          <div class="drawer-content" id="drawer-left-content">
+        <!-- Left Menu: Top-down Dropdown (Secondary options, Themes) -->
+        <div class="top-dropdown top-dropdown-left" id="drawer-left" aria-label="Menu tùy chọn">
+          <button type="button" class="dropdown-toggle" id="toggle-left" aria-expanded="false" aria-controls="drawer-left-content" title="Tùy chọn nền">
+            <img class="dropdown-icon" src="/icon/topbutton%20(10).png" alt="">
+            <span class="dropdown-arrow">▾</span>
+          </button>
+          <div class="dropdown-menu-list" id="drawer-left-content">
             <button type="button" class="menu-btn" data-tool="theme" disabled>
               <img src="/icon/topbutton%20(10).png" alt="">
               <span>Đổi nền</span>
             </button>
           </div>
-          <button type="button" class="drawer-toggle" id="toggle-left" aria-expanded="false" aria-controls="drawer-left-content" title="Tùy chọn nền">
-            <span class="drawer-icon"><img src="/icon/topbutton%20(10).png" alt=""></span>
-            <span class="drawer-arrow">›</span>
-          </button>
-        </aside>
+        </div>
 
         <!-- Right Menu: Collapsible Drawer (Store, Bag, Warehouse) -->
         <aside class="side-drawer side-drawer-right" id="drawer-right" aria-label="Menu cửa hàng và kho">
