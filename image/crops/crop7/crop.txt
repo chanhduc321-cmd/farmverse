@@ -1,5 +1,5 @@
 cropId=7
-name=Î÷ºìÊÁ
+name=CÃ  chua
 pic=seed.png
 stageCount=5
 unitTime=20

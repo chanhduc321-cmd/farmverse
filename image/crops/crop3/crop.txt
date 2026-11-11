@@ -1,7 +1,8 @@
 cropId=3
-name=°×ÂÜ²·
+name=Cá»§ cáº£i tráº¯ng
 pic=seed.png
-stageCount=5
+stageCount=4
+readyFrame=5
 unitTime=15
 sellMoney=35
 seedMoney=18

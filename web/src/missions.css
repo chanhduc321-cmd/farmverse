@@ -1,0 +1,69 @@
+#missions-open.reward-ready::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 9px;
+  height: 9px;
+  border: 1px solid #fff5d8;
+  border-radius: 50%;
+  background: #b64026;
+}
+#missions {
+  width: min(420px, calc(100% - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  border: 2px solid #eac88b;
+  border-radius: 20px;
+  background: #fbf2dc;
+  color: #304629;
+}
+#missions::backdrop { background: #132c2066; }
+#missions header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #254631;
+  color: #fff4d4;
+}
+#missions h2, #missions h3, #missions p { margin: 0; }
+#missions h2 { font-size: 1.15rem; }
+#missions h3 { display: flex; justify-content: space-between; gap: 8px; font-size: 1rem; }
+#missions h3 span { color: #805525; font-size: .88rem; white-space: nowrap; }
+.missions-body { display: grid; gap: 10px; padding: 12px; }
+.missions-body section { padding: 12px; border: 1px solid #ddc9a0; border-radius: 12px; background: #fff9e9; }
+.missions-body ol, .missions-body ul { margin: 8px 0; padding-left: 22px; font-size: .9rem; }
+.missions-body .mission-done { color: #52784a; text-decoration: line-through; }
+.streak-summary { display: grid; justify-items: center; gap: 10px; text-align: center; }
+#missions [data-streak] { font-size: 1.4rem; }
+#missions .streak-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  width: 100%;
+  padding: 0;
+  list-style: none;
+}
+.streak-days li {
+  display: grid;
+  justify-items: center;
+  padding: 4px 0;
+  border-radius: 6px;
+  background: #eee1c4;
+}
+.streak-days li.checked { background: #d8ebbe; color: #315c29; }
+.streak-days [data-day-mark] { display: grid; place-items: center; height: 24px; font-weight: 850; }
+.streak-days small { font-size: .65rem; white-space: nowrap; }
+.streak-days img { width: 24px; height: 24px; object-fit: contain; }
+#missions :is([data-claim], [data-attend]) {
+  min-height: 42px;
+  padding: 6px 10px;
+  border: 1px solid #a78540;
+  border-radius: 10px;
+  background: #ffe3a1;
+  color: #493419;
+  font: inherit;
+  font-weight: 750;
+}
+#missions [hidden], #missions :is([data-mission-feedback], [data-streak-feedback]):empty { display: none; }

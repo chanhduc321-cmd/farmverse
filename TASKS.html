@@ -69,7 +69,7 @@
       <div>
         <p class="eyebrow">FARMVERSE / DEVELOP</p>
         <h1>Bảng công việc</h1>
-        <p>Theo dõi từ dựng nền Farm đến ngày nộp bài.</p>
+        <p>Backlog theo bản ưu tiên <code>feat/art-integration</code> tại <code>652eada</code>.</p>
       </div>
       <div>
         <div class="progress-label"><label for="progress">Tiến độ tích hợp</label><span id="progress-text"></span></div>
@@ -81,10 +81,10 @@
 
     <section aria-labelledby="tasks-title">
       <div class="section-title">
-        <h2 id="tasks-title">Công việc P0–P5</h2>
+        <h2 id="tasks-title">Công việc đang theo dõi</h2>
         <p id="results" class="results" role="status"></p>
       </div>
-      <p class="results plan-note">Mốc theo giờ Việt Nam. Phân công P2–P5 đang chờ review. <a href="BUGS.html">Mở dashboard lỗi</a></p>
+      <p class="results plan-note">RAM dùng để test nhanh. PostgreSQL nằm trong kế hoạch dài hạn. NEAR đang tạm giữ. <a href="BUGS.html">Mở dashboard lỗi</a></p>
       <form id="filters" class="filters" role="search" aria-label="Lọc công việc">
         <label class="search">Tìm việc<input id="query" type="search" placeholder="ID, tên việc, ngày hoặc nhánh"></label>
         <label>Phase<select id="phase"><option value="">Tất cả phase</option></select></label>
@@ -100,7 +100,7 @@
     <footer>
       <span>Bản xem từ <a href="TASKS.md">TASKS.md</a>. Codex cập nhật trạng thái sau khi nhận bàn giao.</span>
       <a href="docs/agents/workflow.md">Quy trình phối hợp</a>
-      <a href="docs/FARMVERSE_TIMELINE.md">Timeline P0–P5</a>
+      <a href="TASKS_ARCHIVE.md">Task đã lưu trữ</a>
     </footer>
   </main>
 
@@ -121,268 +121,328 @@
   <script id="task-data" type="application/json">
 [
   {
-    "id": "T-01",
-    "phase": "P0",
-    "target": "09/11",
-    "title": "Chốt giao diện kiểm tra API",
+    "id": "T-24",
+    "phase": "P1",
+    "target": "01 · Tài khoản",
+    "title": "Vào Farm bằng Guest hoặc tạo tài khoản",
     "owner": "Codex",
-    "scope": "shared/",
-    "branch": "feat/p0-backend",
-    "status": "DONE",
-    "dependsOn": "—",
-    "acceptance": "Ghi giao diện đã duyệt trong shared/. Hono phục vụ GET /health với 200 {\"status\":\"ok\"} hoặc 503 {\"status\":\"unavailable\"}. Web gọi qua /api/health."
-  },
-  {
-    "id": "T-02",
-    "phase": "P0",
-    "target": "09/11",
-    "title": "Dựng khung Phaser và Vite",
-    "owner": "Antigravity",
-    "scope": "web/",
-    "branch": "feat/p0-web",
-    "status": "DONE",
-    "dependsOn": "Giao diện P0 đã duyệt",
-    "acceptance": "pnpm dev mở Farm canvas có hai ô đất với sprite tạm. Vite proxy chuyển /api/health đến /health của Hono."
-  },
-  {
-    "id": "T-03",
-    "phase": "P0",
-    "target": "09/11",
-    "title": "Dựng khung Hono và kết nối PostgreSQL",
-    "owner": "Codex",
-    "scope": "backend/",
-    "branch": "feat/p0-backend",
-    "status": "DONE",
-    "dependsOn": "Giao diện T-01 có trong shared/",
-    "acceptance": "pnpm dev khởi động Hono. Cấu hình kết nối bằng DATABASE_URL. GET /health trả 200 khi kiểm tra DB thành công và 503 khi DB chưa sẵn sàng."
-  },
-  {
-    "id": "T-04",
-    "phase": "P0",
-    "target": "09/11",
-    "title": "Tích hợp web và API",
-    "owner": "Codex",
-    "scope": "Tích hợp diff T-01–T-03",
+    "scope": "Nghiệm thu bố cục, trạng thái và câu chữ tài khoản trong web/.",
     "branch": "develop",
     "status": "DONE",
-    "dependsOn": "T-01–T-03 đã bàn giao",
-    "acceptance": "Ghi lệnh chạy web và API từ bản tích hợp. Mở Farm trong trình duyệt và xác minh request /api/health trả 200 {\"status\":\"ok\"} từ Hono."
+    "dependsOn": "BUG-25, BUG-26 và BUG-27 FIXED. Đã kiểm tra lại BUG-22.",
+    "acceptance": "Chromium 1280×800, 390×844 và 844×390 xác nhận đúng một nội dung theo tab và phiên. Toast lỗi ở trên cùng hộp thoại, không che tab. Tạo tài khoản giữ nguyên ruộng Guest, đăng nhập phiên khác mở đúng ruộng. Đăng xuất và thử lại sau 503 đạt. Backend RAM tiếp tục hỗ trợ Guest. Demo offline mở riêng bằng tham số demo."
   },
   {
-    "id": "T-07",
-    "phase": "P1",
-    "target": "10/11",
-    "title": "Chốt giao diện API Farm",
+    "id": "T-36",
+    "phase": "P2",
+    "target": "02 · Chốt thăm ruộng",
+    "title": "[feature] Thăm ruộng và Steal",
     "owner": "Codex",
-    "scope": "shared/",
-    "branch": "feat/farm-contract",
-    "status": "DONE",
-    "dependsOn": "T-04 DONE",
-    "acceptance": "Request, response và lỗi cho trạng thái Farm, Plant, Harvest, Quick Sell và Unlock được ghi rõ và tích hợp vào develop."
-  },
-  {
-    "id": "T-05",
-    "phase": "P1",
-    "target": "10/11",
-    "title": "Làm API Farm và lưu tiến độ",
-    "owner": "Codex",
-    "scope": "backend/",
-    "branch": "feat/farm-api",
-    "status": "DONE",
-    "dependsOn": "T-07 DONE",
-    "acceptance": "Guest có 2 ô trống. Cây chín sau 10 giây. Thu hoạch đúng một crop, silo đầy giữ ô READY, Quick Sell và mở Plot #3 cập nhật GOLD chính xác."
-  },
-  {
-    "id": "T-06",
-    "phase": "P1",
-    "target": "10/11",
-    "title": "Làm Farm scene và thao tác chơi",
-    "owner": "Antigravity",
-    "scope": "web/",
-    "branch": "feat/farm-web",
-    "status": "DONE",
-    "dependsOn": "T-07 DONE",
-    "acceptance": "Có trạng thái ô và phản hồi trồng, lớn, thu hoạch. Hiển thị GOLD, silo, Quick Sell và Unlock. Chạy thử bằng dữ liệu mẫu đúng giao diện khi API đang làm."
-  },
-  {
-    "id": "T-08",
-    "phase": "P1",
-    "target": "10/11",
-    "title": "Nghiệm thu vòng chơi Farm",
-    "owner": "Codex",
-    "scope": "Tích hợp diff T-05 và T-06",
+    "scope": "Giao diện Hàng xóm, HUD thăm ruộng và API Community trên bản tích hợp.",
     "branch": "develop",
     "status": "DONE",
-    "dependsOn": "T-05 và T-06 ở REVIEW",
-    "acceptance": "Từ Guest đến mở Plot #3 trong kịch bản 45 giây. Reload giữ tiến độ, bấm thu hoạch hai lần chỉ nhận một crop, silo đầy giữ cây READY và mở ô chỉ trừ GOLD một lần."
+    "dependsOn": "Đã nghiệm thu với ba tài khoản PostgreSQL thật. BUG-29 và BUG-30 FIXED.",
+    "acceptance": "Chromium 1280×800, 390×844 và 844×390 kiểm tra tìm người chơi, gửi và xác nhận lời mời, thăm ruộng, lấy quả và về ruộng mình. Bạn bè chỉ hiện sau xác nhận. Lấy một quả vào Kho, lượt lặp trả 409. Hai khách tranh khi còn hai quả chỉ một lượt thành công, giao diện cập nhật còn một quả và chủ ruộng hái được quả đó. Guest mở đúng tab Đăng nhập. Demo offline có 5 bạn mẫu, mỗi ruộng 6 ô cây chín, thăm và lấy quả bằng dữ liệu RAM trong tab, không gọi API."
   },
   {
-    "id": "T-09",
+    "id": "T-42",
     "phase": "P2",
-    "target": "11/11",
-    "title": "Chốt giao diện merchant",
+    "target": "03 · Nhật ký và thông báo",
+    "title": "[feature] Nhật ký ghé thăm và bị trộm",
     "owner": "Codex",
-    "scope": "shared/, docs/API.md",
-    "branch": "feat/merchant-contract",
-    "status": "DONE",
-    "dependsOn": "T-08 DONE",
-    "acceptance": "Chốt schema trạng thái merchant, báo giá, mua, bán và lỗi để hai bên phát triển theo cùng giao diện."
-  },
-  {
-    "id": "T-10",
-    "phase": "P2",
-    "target": "11/11",
-    "title": "Làm API merchant và giao dịch GOLD",
-    "owner": "Codex",
-    "scope": "backend/",
-    "branch": "feat/merchant-api",
-    "status": "DONE",
-    "dependsOn": "T-09 DONE",
-    "acceptance": "Kiểm tra giá, cập nhật GOLD và tồn kho trong cùng giao dịch, xử lý offer tối đa một lần và kiểm tra quy tắc phục hồi C02 Lite."
-  },
-  {
-    "id": "T-11",
-    "phase": "P2",
-    "target": "11/11",
-    "title": "Dựng Town Square và cửa hàng",
-    "owner": "Antigravity",
-    "scope": "web/src/",
-    "branch": "feat/merchant-web",
-    "status": "DONE",
-    "dependsOn": "T-09 DONE",
-    "acceptance": "Đi qua lại Farm ↔ Store, đọc được báo giá, ngân sách, tồn kho và nhu cầu. Mua hoặc bán cập nhật trạng thái hiển thị và báo lỗi rõ ràng."
-  },
-  {
-    "id": "T-12",
-    "phase": "P2",
-    "target": "11/11",
-    "title": "Nghiệm thu merchant",
-    "owner": "Codex",
-    "scope": "Tích hợp diff T-10 và T-11",
+    "scope": "Đã tích hợp nhật ký và thông báo trong web/, API và lưu sự kiện PostgreSQL.",
     "branch": "develop",
     "status": "DONE",
-    "dependsOn": "T-10 DONE, T-11 qua review",
-    "acceptance": "Từ trình duyệt, mua và bán làm thay đổi GOLD và đúng một vật phẩm. Reload giữ tiến độ, giao dịch lặp không áp dụng lại."
+    "dependsOn": "T-24 cho tài khoản, T-29 cho lưu PostgreSQL, T-36 cho ghé thăm và Steal.",
+    "acceptance": "Khi vào Farm, tải lại, đăng nhập hoặc về ruộng mình sau khi thăm người khác, chủ ruộng thấy ngay thông báo nhẹ về sự kiện mới kể từ lần xem nhật ký trước, gồm ai ghé và số quả đã bị lấy. Nút nhật ký có số sự kiện chưa đọc, giữ đến khi người chơi mở nhật ký. Lưu mốc đã đọc trong PostgreSQL, tải lại không làm mất sự kiện chưa đọc. Chủ ruộng xem được ai ghé thăm hoặc lấy quả, thời gian xảy ra, ô đất, giống cây và số quả của lượt lấy thành công. Backend ghi sự kiện theo kết quả thực tế, lưu cùng giao dịch Steal và chống ghi trùng khi gửi lại. Nhật ký mới nhất trước, có phân trang, chỉ chủ ruộng xem được. Tải lại và khởi động lại backend vẫn giữ sự kiện. Kiểm tra ghé thăm, lấy thành công, lấy bị từ chối, yêu cầu lặp và hai khách lấy đồng thời."
   },
   {
-    "id": "T-13",
-    "phase": "P3",
-    "target": "10/11",
-    "title": "Chốt mẫu art",
-    "owner": "Antigravity",
-    "scope": "docs/art/, art/source/",
-    "branch": "feat/art-style",
-    "status": "DONE",
-    "dependsOn": "Brief art được giao",
-    "acceptance": "Chủ dự án duyệt góc nhìn, tỷ lệ và ánh sáng. Lưu approved_style.png và các thông số đã chốt trong Art Bible."
-  },
-  {
-    "id": "T-14",
-    "phase": "P3",
-    "target": "10–12/11",
-    "title": "Tạo 23 sprite cho hai cảnh",
+    "id": "T-38",
+    "phase": "P1",
+    "target": "04 · Nghiệm thu gameplay",
+    "title": "[bug] Gameplay chưa khớp 100%",
     "owner": "Codex",
-    "scope": "art/source/, web/public/assets/, docs/art/SPRITE_MANIFEST.md",
-    "branch": "codex/t14-sprites",
+    "scope": "Đối chiếu và nghiệm thu backend, shared và web. Phân việc sửa theo từng phần.",
+    "branch": "develop",
     "status": "DONE",
-    "dependsOn": "T-13 DONE",
-    "acceptance": "Bàn giao 23 sprite Farm, Store, merchant, crop, icon và hiệu ứng theo manifest. Kiểm tra kích thước, anchor, độ trong suốt và ghi nguồn."
+    "dependsOn": "BUG-33 FIXED. T-24, T-36, T-42 và T-44 đã nghiệm thu. Báo giá NPC còn theo BUG-20 trong T-25 tạm giữ.",
+    "acceptance": "Đã đối chiếu toàn bộ tiêu chí Farm đang mở. 15 giống, 121 ảnh, 30 vụ có kiểm soát và ba kích thước Chromium đạt. Kiểm tra lưu ruộng, Gold, XP, tồn kho, tài khoản và tiến trình sau F5/restart. [Ma trận nghiệm thu](docs/qa/T38_GAMEPLAY_ACCEPTANCE.md)"
   },
   {
-    "id": "T-15",
+    "id": "T-26",
+    "phase": "P1",
+    "target": "04 · Theo T-38",
+    "title": "Cập nhật gameplay theo tài liệu",
+    "owner": "Codex",
+    "scope": "docs/, backend/, shared/ và thao tác Farm trong web/.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Vòng Farm theo FV-GAME-01 đã nghiệm thu cùng T-38.",
+    "acceptance": "Guest bắt đầu với 6 ô trống và 200 Gold. Kiểm tra mua hạt, gieo, chín theo giống, hái, bán trong Kho, dọn đất và XP. Đối chiếu tiến độ sau tải lại."
+  },
+  {
+    "id": "T-44",
+    "phase": "P1",
+    "target": "05 · Giữ chân người chơi",
+    "title": "[feature] Onboarding, streak và mission",
+    "owner": "Codex",
+    "scope": "Codex triển khai trong shared/, điểm nối backend Farm và module nhiệm vụ trong web/. Lưu cùng JSON tiến độ Farm.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "T-24, T-29 và vòng gameplay T-26/T-38. Tái sử dụng tour một lần của T-39. Chủ dự án đã duyệt vụ đầu 20 Gold, nhiệm vụ ngày 10 Gold, streak theo ngày Việt Nam và giữ tiến độ Guest.",
+    "acceptance": "Người mới thấy mục tiêu đầu tiên và hiểu bước tiếp theo. Có nút icon Điểm danh và Nhiệm vụ riêng. Cụm tiện ích xếp ngang trên desktop, xếp dọc và thu gọn được trên mobile. Điều kiện, tiến độ và thưởng hiển thị trong bảng tương ứng. Backend xác nhận tiến trình và chỉ trao mỗi phần thưởng một lần. Lưu qua F5, đăng nhập lại và restart. Tạo tài khoản giữ tiến trình Guest theo luật đã chốt. Kiểm tra đổi ngày, đứt streak, yêu cầu nhận thưởng lặp và đồng thời. Tour T-39 tiếp tục chỉ hiện một lần."
+  },
+  {
+    "id": "T-43",
     "phase": "P3",
-    "target": "12/11",
-    "title": "Tích hợp và kiểm tra art",
+    "target": "06 · Kiểm chứng lỗi tồn",
+    "title": "[bug] Kiểm chứng các lỗi cũ còn mở",
+    "owner": "Codex",
+    "scope": "Đối chiếu BUGS.md với source hiện tại, tái hiện và phân việc sửa trong phạm vi lỗi còn tồn tại.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Đã kiểm chứng 5 mục. BUG-06, BUG-13, BUG-14 và BUG-18 FIXED. BUG-15 chuyển theo dõi ở T-25 đang tạm giữ.",
+    "acceptance": "Bản build Chromium 320×568, 390×844, 844×390 và 1280×800 đạt HUD, dock, số lượng Kho, bấm nhãn và mở Túi. Cấu hình build chạy đúng từ root và tạo web/dist. Kiểm tra tiêu đề Store khi mở lại T-25."
+  },
+  {
+    "id": "T-40",
+    "phase": "P3",
+    "target": "07 · Phản hồi thao tác",
+    "title": "[task] Animation và âm thanh thao tác Farm",
     "owner": "Antigravity",
-    "scope": "web/src/",
-    "branch": "feat/art-integration",
-    "status": "REVIEW",
-    "dependsOn": "T-12 và T-14 DONE",
-    "acceptance": "Farm và Store dùng asset đã duyệt. Kiểm tra tỷ lệ, vùng bấm và độ rõ của trạng thái ở kích thước chơi thực tế."
+    "scope": "web/ và tài nguyên hiệu ứng theo quy trình art của dự án.",
+    "branch": "feat/farm-feedback",
+    "status": "TODO",
+    "dependsOn": "T-35. Phối hợp với T-39 trước khi sửa file chung.",
+    "acceptance": "Gieo, hái, dọn và mua bán có phản hồi hình ảnh và âm thanh đúng kết quả. Kiểm tra mỗi thao tác thành công chỉ phát một lần và người chơi có thể tắt tiếng."
+  },
+  {
+    "id": "T-41",
+    "phase": "P3",
+    "target": "08 · Chốt luật Pet",
+    "title": "[feature] Thú ảo giữ nhà trong Farm",
+    "owner": "Codex",
+    "scope": "Codex chốt luật và dữ liệu sở hữu. Antigravity phụ trách giao diện sau khi chốt API.",
+    "branch": "codex/farm-pets",
+    "status": "TODO",
+    "dependsOn": "Đã chốt Pet đủ năng lượng thì chặn Steal, thiếu thì đứng nhìn. Chốt cách nhận, chăm và tính năng lượng. T-24 cho hồ sơ, T-36 cho Steal.",
+    "acceptance": "Chủ ruộng chăm được Pet và tải lại vẫn mở đúng Pet. Khi khách Steal, đủ năng lượng thì Pet chặn và quả ở lại trên cây. Thiếu năng lượng thì Pet đứng nhìn và khách lấy 1 quả theo T-36. Kiểm tra animation và thông báo của cả hai ca."
+  },
+  {
+    "id": "T-46",
+    "phase": "P1",
+    "target": "09 · Tăng tốc sinh trưởng",
+    "title": "[feature] Tưới nước và bón phân để cây mau chín",
+    "owner": "Codex",
+    "scope": "Codex giữ docs/, shared/, backend/ và các điểm nối công cụ trong web/.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "T-33 cho vòng đời cây, T-29 cho lưu tiến độ. Chủ dự án duyệt tưới miễn phí giảm 10%, bón phân 5 Gold giảm 20%, mỗi loại một lần mỗi vụ và cộng dồn 30%.",
+    "acceptance": "Tưới nước và bón phân trên cây đang lớn rút ngắn thời gian chờ theo luật đã duyệt. Farm hiển thị phản hồi và thời gian còn lại theo trạng thái API. Kiểm tra dùng từng loại, dùng cả hai trên cùng một vụ, thao tác sai trạng thái hoặc vượt giới hạn, gửi lại yêu cầu và lưu tiến độ qua tải lại trang và khởi động lại backend PostgreSQL."
+  },
+  {
+    "id": "T-45",
+    "phase": "P3",
+    "target": "10 · Cuối MVP",
+    "title": "[feature] Chia sẻ Farm và thành tích lên social",
+    "owner": "Codex",
+    "scope": "Chốt nội dung chia sẻ và trang đích, tích hợp thao tác chia sẻ trong web/, backend/ nếu cần dữ liệu công khai.",
+    "branch": "codex/social-sharing",
+    "status": "TODO",
+    "dependsOn": "Task cuối của MVP sau các luồng chơi, tiến trình và phản hồi đã chốt, gồm T-46. Chốt định dạng chia sẻ, nội dung và trang đích trước khi triển khai.",
+    "acceptance": "Người chơi chủ động chia sẻ Farm hoặc thành tích với nội dung dễ hiểu và đường dẫn đúng khi có link. Có cách chia sẻ phù hợp trên mobile và desktop, phản hồi rõ khi hủy hoặc không chia sẻ được. Kiểm tra người nhận mở link trong trạng thái chưa đăng nhập và đã đăng nhập nếu dùng link. Nội dung chỉ dùng thông tin được phép công khai, giữ bí mật phiên ở server."
+  },
+  {
+    "id": "T-28",
+    "phase": "P3",
+    "target": "Chờ duyệt mẫu",
+    "title": "Tạo lại sprite theo giống cây và đổi tên",
+    "owner": "Codex",
+    "scope": "art/source/crops/, image/crops/ và manifest. Antigravity nối tên file với loader trong web/src/ theo mapping đã chốt.",
+    "branch": "codex/crop-assets",
+    "status": "BLOCKED",
+    "dependsOn": "Đã rà 121 ảnh. Chờ duyệt bộ Dâu tây làm mẫu và xử lý ảnh Khoai lang trong bộ mới.",
+    "acceptance": "Bàn giao sprite hạt, các giai đoạn và vật phẩm theo pipeline. Đặt tên theo giống và giai đoạn, ghi mapping từ đường dẫn cũ sang mới. Kiểm tra alpha, kích thước, điểm neo và tải đúng frame trong Farm, kho và Store theo trạng thái tương ứng."
+  },
+  {
+    "id": "T-25",
+    "phase": "P2",
+    "target": "Tạm giữ",
+    "title": "Cửa hàng giao dịch Gold với NPC",
+    "owner": "Codex",
+    "scope": "Codex giữ backend/ và shared/. Antigravity phụ trách giao diện Store trong web/.",
+    "branch": "develop",
+    "status": "BLOCKED",
+    "dependsOn": "Chủ dự án tạm giữ NPC. Khi mở lại, nối Store, chốt báo giá hướng dẫn trong BUG-20 và nghiệm thu tiêu đề/vùng bấm quầy theo BUG-15.",
+    "acceptance": "Đi Farm ↔ Store. NPC hiển thị báo giá, ngân sách, tồn kho và nhu cầu. Thử cả NPC mua và bán theo C02 Lite. Mỗi giao dịch chuyển đúng một nông sản, cập nhật Gold và tồn kho nhất quán. Báo giá lặp hoặc hết hạn giữ nguyên tài sản."
+  },
+  {
+    "id": "T-27",
+    "phase": "P3",
+    "target": "Chờ Store",
+    "title": "Chỉnh mobile view cho Farm và Store",
+    "owner": "Codex",
+    "scope": "Codex nghiệm thu giao diện nhập từ main trên develop.",
+    "branch": "develop",
+    "status": "BLOCKED",
+    "dependsOn": "Phần Farm đạt trên bản tích hợp. Phần Store chờ chủ dự án mở lại T-25.",
+    "acceptance": "Chromium 390×844, 844×390 và 1280×720 xác nhận HUD, dock và lời nhắc trong màn hình, không chồng dock. Chạm lần lượt ô 1, 6 và 3 gửi đúng một POST cho mỗi thao tác. Vòng mua, gieo, hái, dọn và bán đạt, reload giữ 210 Gold và 9 XP. Nghiệm thu Store sau khi nối T-25."
   },
   {
     "id": "T-16",
     "phase": "P4",
-    "target": "12/11",
+    "target": "Tạm giữ",
     "title": "Thử giao dịch NEAR và chốt API demo",
     "owner": "Codex",
     "scope": "backend/, shared/",
     "branch": "feat/near-contract",
-    "status": "TODO",
-    "dependsOn": "T-12 DONE",
+    "status": "BLOCKED",
+    "dependsOn": "Chủ dự án tạm giữ NEAR. Khi mở lại, kiểm tra lại phụ thuộc cũ (T-12 DONE)",
     "acceptance": "Gửi một native transfer testnet giữa hai tài khoản demo. Xác minh thực thi qua RPC và ghi hash, explorer link cùng schema trạng thái cho Store."
   },
   {
     "id": "T-17",
     "phase": "P4",
-    "target": "13/11",
+    "target": "Tạm giữ",
     "title": "Làm API NEAR Testnet Demo",
     "owner": "Codex",
     "scope": "backend/",
     "branch": "feat/near-api",
-    "status": "TODO",
-    "dependsOn": "T-16 DONE",
+    "status": "BLOCKED",
+    "dependsOn": "Chủ dự án tạm giữ NEAR. Khi mở lại, kiểm tra lại phụ thuộc cũ (T-16 DONE)",
     "acceptance": "API gửi lượng testnet NEAR cố định, giữ khóa ký phía server, chống yêu cầu lặp và trả trạng thái theo kết quả thực thi RPC."
   },
   {
     "id": "T-18",
     "phase": "P4",
-    "target": "13/11",
+    "target": "Tạm giữ",
     "title": "Nối nút NEAR vào Store",
     "owner": "Antigravity",
     "scope": "web/src/",
     "branch": "feat/near-web",
-    "status": "TODO",
-    "dependsOn": "T-16 DONE",
+    "status": "BLOCKED",
+    "dependsOn": "Chủ dự án tạm giữ NEAR. Khi mở lại, kiểm tra lại phụ thuộc cũ (T-16 DONE)",
     "acceptance": "Hiển thị pending, thành công đã xác minh hoặc lỗi. Có network, hash và explorer link khi có giao dịch."
   },
   {
     "id": "T-19",
     "phase": "P4",
-    "target": "13/11",
+    "target": "Tạm giữ",
     "title": "Nghiệm thu C03 trong trình duyệt",
     "owner": "Codex",
     "scope": "Tích hợp diff T-17 và T-18",
     "branch": "develop",
-    "status": "TODO",
-    "dependsOn": "T-17 và T-18 ở REVIEW",
+    "status": "BLOCKED",
+    "dependsOn": "Chủ dự án tạm giữ NEAR. Khi mở lại, kiểm tra lại phụ thuộc cũ (T-17 và T-18 ở REVIEW)",
     "acceptance": "Bấm nút Store tạo giao dịch thật và mở được explorer. Kiểm tra bấm lặp, xử lý lỗi và đối chiếu GOLD cùng inventory trước và sau."
   },
   {
-    "id": "T-20",
-    "phase": "P5",
-    "target": "13–14/11",
-    "title": "QA bản tích hợp và chuẩn bị hồ sơ",
+    "id": "T-30",
+    "phase": "P1",
+    "target": "Ưu tiên",
+    "title": "Việt hóa tên giống cây",
     "owner": "Codex",
-    "scope": "README.md, LICENSE, docs/",
-    "branch": "feat/release-qa",
-    "status": "TODO",
-    "dependsOn": "T-15 và T-19 DONE",
-    "acceptance": "Chạy walkthrough 60–90 giây từ trình duyệt sạch. Kiểm tra lệnh setup, README, giao dịch mẫu, ảnh hoặc video, credits và license đã được chủ dự án chốt."
+    "scope": "image/crops/crop*/crop.txt",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Kiểm kê tên và mã hóa tệp trong project",
+    "acceptance": "Tất cả 15 tên giống đọc được bằng UTF-8, ID 5 là Khoai lang. Kiểm tra không còn chữ Hán trong tên tệp hoặc nội dung tệp văn bản được Git theo dõi."
   },
   {
-    "id": "T-21",
-    "phase": "P5",
-    "target": "14/11",
-    "title": "Duyệt bản chạy và kiểm tra link public",
+    "id": "T-31",
+    "phase": "P1",
+    "target": "Đã chốt",
+    "title": "Duyệt hợp đồng vòng chơi theo giống",
     "owner": "Codex",
-    "scope": "Bản phát hành và cấu hình deploy theo brief",
-    "branch": "develop → main sau khi duyệt",
-    "status": "TODO",
-    "dependsOn": "T-20 DONE, chủ dự án duyệt release",
-    "acceptance": "Mở demo từ trình duyệt sạch qua URL public. Repo public, README trỏ đúng demo và explorer. Ghi lại phiên bản đã kiểm tra."
+    "scope": "docs/FARMVERSE_GAMEPLAY_AMENDMENT_01.md",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "T-30 DONE",
+    "acceptance": "Chủ dự án duyệt vòng trồng bán, giữ NPC C02 và chốt thăm ruộng sau."
   },
   {
-    "id": "T-22",
-    "phase": "P5",
-    "target": "14/11 · 22:00",
-    "title": "Đăng demo và nộp bài",
-    "owner": "Chủ dự án",
-    "scope": "Bài đăng X và form hackathon",
-    "branch": "—",
-    "status": "TODO",
-    "dependsOn": "T-21 DONE",
-    "acceptance": "Bài đăng công khai có video hoặc ảnh, tag @NEARProtocol và #NEARHackathon. Nộp URL repo và bài đăng, lưu xác nhận nộp."
+    "id": "T-32",
+    "phase": "P1",
+    "target": "Đợt hiện tại",
+    "title": "Danh mục cây và mốc sinh trưởng",
+    "owner": "Codex",
+    "scope": "image/crops/, shared/, backend/",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Đã đối chiếu đủ 15 dòng FV-GAME-01 với catalog và kiểm tra từng mốc.",
+    "acceptance": "15 giống, đủ mốc frame và giờ chín. ID 3–4 chín ở mốc 4 và dùng sprite 5. Kiểm tra ID 5 là Khoai lang."
+  },
+  {
+    "id": "T-33",
+    "phase": "P1",
+    "target": "Đợt hiện tại",
+    "title": "Vòng đời ô, túi hạt và XP",
+    "owner": "Codex",
+    "scope": "backend/, shared/",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "T-32 DONE. Luật Farm và vòng chơi tích hợp đã kiểm tra trong T-37.",
+    "acceptance": "Hồ sơ mới có 6 ô và 200 Gold. Gieo trừ 1 hạt, hái cho 10–29 quả, dọn mới gieo lại. Kiểm tra XP, bấm lặp và thao tác sai trạng thái."
+  },
+  {
+    "id": "T-34",
+    "phase": "P2",
+    "target": "Đợt hiện tại",
+    "title": "Shop hạt và kho bán nông sản",
+    "owner": "Codex",
+    "scope": "backend/, shared/",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "T-32 và T-33 DONE. Kiểm tra biên mua 99 và bán 999.",
+    "acceptance": "Mua 1–99 hạt theo đơn giá, bán theo lô trong giới hạn kho. Đối chiếu số dư, túi và kho sau mỗi giao dịch. Chặn yêu cầu lặp hoặc vượt tồn kho."
+  },
+  {
+    "id": "T-35",
+    "phase": "P2",
+    "target": "Đợt hiện tại",
+    "title": "Giao diện Farm, Shop, Túi và Kho",
+    "owner": "Codex",
+    "scope": "web/ theo contract T-32–T-34",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Đã chạy vụ đầu trên dev. Khôi phục ba ô khóa ở BUG-21.",
+    "acceptance": "Vụ Dâu tây, Kho, công cụ và XP đã kiểm tra trên desktop và mobile. Sáu ô canh tác và ba ô khóa hiển thị đúng. Đã rà chữ và font của Tiệm hạt, Túi hạt và Kho ở BUG-34."
+  },
+  {
+    "id": "T-37",
+    "phase": "P3",
+    "target": "Đợt hiện tại",
+    "title": "Nghiệm thu vòng chơi và lưu tiến độ",
+    "owner": "Codex",
+    "scope": "Tích hợp trên develop",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Vòng chơi Guest đạt trên trình duyệt với RAM và PostgreSQL.",
+    "acceptance": "Chromium 390×844 và 844×390 chạy trọn vòng chơi. Reload và hai lần khởi động lại backend giữ đúng Gold, XP, Túi, Kho và trạng thái ô."
+  },
+  {
+    "id": "T-39",
+    "phase": "P3",
+    "target": "Hoàn thành",
+    "title": "[task] Tooltip và hướng dẫn Farm",
+    "owner": "Codex",
+    "scope": "Antigravity bàn giao ba file web. Codex sửa tooltip và tour, tích hợp trên develop với T-36.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Đã nghiệm thu tour theo quyết định của chủ dự án. BUG-23, BUG-24 và BUG-28 FIXED.",
+    "acceptance": "Tour chỉ làm tối khi giới thiệu khu vực mới. Mua hạt thành công tự về ruộng, bước sau nhấp nháy đúng mục tiêu. Khung thoại manga dùng style tooltip ô đất. Bỏ qua, Escape, đóng cửa sổ và rời trang kết thúc tour, xóa toàn bộ lời gợi ý, nhấp nháy và khung chặn. Tour chỉ xuất hiện ở lần đầu vào ruộng mới trên trình duyệt. Ghi nhận ngay khi hiện, không còn nút mở lại. Đã kiểm tra Bỏ qua, Escape, F5 giữa tour và tab mới. Chromium chạy trọn vụ ở 1280×844, 390×844 và 844×390. API PostgreSQL kiểm tra mua lỗi, mua trong tour và mua thường."
+  },
+  {
+    "id": "T-29",
+    "phase": "P1",
+    "target": "Đợt hiện tại",
+    "title": "Nối PostgreSQL để lưu tiến độ",
+    "owner": "Codex",
+    "scope": "backend/ và migrations",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Migration 003–006 chạy hai lần trên DB riêng. Đã kiểm tra Guest, tài khoản và giao dịch NPC sau restart.",
+    "acceptance": "Chạy migration trên DB test, kiểm tra đúng phiên sau reload và khởi động lại backend. Tiến độ Farm, Gold, tồn kho và giao dịch NPC nhất quán. Có chế độ RAM để test nhanh."
   }
 ]
 </script>
@@ -391,6 +451,8 @@
     const tasks = JSON.parse(byId('task-data').textContent);
     const statuses = { TODO: 'Chờ làm', DOING: 'Đang làm', BLOCKED: 'Đang vướng', REVIEW: 'Chờ review', DONE: 'Hoàn thành' };
     const phases = { P0: 'Dựng nền', P1: 'Farm', P2: 'Merchant', P3: 'Art', P4: 'NEAR', P5: 'QA và nộp bài' };
+    const filterFields = ['phase', 'owner', 'status'];
+    const filterControls = ['query', ...filterFields].map(byId);
 
     function addOptions(id, values) {
       for (const [value, label] of values) byId(id).add(new Option(label, value));
@@ -399,6 +461,12 @@
     addOptions('phase', [...new Set(tasks.map((task) => task.phase))].map((phase) => [phase, `${phase} · ${phases[phase]}`]));
     addOptions('owner', [...new Set(tasks.map((task) => task.owner))].map((owner) => [owner, owner]));
     addOptions('status', Object.entries(statuses));
+
+    const savedFilters = new URLSearchParams(location.hash.slice(1));
+    for (const control of filterControls) {
+      control.value = savedFilters.get(control.id) ?? '';
+      if (control instanceof HTMLSelectElement && control.selectedIndex === -1) control.value = '';
+    }
 
     const counts = Object.fromEntries(Object.keys(statuses).map((status) => [status, 0]));
     for (const task of tasks) counts[task.status] += 1;
@@ -423,7 +491,7 @@
     function render() {
       const query = normalize(byId('query').value.trim());
       const visible = tasks.filter((task) => {
-        const matchesFilters = ['phase', 'owner', 'status'].every((field) => !byId(field).value || byId(field).value === task[field]);
+        const matchesFilters = filterFields.every((field) => !byId(field).value || byId(field).value === task[field]);
         return matchesFilters && normalize(Object.values(task).join(' ')).includes(query);
       });
       const cards = visible.map((task) => {
@@ -438,9 +506,20 @@
       byId('empty').hidden = visible.length !== 0;
     }
 
+    function applyFilters() {
+      const filters = new URLSearchParams();
+      for (const control of filterControls) {
+        if (control.value) filters.set(control.id, control.value);
+      }
+      const url = new URL(location.href);
+      url.hash = filters.toString();
+      history.replaceState(history.state, '', url);
+      render();
+    }
+
     byId('filters').addEventListener('submit', (event) => event.preventDefault());
-    byId('filters').addEventListener('input', render);
-    byId('filters').addEventListener('reset', () => setTimeout(render, 0));
+    byId('filters').addEventListener('input', applyFilters);
+    byId('filters').addEventListener('reset', () => setTimeout(applyFilters, 0));
     render();
   </script>
 </body>

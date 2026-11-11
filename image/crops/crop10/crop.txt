@@ -1,5 +1,5 @@
 cropId=10
-name=�Ϲ�
+name=Bí đỏ
 pic=seed.png
 stageCount=5
 unitTime=26

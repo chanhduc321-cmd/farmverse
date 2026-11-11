@@ -1,5 +1,5 @@
 cropId=13
-name=�㽶
+name=Chuối
 pic=seed.png
 stageCount=6
 unitTime=32

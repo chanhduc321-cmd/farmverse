@@ -23,6 +23,8 @@ FarmVerse is a **casual-first farming game** with a small, reactive NPC economy.
 
 ## 2. C01 — Core gameplay [LOCKED]
 
+The approved [FV-GAME-01](FARMVERSE_GAMEPLAY_AMENDMENT_01.md) supersedes the Farm rules and acceptance checks below for the crop, seed shop, and warehouse loop. C02 remains a separate NPC contract.
+
 ### C01 initial state and tunable values
 
 | Key | MVP value |
