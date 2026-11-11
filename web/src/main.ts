@@ -319,16 +319,17 @@ let visitReceivedAt = 0;
 let visitPending = false;
 let crops: Crop[] = [];
 let offlineFarm: ReturnType<typeof openOfflineFarm> | undefined;
-const offlineMode = new URLSearchParams(location.search).get('demo') === 'offline';
+let offlineMode = new URLSearchParams(location.search).get('demo') === 'offline';
 const plotButtons: HTMLButtonElement[] = [];
 
-async function request<T>(path: string, body?: unknown): Promise<T> {
+async function request<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   if (offlineMode) throw new Error('Tính năng này cần kết nối máy chủ.');
   const response = await fetch(`/api${path}`, body !== undefined ? {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-  } : undefined);
+    signal,
+  } : { signal });
   if (!response.ok) {
     const result = await response.json().catch(() => null) as { error?: string } | null;
     throw new Error(result?.error ?? 'Chưa kết nối được máy chủ FarmVerse.', { cause: response.status });
@@ -2015,18 +2016,32 @@ class FarmScene extends Phaser.Scene {
 }
 
 async function start(): Promise<void> {
+  if (!offlineMode) {
+    const connection = new AbortController();
+    const timeout = window.setTimeout(() => connection.abort(), 8_000);
+    let online: [Crop[], FarmSessionResponse] | undefined;
+    try {
+      online = await Promise.all([
+        request<Crop[]>(FARM_API.catalog.path, undefined, connection.signal),
+        request<FarmSessionResponse>(FARM_API.read.path, undefined, connection.signal),
+      ]);
+    } catch {
+      connection.abort();
+      offlineMode = true;
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (online) {
+      const [catalog, initial] = online;
+      crops = catalog;
+      setSnapshot(initial);
+    }
+  }
   if (offlineMode) {
     const { openOfflineFarm } = await import('./offline-farm.ts');
     offlineFarm = openOfflineFarm();
     crops = offlineFarm.catalog;
     setSnapshot(offlineFarm.initial);
-  } else {
-    const [catalog, initial] = await Promise.all([
-      request<Crop[]>(FARM_API.catalog.path),
-      request<FarmSessionResponse>(FARM_API.read.path),
-    ]);
-    crops = catalog;
-    setSnapshot(initial);
   }
   if (farmLoading.failed) return;
   new Phaser.Game({
@@ -2076,5 +2091,5 @@ initActivityControls();
 farmLoading.start();
 void start().catch(error => {
   console.error('Không khởi động được FarmVerse:', error);
-  farmLoading.fail(offlineMode ? 'Chưa mở được bản chơi offline.' : 'Chưa kết nối được máy chủ FarmVerse.');
+  farmLoading.fail('Chưa mở được nông trại.');
 });
