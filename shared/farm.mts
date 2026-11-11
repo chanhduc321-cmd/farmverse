@@ -1,7 +1,30 @@
+export const FARM_API = {
+  read: { path: '/farm' },
+  catalog: { path: '/crops' },
+  buy: { path: '/farm/buy' },
+  sell: { path: '/farm/sell' },
+  plant: { path: '/farm/plant' },
+  harvest: { path: '/farm/harvest' },
+  clear: { path: '/farm/clear' },
+  theme: { path: '/farm/actions' },
+} as const;
+
+export const ACCOUNT_API = {
+  register: { path: '/account/register' },
+  login: { path: '/account/login' },
+  logout: { path: '/account/logout' },
+} as const;
+
+export interface AccountCredentials {
+  username: string;
+  password: string;
+}
+
 export interface Crop {
   id: number;
   name: string;
   stages: number;
+  readyFrame: number;
   unitSeconds: number;
   buyPrice: number;
   sellPrice: number;
@@ -15,7 +38,8 @@ export interface Plot {
 }
 
 export interface Farm {
-  coins: number;
+  revision: number;
+  gold: number;
   xp: number;
   level: number;
   theme: number;
@@ -30,13 +54,18 @@ export interface FarmResponse {
   message?: string;
 }
 
+export interface FarmSessionResponse extends FarmResponse {
+  accountsAvailable: boolean;
+  account: { username: string } | null;
+}
+
 export type FarmAction =
-  | { type: 'buy'; cropId: number; quantity: number }
-  | { type: 'sell'; cropId: number; quantity: number }
+  | { type: 'buy' | 'sell'; cropId: number; quantity: number }
   | { type: 'plant'; plot: number; cropId: number }
-  | { type: 'harvest'; plot: number }
-  | { type: 'clear'; plot: number }
+  | { type: 'harvest' | 'clear'; plot: number }
   | { type: 'theme' };
+
+export type FarmMutation = FarmAction & { expectedRevision: number };
 
 export function stageAt(crop: Crop, plot: Plot, now: number): number {
   const units = Math.max(0, now - plot.plantedAt) / (crop.unitSeconds * 1_000);

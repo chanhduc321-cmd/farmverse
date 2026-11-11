@@ -34,6 +34,7 @@ Codex là người duy nhất ghi trạng thái trong bảng này. Antigravity b
 | T-20 | P5 | 13–14/11 | QA bản tích hợp và chuẩn bị hồ sơ | Codex | `README.md`, `LICENSE`, `docs/` | `feat/release-qa` | TODO | T-15 và T-19 DONE | Chạy walkthrough 60–90 giây từ trình duyệt sạch. Kiểm tra lệnh setup, README, giao dịch mẫu, ảnh hoặc video, credits và license đã được chủ dự án chốt. |
 | T-21 | P5 | 14/11 | Duyệt bản chạy và kiểm tra link public | Codex | Bản phát hành và cấu hình deploy theo brief | `develop` → `main` sau khi duyệt | TODO | T-20 DONE, chủ dự án duyệt release | Mở demo từ trình duyệt sạch qua URL public. Repo public, README trỏ đúng demo và explorer. Ghi lại phiên bản đã kiểm tra. |
 | T-22 | P5 | 14/11 · 22:00 | Đăng demo và nộp bài | Chủ dự án | Bài đăng X và form hackathon | — | TODO | T-21 DONE | Bài đăng công khai có video hoặc ảnh, tag `@NEARProtocol` và `#NEARHackathon`. Nộp URL repo và bài đăng, lưu xác nhận nộp. |
+| T-24 | P1 | Ưu tiên giao diện | Vào Farm bằng Guest hoặc tạo tài khoản | Codex | Antigravity bàn giao web. Codex sửa BUG-22 và tích hợp ba file web. | develop | DONE | Đã kiểm tra bản tích hợp trên worktree develop. BUG-22 FIXED. | Build và Chromium với PostgreSQL đạt. Guest mua và gieo, đăng ký giữ nguyên snapshot, tải lại và đăng nhập trên phiên mobile 390×844 mở đúng ruộng. Đã kiểm tra tên trùng, sai mật khẩu, gửi lặp, đăng xuất gặp 503 và thử lại. Guest trên RAM và demo offline mua hạt được. |
 
 ## Trạng thái
 

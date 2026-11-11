@@ -2,12 +2,12 @@
 <html lang="vi">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>HappyFarm · Nông trại vui vẻ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>FarmVerse · Nông trại vui vẻ</title>
   </head>
   <body>
     <main>
-      <h1 class="sr-only">HappyFarm · Nông trại vui vẻ</h1>
+      <h1 class="sr-only">FarmVerse · Nông trại vui vẻ</h1>
       <section class="field" aria-label="Nông trại">
         <div id="game"></div>
 
@@ -23,10 +23,13 @@
           <div class="hud-player-stats">
             <!-- Row 1: Player name & Coins -->
             <div class="hud-top-row">
-              <span class="hud-name">Khách</span>
+              <button type="button" class="hud-account-btn" id="hud-account-btn" aria-haspopup="dialog" title="Quản lý tài khoản">
+                <span class="hud-name" id="hud-name">Khách</span>
+                <span class="hud-account-badge" id="hud-account-badge">Đăng nhập</span>
+              </button>
               <div class="hud-gold-chip">
                 <span class="coin-icon" aria-hidden="true"></span>
-                <strong id="coins">—</strong> <span class="coin-unit">xu</span>
+                <strong id="coins">—</strong> <span class="coin-unit">Gold</span>
               </div>
             </div>
 
@@ -59,6 +62,10 @@
             <span class="dropdown-arrow">▾</span>
           </button>
           <div class="dropdown-menu-list" id="drawer-left-content">
+            <button type="button" class="menu-btn" data-tool="account" title="Tài khoản">
+              <img src="/face/1-1.GIF" alt="">
+              <span id="menu-account-label">Tài khoản</span>
+            </button>
             <button type="button" class="menu-btn" data-tool="theme" disabled>
               <img src="/icon/topbutton%20(10).png" alt="">
               <span>Đổi nền</span>
@@ -136,7 +143,7 @@
             </div>
           </div>
           <div class="inventory-actions">
-            <span class="wallet"><span class="coin-icon" aria-hidden="true"></span><strong id="inventory-coins">—</strong> xu</span>
+            <span class="wallet"><span class="coin-icon" aria-hidden="true"></span><strong id="inventory-coins">—</strong> Gold</span>
             <form method="dialog"><button class="inventory-close" type="submit" aria-label="Đóng cửa sổ" autofocus>×</button></form>
           </div>
         </header>
@@ -149,6 +156,98 @@
 
         <div id="inventory-content" class="inventory-content"></div>
         <p id="panel-feedback" role="status"></p>
+      </div>
+    </dialog>
+
+    <!-- Modal Popup for Account -->
+    <dialog id="account" aria-labelledby="account-title">
+      <div class="dialog-wrapper">
+        <header class="account-header">
+          <div class="account-heading">
+            <img class="account-avatar-img" src="/face/1-1.GIF" alt="">
+            <div>
+              <h2 id="account-title">Tài khoản FarmVerse</h2>
+              <p id="account-description">Đăng ký để lưu vĩnh viễn nông trại</p>
+            </div>
+          </div>
+          <form method="dialog"><button class="inventory-close" type="submit" aria-label="Đóng cửa sổ">×</button></form>
+        </header>
+
+        <nav class="account-nav" id="account-nav" aria-label="Chuyển đổi tạo tài khoản và đăng nhập">
+          <button type="button" class="account-tab" data-account-tab="register" aria-pressed="true">Tạo tài khoản</button>
+          <button type="button" class="account-tab" data-account-tab="login" aria-pressed="false">Đăng nhập</button>
+        </nav>
+
+        <div class="account-body">
+          <!-- Register view -->
+          <div class="account-view" id="view-register">
+            <p class="account-tip">🌱 Tài khoản mới nhận đúng ruộng đang chơi, gồm cây, Gold, XP, túi hạt và kho.</p>
+            <form id="form-register" class="account-form" novalidate>
+              <div class="form-group">
+                <label for="reg-username">Tên đăng nhập <small>(3–24 ký tự a-z, 0-9, _)</small></label>
+                <input type="text" id="reg-username" autocomplete="username" minlength="3" maxlength="24" required placeholder="Ví dụ: nongdan_01">
+              </div>
+              <div class="form-group">
+                <label for="reg-password">Mật khẩu <small>(15–128 ký tự)</small></label>
+                <input type="password" id="reg-password" autocomplete="new-password" minlength="15" maxlength="128" required placeholder="Nhập ít nhất 15 ký tự">
+              </div>
+              <button type="submit" class="account-btn account-btn-submit" id="btn-submit-register">Tạo tài khoản &amp; Lưu ruộng</button>
+            </form>
+          </div>
+
+          <!-- Login view -->
+          <div class="account-view" id="view-login" hidden>
+            <p class="account-tip">🌾 Đăng nhập để mở lại ruộng đã gắn với tài khoản của bạn.</p>
+            <form id="form-login" class="account-form" novalidate>
+              <div class="form-group">
+                <label for="login-username">Tên đăng nhập</label>
+                <input type="text" id="login-username" autocomplete="username" minlength="3" maxlength="24" required placeholder="Tên tài khoản">
+              </div>
+              <div class="form-group">
+                <label for="login-password">Mật khẩu</label>
+                <input type="password" id="login-password" autocomplete="current-password" minlength="15" maxlength="128" required placeholder="Mật khẩu">
+              </div>
+              <button type="submit" class="account-btn account-btn-submit" id="btn-submit-login">Đăng nhập</button>
+            </form>
+          </div>
+
+          <!-- Profile / Logout view -->
+          <div class="account-view" id="view-profile" hidden>
+            <div class="profile-card">
+              <div class="profile-avatar-wrap">
+                <img src="/face/1-1.GIF" alt="" class="profile-avatar-img">
+              </div>
+              <div class="profile-info">
+                <span class="profile-badge">Đã gắn ruộng</span>
+                <h3 class="profile-username" id="profile-username">—</h3>
+                <p class="profile-hint">Nông trại được lưu an toàn trên hệ thống.</p>
+              </div>
+            </div>
+            <p class="account-tip account-tip-warning">⚠️ Đăng xuất sẽ chuyển về phiên Khách mới với ruộng độc lập.</p>
+            <button type="button" class="account-btn account-btn-logout" id="btn-account-logout">Đăng xuất</button>
+          </div>
+
+          <!-- Unavailable view (RAM or demo offline) -->
+          <div class="account-view" id="view-unavailable" hidden>
+            <div class="unavailable-card">
+              <span class="unavailable-icon">🔒</span>
+              <h3>Chế độ tài khoản chưa khả dụng</h3>
+              <p id="unavailable-text">Hệ thống tài khoản cần PostgreSQL để lưu trữ. Bạn đang chơi ở phiên tạm thời.</p>
+            </div>
+          </div>
+
+          <!-- Sync error view (when session loading fails after logout or network error) -->
+          <div class="account-view" id="view-sync-error" hidden>
+            <div class="unavailable-card">
+              <span class="unavailable-icon">⚠️</span>
+              <h3>Chưa tải được phiên nông trại</h3>
+              <p id="sync-error-text">Không thể đồng bộ dữ liệu phiên từ máy chủ. Thao tác thay đổi Farm tạm thời bị khóa.</p>
+            </div>
+            <button type="button" class="account-btn account-btn-submit" id="btn-retry-sync">Thử lại tải phiên</button>
+          </div>
+
+          <p id="account-feedback" class="account-feedback" role="status" aria-live="polite"></p>
+        </div>
       </div>
     </dialog>
 

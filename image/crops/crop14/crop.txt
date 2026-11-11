@@ -1,5 +1,5 @@
 cropId=14
-name=МТЧУ
+name=ДђГ o
 pic=seed.png
 stageCount=5
 unitTime=34

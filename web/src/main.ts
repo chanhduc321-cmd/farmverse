@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { ripeAt, stageAt } from '../../shared/farm.mts';
-import type { Crop, Farm, FarmAction, FarmResponse, Plot } from '../../shared/farm.mts';
+import { ACCOUNT_API, FARM_API, ripeAt, stageAt } from '../../shared/farm.mts';
+import type { Crop, FarmAction, FarmMutation, FarmResponse, FarmSessionResponse, Plot } from '../../shared/farm.mts';
+import type { openOfflineFarm } from './offline-farm.ts';
 import './style.css';
 
 const width = 800;
@@ -13,11 +14,8 @@ const toPosition = ([column, row]: number[]) => [
   400 + (column - row) * tileWidth / 2,
   214 + (column + row) * tileHeight / 2,
 ];
-const defaultPositions = [[0, 1], [0, 0], [1, 0], [1, 1], [2, 0], [2, 1]].map(toPosition);
-const defaultLocked = [[0, 2], [1, 2], [2, 2]].map(toPosition);
-
-const positions = defaultPositions;
-const lockedPositions = defaultLocked;
+const positions = [[0, 1], [0, 0], [1, 0], [1, 1], [2, 0], [2, 1]].map(toPosition);
+const lockedPositions = [[0, 2], [1, 2], [2, 2]].map(toPosition);
 const themes = [
   { file: 'web-wide-dock.png', fieldOffset: 0, bank: ['#a5b44b', '#778d2b'] },
   { file: 'web-theme-2.jpg', fieldOffset: .1, bank: ['#a8bc49', '#7f982e'] },
@@ -32,14 +30,7 @@ const panel = document.querySelector<HTMLDivElement>('#inventory-content')!;
 const panelTabs = [...dialog.querySelectorAll<HTMLButtonElement>('[data-panel]')];
 const panelCoins = dialog.querySelector<HTMLElement>('#inventory-coins')!;
 dialog.addEventListener('click', (event) => {
-  const rect = dialog.getBoundingClientRect();
-  const isInDialog = (
-    rect.top <= event.clientY &&
-    event.clientY <= rect.top + rect.height &&
-    rect.left <= event.clientX &&
-    event.clientX <= rect.left + rect.width
-  );
-  if (!isInDialog) dialog.close();
+  if (event.target === dialog) dialog.close();
 });
 const plotTargets = document.querySelector<HTMLDivElement>('#plot-targets')!;
 const hint = document.querySelector<HTMLParagraphElement>('#hint')!;
@@ -52,144 +43,81 @@ const xpBar = document.querySelector<HTMLProgressElement>('#xp-bar')!;
 const fieldBar = document.querySelector<HTMLProgressElement>('#field-bar')!;
 const fieldCount = document.querySelector<HTMLElement>('#field-count')!;
 
+const accountDialog = document.querySelector<HTMLDialogElement>('#account')!;
+const hudAccountBtn = document.querySelector<HTMLButtonElement>('#hud-account-btn')!;
+const hudName = document.querySelector<HTMLElement>('#hud-name')!;
+const hudAccountBadge = document.querySelector<HTMLElement>('#hud-account-badge')!;
+const menuAccountLabel = document.querySelector<HTMLElement>('#menu-account-label');
+const accountTitle = document.querySelector<HTMLElement>('#account-title')!;
+const accountDescription = document.querySelector<HTMLElement>('#account-description')!;
+const accountNav = document.querySelector<HTMLElement>('#account-nav')!;
+const accountTabs = [...accountDialog.querySelectorAll<HTMLButtonElement>('[data-account-tab]')];
+const viewRegister = document.querySelector<HTMLElement>('#view-register')!;
+const viewLogin = document.querySelector<HTMLElement>('#view-login')!;
+const viewProfile = document.querySelector<HTMLElement>('#view-profile')!;
+const viewUnavailable = document.querySelector<HTMLElement>('#view-unavailable')!;
+const viewSyncError = document.querySelector<HTMLElement>('#view-sync-error')!;
+const syncErrorText = document.querySelector<HTMLElement>('#sync-error-text')!;
+const btnRetrySync = document.querySelector<HTMLButtonElement>('#btn-retry-sync')!;
+const formRegister = document.querySelector<HTMLFormElement>('#form-register')!;
+const formLogin = document.querySelector<HTMLFormElement>('#form-login')!;
+const profileUsername = document.querySelector<HTMLElement>('#profile-username')!;
+const unavailableText = document.querySelector<HTMLElement>('#unavailable-text')!;
+const accountFeedback = document.querySelector<HTMLElement>('#account-feedback')!;
+const btnAccountLogout = document.querySelector<HTMLButtonElement>('#btn-account-logout')!;
+const btnSubmitRegister = document.querySelector<HTMLButtonElement>('#btn-submit-register')!;
+const btnSubmitLogin = document.querySelector<HTMLButtonElement>('#btn-submit-login')!;
+
 type Panel = 'shop' | 'bag' | 'warehouse';
 type Tool = { type: 'plant'; cropId: number } | { type: 'harvest' | 'clear' };
 const panelInfo = {
   shop: { title: 'Tiệm hạt giống', description: 'Chọn giống cây cho mùa vụ mới.', icon: 2 },
   bag: { title: 'Túi hạt giống', description: 'Chọn hạt rồi bấm một ô đất để gieo.', icon: 12 },
-  warehouse: { title: 'Kho nông sản', description: 'Bán nông sản đã thu hoạch để lấy xu.', icon: 8 },
+  warehouse: { title: 'Kho nông sản', description: 'Bán nông sản đã thu hoạch để lấy Gold.', icon: 8 },
 };
 let activePanel: Panel = 'shop';
 let activeTool: Tool = { type: 'harvest' };
+let activeAccountTab: 'register' | 'login' = 'register';
+let accountSubmitting = false;
+let sessionSynchronized = false;
 let busy = false;
 let snapshot: FarmResponse;
+let session: FarmSessionResponse | undefined;
 let receivedAt = 0;
 let crops: Crop[] = [];
+let offlineFarm: ReturnType<typeof openOfflineFarm> | undefined;
 const plotButtons: HTMLButtonElement[] = [];
 
-const defaultCrops: Crop[] = [
-  { id: 1, name: 'Dâu tây', stages: 5, unitSeconds: 2, buyPrice: 10, sellPrice: 20, level: 1 },
-  { id: 2, name: 'Ngô', stages: 5, unitSeconds: 12, buyPrice: 15, sellPrice: 30, level: 1 },
-  { id: 3, name: 'Củ cải trắng', stages: 4, unitSeconds: 15, buyPrice: 18, sellPrice: 35, level: 1 },
-  { id: 4, name: 'Cà rốt', stages: 4, unitSeconds: 16, buyPrice: 19, sellPrice: 37, level: 1 },
-  { id: 5, name: 'Khoai lang', stages: 5, unitSeconds: 18, buyPrice: 20, sellPrice: 40, level: 2 },
-  { id: 6, name: 'Cà tím', stages: 5, unitSeconds: 19, buyPrice: 22, sellPrice: 42, level: 2 },
-  { id: 7, name: 'Cà chua', stages: 5, unitSeconds: 20, buyPrice: 24, sellPrice: 44, level: 2 },
-  { id: 8, name: 'Đậu xanh', stages: 5, unitSeconds: 22, buyPrice: 26, sellPrice: 46, level: 3 },
-  { id: 9, name: 'Ớt', stages: 5, unitSeconds: 24, buyPrice: 28, sellPrice: 48, level: 3 },
-  { id: 10, name: 'Bí đỏ', stages: 5, unitSeconds: 26, buyPrice: 30, sellPrice: 50, level: 4 },
-  { id: 11, name: 'Táo', stages: 6, unitSeconds: 28, buyPrice: 33, sellPrice: 55, level: 4 },
-  { id: 12, name: 'Dưa hấu', stages: 5, unitSeconds: 30, buyPrice: 35, sellPrice: 57, level: 5 },
-  { id: 13, name: 'Chuối', stages: 6, unitSeconds: 32, buyPrice: 37, sellPrice: 60, level: 5 },
-  { id: 14, name: 'Đào', stages: 5, unitSeconds: 34, buyPrice: 38, sellPrice: 62, level: 6 },
-  { id: 15, name: 'Dứa', stages: 6, unitSeconds: 36, buyPrice: 39, sellPrice: 64, level: 6 },
-];
-
-let isStandalone = false;
-let localFarm: Farm = {
-  coins: 200,
-  xp: 0,
-  level: 1,
-  theme: 1,
-  seeds: { 1: 6 },
-  produce: {},
-  plots: [null, null, null, null, null, null],
-};
-
-function getLocalFarm(): Farm {
-  try {
-    const saved = localStorage.getItem('farmverse_local_farm');
-    if (saved) return JSON.parse(saved);
-  } catch {}
-  return localFarm;
-}
-
-function saveLocalFarm(farm: Farm): void {
-  try {
-    localStorage.setItem('farmverse_local_farm', JSON.stringify(farm));
-  } catch {}
-}
-
-function applyLocalAction(farm: Farm, action: FarmAction): string {
-  const now = Date.now();
-  switch (action.type) {
-    case 'theme':
-      farm.theme = (farm.theme % 4) + 1;
-      return 'Đã đổi nền.';
-    case 'buy': {
-      const crop = crops[action.cropId - 1];
-      const cost = crop.buyPrice * action.quantity;
-      if (farm.coins < cost) throw new Error('Không đủ xu để mua hạt.');
-      farm.coins -= cost;
-      farm.seeds[crop.id] = (farm.seeds[crop.id] ?? 0) + action.quantity;
-      return `Đã mua ${action.quantity} hạt ${crop.name.toLowerCase()}.`;
-    }
-    case 'sell': {
-      const crop = crops[action.cropId - 1];
-      const available = farm.produce[crop.id] ?? 0;
-      if (available < action.quantity) throw new Error('Kho không đủ nông sản để bán.');
-      const income = crop.sellPrice * action.quantity;
-      farm.produce[crop.id] = available - action.quantity;
-      farm.coins += income;
-      return `Đã bán ${action.quantity} ${crop.name.toLowerCase()} · +${income} xu.`;
-    }
-    case 'plant': {
-      if (farm.plots[action.plot]) throw new Error('Chọn ô đất trống để gieo.');
-      const seeds = farm.seeds[action.cropId] ?? 0;
-      if (seeds === 0) throw new Error('Túi đã hết hạt giống này.');
-      farm.seeds[action.cropId] = seeds - 1;
-      farm.plots[action.plot] = { cropId: action.cropId, plantedAt: now, harvested: false };
-      farm.xp += 5;
-      if (farm.xp >= farm.level * 200) {
-        farm.xp -= farm.level * 200;
-        farm.level++;
-      }
-      return `Đã gieo ô ${action.plot + 1}.`;
-    }
-    case 'harvest': {
-      const plot = farm.plots[action.plot];
-      if (!plot) throw new Error('Ô này chưa có cây.');
-      const crop = crops[plot.cropId - 1];
-      if (stageAt(crop, plot, now) < crop.stages) throw new Error('Cây chưa chín.');
-      if (plot.harvested) throw new Error('Cây đã được thu hoạch.');
-      plot.harvested = true;
-      const amount = Math.floor(Math.random() * 2) + 2;
-      farm.produce[crop.id] = (farm.produce[crop.id] ?? 0) + amount;
-      farm.xp += 15;
-      if (farm.xp >= farm.level * 200) {
-        farm.xp -= farm.level * 200;
-        farm.level++;
-      }
-      return `Đã thu hoạch ${amount} ${crop.name.toLowerCase()} · Ô ${action.plot + 1}.`;
-    }
-    case 'clear': {
-      const plot = farm.plots[action.plot];
-      if (!plot) throw new Error('Ô này đang trống.');
-      if (!plot.harvested) throw new Error('Cần thu hoạch trước khi dọn đất.');
-      farm.plots[action.plot] = null;
-      return `Đã dọn sạch ô ${action.plot + 1}.`;
-    }
-  }
-}
-
-async function request<T>(path: string, action?: FarmAction): Promise<T> {
-  const response = await fetch(`/api/${path}`, action && {
+async function request<T>(path: string, body?: unknown): Promise<T> {
+  const response = await fetch(`/api${path}`, body !== undefined ? {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(action),
-  });
+    body: JSON.stringify(body),
+  } : undefined);
   if (!response.ok) {
     const result = await response.json().catch(() => null) as { error?: string } | null;
-    throw new Error(result?.error ?? 'Chưa kết nối được máy chủ HappyFarm.');
+    throw new Error(result?.error ?? 'Chưa kết nối được máy chủ FarmVerse.', { cause: response.status });
+  }
+  if (response.status === 204) {
+    return undefined as unknown as T;
   }
   return await response.json() as T;
 }
 
-function setSnapshot(next: FarmResponse): void {
+function setSnapshot(next: FarmResponse | FarmSessionResponse): void {
   snapshot = next;
+  if ('accountsAvailable' in next) {
+    if (!sessionSynchronized || session?.account?.username !== next.account?.username) {
+      activeTool = { type: 'harvest' };
+    }
+    session = next;
+    sessionSynchronized = true;
+    updateToolHint();
+  }
+  if (offlineFarm) sessionSynchronized = true;
   receivedAt = performance.now();
-  coins.textContent = String(next.farm.coins);
-  panelCoins.textContent = next.farm.coins.toLocaleString('vi-VN');
+  coins.textContent = String(next.farm.gold);
+  panelCoins.textContent = next.farm.gold.toLocaleString('vi-VN');
   level.textContent = String(next.farm.level);
   xpBar.max = next.farm.level * 200;
   xpBar.value = next.farm.xp;
@@ -206,6 +134,123 @@ function setSnapshot(next: FarmResponse): void {
     const pct = Math.min(100, Math.round((fieldBar.value / fieldBar.max) * 100));
     fieldFill.style.width = `${pct}%`;
   }
+
+  // Cập nhật tên và trạng thái tài khoản trên HUD
+  if (offlineFarm) {
+    hudName.textContent = 'Demo offline';
+    hudAccountBadge.textContent = 'Offline';
+    hudAccountBtn.classList.add('is-offline');
+    hudAccountBtn.classList.remove('is-authenticated');
+    if (menuAccountLabel) menuAccountLabel.textContent = 'Demo offline';
+  } else if (session?.account) {
+    hudName.textContent = session.account.username;
+    hudAccountBadge.textContent = 'Tài khoản';
+    hudAccountBtn.classList.add('is-authenticated');
+    hudAccountBtn.classList.remove('is-offline');
+    if (menuAccountLabel) menuAccountLabel.textContent = session.account.username;
+  } else {
+    hudName.textContent = 'Khách';
+    hudAccountBadge.textContent = session?.accountsAvailable ? 'Đăng nhập' : 'RAM';
+    hudAccountBtn.classList.remove('is-authenticated');
+    if (session?.accountsAvailable) hudAccountBtn.classList.remove('is-offline');
+    else hudAccountBtn.classList.add('is-offline');
+    if (menuAccountLabel) menuAccountLabel.textContent = 'Tài khoản';
+  }
+
+  if (activeTool.type === 'plant' && !(snapshot.farm.seeds[activeTool.cropId] > 0)) {
+    activeTool = { type: 'harvest' };
+    updateToolHint();
+  }
+  if (dialog.open && activePanel !== 'shop') {
+    renderPanel();
+  }
+}
+
+function updateAccountButtons(): void {
+  const pending = busy || accountSubmitting;
+  btnSubmitRegister.disabled = pending;
+  btnSubmitLogin.disabled = pending;
+  btnAccountLogout.disabled = pending;
+  btnRetrySync.disabled = pending;
+}
+
+function renderAccountView(): void {
+  accountFeedback.textContent = '';
+  accountFeedback.className = 'account-feedback';
+  if (!sessionSynchronized && !offlineFarm) {
+    accountTitle.textContent = 'Chưa tải được phiên';
+    accountDescription.textContent = 'Thao tác Farm đang tạm khóa để bảo vệ dữ liệu';
+    accountNav.hidden = true;
+    viewRegister.hidden = true;
+    viewLogin.hidden = true;
+    viewProfile.hidden = true;
+    viewUnavailable.hidden = true;
+    viewSyncError.hidden = false;
+    syncErrorText.textContent = 'Không thể đồng bộ dữ liệu phiên nông trại từ máy chủ. Vui lòng bấm thử lại để tiếp tục chơi.';
+  } else if (offlineFarm) {
+    viewSyncError.hidden = true;
+    accountTitle.textContent = 'Bản chơi Demo offline';
+    accountDescription.textContent = 'Tiến độ được lưu cục bộ trong trình duyệt';
+    accountNav.hidden = true;
+    viewRegister.hidden = true;
+    viewLogin.hidden = true;
+    viewProfile.hidden = true;
+    viewUnavailable.hidden = false;
+    unavailableText.textContent = 'Bạn đang chơi bản demo offline. Tiến độ lưu trong trình duyệt và không dùng tài khoản.';
+  } else if (session?.account) {
+    viewSyncError.hidden = true;
+    accountTitle.textContent = 'Tài khoản FarmVerse';
+    accountDescription.textContent = 'Nông trại đã liên kết an toàn';
+    accountNav.hidden = true;
+    viewRegister.hidden = true;
+    viewLogin.hidden = true;
+    viewProfile.hidden = false;
+    viewUnavailable.hidden = true;
+    profileUsername.textContent = session.account.username;
+  } else if (session && !session.accountsAvailable) {
+    viewSyncError.hidden = true;
+    accountTitle.textContent = 'Chế độ Khách (RAM)';
+    accountDescription.textContent = 'Tính năng tài khoản chưa khả dụng';
+    accountNav.hidden = true;
+    viewRegister.hidden = true;
+    viewLogin.hidden = true;
+    viewProfile.hidden = true;
+    viewUnavailable.hidden = false;
+    unavailableText.textContent = 'Hệ thống tài khoản cần PostgreSQL để lưu trữ. Hiện backend đang chạy ở chế độ RAM.';
+  } else {
+    viewSyncError.hidden = true;
+    accountTitle.textContent = 'Tài khoản FarmVerse';
+    accountDescription.textContent = activeAccountTab === 'register'
+      ? 'Đăng ký để lưu vĩnh viễn nông trại'
+      : 'Đăng nhập để mở lại nông trại';
+    accountNav.hidden = false;
+    viewProfile.hidden = true;
+    viewUnavailable.hidden = true;
+    for (const tab of accountTabs) {
+      tab.setAttribute('aria-pressed', String(tab.dataset.accountTab === activeAccountTab));
+    }
+    viewRegister.hidden = activeAccountTab !== 'register';
+    viewLogin.hidden = activeAccountTab !== 'login';
+  }
+}
+
+function openAccountDialog(): void {
+  renderAccountView();
+  if (!accountDialog.open) {
+    accountDialog.showModal();
+    if (session?.account) {
+      btnAccountLogout.focus();
+    } else if (session?.accountsAvailable) {
+      const input = activeAccountTab === 'register'
+        ? document.querySelector<HTMLInputElement>('#reg-username')
+        : document.querySelector<HTMLInputElement>('#login-username');
+      input?.focus();
+    }
+  }
+}
+
+function farmTime(): number {
+  return snapshot.serverTime + performance.now() - receivedAt;
 }
 
 function updateToolHint(): void {
@@ -216,7 +261,7 @@ function updateToolHint(): void {
   });
   if (activeTool.type === 'plant') {
     const name = crops[activeTool.cropId - 1].name.toLowerCase();
-    hint.textContent = `Đang chọn hạt ${name}. Bấm một ô trống để gieo.`;
+    hint.textContent = `Đang chọn hạt ${name}. Bấm ô trống để gieo hoặc cây chín để thu hoạch.`;
   } else if (activeTool.type === 'clear') {
     hint.textContent = 'Bấm ô đã thu hoạch để dọn đất.';
   } else {
@@ -225,17 +270,20 @@ function updateToolHint(): void {
 }
 
 async function send(action: FarmAction): Promise<FarmResponse | undefined> {
-  if (busy) return;
-  busy = true;
-  try {
-    let result: FarmResponse;
-    if (isStandalone) {
-      const message = applyLocalAction(localFarm, action);
-      saveLocalFarm(localFarm);
-      result = { farm: { ...localFarm, plots: [...localFarm.plots] }, serverTime: Date.now(), message };
-    } else {
-      result = await request<FarmResponse>('farm/actions', action);
+  if (busy || accountSubmitting) return;
+  if (!sessionSynchronized) {
+    feedback.textContent = 'Chưa tải được phiên nông trại. Hãy kiểm tra kết nối và thử lại.';
+    if (dialog.open) {
+      panelFeedback.textContent = feedback.textContent;
+      panelFeedback.classList.add('is-error');
     }
+    return;
+  }
+  busy = true;
+  updateAccountButtons();
+  try {
+    const mutation: FarmMutation = { ...action, expectedRevision: snapshot.farm.revision };
+    const result = offlineFarm ? await offlineFarm.apply(mutation) : await request<FarmResponse>(FARM_API[action.type].path, mutation);
     setSnapshot(result);
     feedback.textContent = result.message ?? '';
     if (dialog.open) {
@@ -246,12 +294,20 @@ async function send(action: FarmAction): Promise<FarmResponse | undefined> {
     return result;
   } catch (error) {
     feedback.textContent = error instanceof Error ? error.message : 'Thao tác gặp lỗi.';
+    if (error instanceof Error && (error.cause === 401 || error.cause === 409)) {
+      const latest = offlineFarm?.read() ?? await request<FarmSessionResponse>(FARM_API.read.path).catch(() => undefined);
+      if (latest) {
+        setSnapshot(latest);
+        if (dialog.open) renderPanel();
+      }
+    }
     if (dialog.open) {
       panelFeedback.textContent = feedback.textContent;
       panelFeedback.classList.add('is-error');
     }
   } finally {
     busy = false;
+    updateAccountButtons();
   }
 }
 
@@ -281,10 +337,9 @@ function renderPanel(): void {
     const name = document.createElement('h3');
     name.textContent = crop.name;
     const info = document.createElement('small');
-    const locked = activePanel === 'shop' && snapshot.farm.level < crop.level;
-    if (activePanel === 'shop') info.textContent = `${crop.buyPrice} xu / hạt`;
+    if (activePanel === 'shop') info.textContent = `${crop.buyPrice} Gold / hạt · Cấp tham khảo ${crop.level}`;
     if (activePanel === 'bag') info.textContent = `Còn ${seeds} hạt`;
-    if (activePanel === 'warehouse') info.textContent = `${produce} trong kho · ${crop.sellPrice} xu / phần`;
+    if (activePanel === 'warehouse') info.textContent = `${produce} trong kho · ${crop.sellPrice} Gold / quả`;
     details.append(name, info);
 
     const controls = document.createElement('div');
@@ -300,12 +355,8 @@ function renderPanel(): void {
         dialog.close();
         updateToolHint();
       };
-    } else if (locked) {
-      item.classList.add('item-locked');
-      action.textContent = `Mở ở cấp ${crop.level}`;
-      action.disabled = true;
     } else {
-      const { stepper, quantity } = createQuantity(crop.name, activePanel === 'shop' ? 999 : Math.min(999, produce));
+      const { stepper, quantity } = createQuantity(crop.name, activePanel === 'shop' ? 99 : Math.min(999, produce), activePanel === 'shop' ? 1 : 0);
       const type = activePanel === 'shop' ? 'buy' : 'sell';
       action.textContent = type === 'buy' ? 'Mua' : 'Bán';
       action.setAttribute('aria-label', `${action.textContent} ${crop.name}`);
@@ -336,14 +387,14 @@ function renderPanel(): void {
   panel.scrollTop = previousScroll;
 }
 
-function createQuantity(name: string, max: number): { stepper: HTMLDivElement; quantity: HTMLInputElement } {
+function createQuantity(name: string, max: number, min: number): { stepper: HTMLDivElement; quantity: HTMLInputElement } {
   const stepper = document.createElement('div');
   stepper.className = 'quantity-stepper';
   const quantity = document.createElement('input');
   quantity.type = 'number';
   quantity.inputMode = 'numeric';
   quantity.required = true;
-  quantity.min = '1';
+  quantity.min = String(min);
   quantity.max = String(max);
   quantity.value = '1';
   quantity.setAttribute('aria-label', `Số lượng ${name}`);
@@ -354,8 +405,8 @@ function createQuantity(name: string, max: number): { stepper: HTMLDivElement; q
   increase.textContent = '+';
   decrease.setAttribute('aria-label', `Giảm số lượng ${name}`);
   increase.setAttribute('aria-label', `Tăng số lượng ${name}`);
-  decrease.onclick = () => { quantity.value = String(Math.max(1, Math.min(max, (quantity.valueAsNumber || 1) - 1))); };
-  increase.onclick = () => { quantity.value = String(Math.max(1, Math.min(max, (quantity.valueAsNumber || 0) + 1))); };
+  decrease.onclick = () => { quantity.value = String(Math.max(min, Math.min(max, (quantity.valueAsNumber || 0) - 1))); };
+  increase.onclick = () => { quantity.value = String(Math.max(min, Math.min(max, (quantity.valueAsNumber || 0) + 1))); };
   stepper.append(decrease, quantity, increase);
   return { stepper, quantity };
 }
@@ -409,12 +460,157 @@ function initDrawers(): void {
 
 function attachControls(scene: FarmScene): void {
   initDrawers();
+  accountDialog.addEventListener('click', (event) => {
+    if (event.target === accountDialog) accountDialog.close();
+  });
+  hudAccountBtn.onclick = () => openAccountDialog();
+  for (const tab of accountTabs) {
+    tab.onclick = () => {
+      activeAccountTab = tab.dataset.accountTab as 'register' | 'login';
+      renderAccountView();
+      const input = activeAccountTab === 'register'
+        ? document.querySelector<HTMLInputElement>('#reg-username')
+        : document.querySelector<HTMLInputElement>('#login-username');
+      input?.focus();
+    };
+  }
+
+  function setAccountBusy(isBusy: boolean, statusText?: string): void {
+    accountSubmitting = isBusy;
+    updateAccountButtons();
+    if (statusText) {
+      accountFeedback.textContent = statusText;
+      accountFeedback.className = 'account-feedback is-info';
+    }
+  }
+
+  formRegister.onsubmit = async (event) => {
+    event.preventDefault();
+    if (busy || accountSubmitting) return;
+    const usernameInput = document.querySelector<HTMLInputElement>('#reg-username')!;
+    const passwordInput = document.querySelector<HTMLInputElement>('#reg-password')!;
+    const username = usernameInput.value.trim().toLowerCase();
+    const password = passwordInput.value;
+
+    if (!/^[a-z0-9_]{3,24}$/.test(username)) {
+      accountFeedback.textContent = 'Tên đăng nhập cần 3–24 chữ cái không dấu, chữ số hoặc dấu gạch dưới.';
+      accountFeedback.className = 'account-feedback is-error';
+      usernameInput.focus();
+      return;
+    }
+    if (password.length < 15 || password.length > 128) {
+      accountFeedback.textContent = 'Mật khẩu cần từ 15–128 ký tự.';
+      accountFeedback.className = 'account-feedback is-error';
+      passwordInput.focus();
+      return;
+    }
+
+    setAccountBusy(true, 'Đang tạo tài khoản và lưu nông trại...');
+    try {
+      const res = await request<FarmSessionResponse>(ACCOUNT_API.register.path, { username, password });
+      setSnapshot(res);
+      formRegister.reset();
+      feedback.textContent = `Tài khoản ${res.account?.username ?? username} đã được tạo và lưu trữ nông trại!`;
+      accountDialog.close();
+    } catch (error) {
+      accountFeedback.textContent = error instanceof Error ? error.message : 'Tạo tài khoản thất bại.';
+      accountFeedback.className = 'account-feedback is-error';
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
+  formLogin.onsubmit = async (event) => {
+    event.preventDefault();
+    if (busy || accountSubmitting) return;
+    const usernameInput = document.querySelector<HTMLInputElement>('#login-username')!;
+    const passwordInput = document.querySelector<HTMLInputElement>('#login-password')!;
+    const username = usernameInput.value.trim().toLowerCase();
+    const password = passwordInput.value;
+
+    if (!/^[a-z0-9_]{3,24}$/.test(username)) {
+      accountFeedback.textContent = 'Tên đăng nhập cần 3–24 chữ cái không dấu, chữ số hoặc dấu gạch dưới.';
+      accountFeedback.className = 'account-feedback is-error';
+      usernameInput.focus();
+      return;
+    }
+    if (password.length < 15 || password.length > 128) {
+      accountFeedback.textContent = 'Mật khẩu cần từ 15–128 ký tự.';
+      accountFeedback.className = 'account-feedback is-error';
+      passwordInput.focus();
+      return;
+    }
+
+    setAccountBusy(true, 'Đang đăng nhập...');
+    try {
+      const res = await request<FarmSessionResponse>(ACCOUNT_API.login.path, { username, password });
+      setSnapshot(res);
+      formLogin.reset();
+      feedback.textContent = `Chào mừng ${res.account?.username ?? username} trở lại nông trại!`;
+      accountDialog.close();
+    } catch (error) {
+      accountFeedback.textContent = error instanceof Error ? error.message : 'Đăng nhập thất bại.';
+      accountFeedback.className = 'account-feedback is-error';
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
+  btnAccountLogout.onclick = async () => {
+    if (busy || accountSubmitting) return;
+    setAccountBusy(true, 'Đang đăng xuất...');
+    try {
+      await request<void>(ACCOUNT_API.logout.path, {});
+      session = undefined;
+      sessionSynchronized = false;
+      hudName.textContent = 'Khách';
+      hudAccountBadge.textContent = 'Lỗi tải';
+      hudAccountBtn.classList.remove('is-authenticated');
+      hudAccountBtn.classList.add('is-offline');
+      if (menuAccountLabel) menuAccountLabel.textContent = 'Khách';
+
+      const guestSession = await request<FarmSessionResponse>(FARM_API.read.path);
+      setSnapshot(guestSession);
+      feedback.textContent = 'Đã đăng xuất. Bạn đang ở phiên Khách mới.';
+      accountDialog.close();
+    } catch (error) {
+      accountFeedback.textContent = error instanceof Error ? error.message : 'Đăng xuất thất bại.';
+      accountFeedback.className = 'account-feedback is-error';
+      if (!sessionSynchronized) {
+        feedback.textContent = 'Chưa tải được phiên nông trại. Hãy kiểm tra kết nối và thử lại.';
+        hint.textContent = 'Phiên chơi chưa đồng bộ. Thao tác Farm đang tạm khóa.';
+        renderAccountView();
+      }
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
+  btnRetrySync.onclick = async () => {
+    if (busy || accountSubmitting) return;
+    setAccountBusy(true, 'Đang tải lại phiên nông trại...');
+    try {
+      const res = await request<FarmSessionResponse>(FARM_API.read.path);
+      setSnapshot(res);
+      feedback.textContent = 'Đã kết nối và đồng bộ phiên nông trại thành công!';
+      accountDialog.close();
+    } catch (err) {
+      accountFeedback.textContent = err instanceof Error ? err.message : 'Tải phiên thất bại. Vui lòng thử lại.';
+      accountFeedback.className = 'account-feedback is-error';
+      hudAccountBadge.textContent = 'Lỗi tải';
+    } finally {
+      setAccountBusy(false);
+    }
+  };
+
   for (const tab of panelTabs) tab.onclick = () => showPanel(tab.dataset.panel as Panel);
   for (const button of buttons) {
     button.disabled = false;
     button.onclick = () => {
       const tool = button.dataset.tool;
-      if (tool === 'theme') {
+      if (tool === 'account') {
+        openAccountDialog();
+      } else if (tool === 'theme') {
         void send({ type: 'theme' });
       } else if (tool === 'harvest' || tool === 'clear') {
         activeTool = { type: tool };
@@ -434,9 +630,18 @@ function attachControls(scene: FarmScene): void {
       if (button.matches(':focus-visible')) scene.highlightPlot(plot);
     };
     button.onblur = () => scene.highlightPlot();
-    button.onclick = async () => {
-      const tool = activeTool;
+    button.onclick = async (event) => {
+      if (!sessionSynchronized) {
+        feedback.textContent = 'Chưa tải được phiên nông trại. Hãy kiểm tra kết nối và thử lại.';
+        return;
+      }
+      if (busy || event.detail > 1) return;
       const previous = snapshot.farm;
+      const current = previous.plots[plot];
+      const tool: Tool = activeTool.type === 'plant' && current && !current.harvested
+        && farmTime() >= ripeAt(crops[current.cropId - 1], current)
+        ? { type: 'harvest' }
+        : activeTool;
       const result = await send({ ...tool, plot });
       if (!result) return;
       const cropId = previous.plots[plot]?.cropId;
@@ -469,10 +674,7 @@ function attachControls(scene: FarmScene): void {
 class FarmScene extends Phaser.Scene {
   private background!: Phaser.GameObjects.Image;
   private ground!: Phaser.GameObjects.Container;
-  private bankImage!: Phaser.GameObjects.Image;
   private soilTiles: Phaser.GameObjects.Image[] = [];
-  private grassTiles: Phaser.GameObjects.Image[] = [];
-  private gates: Phaser.GameObjects.Image[] = [];
   private highlightedPlot?: number;
   private visuals: { plant: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text }[] = [];
 
@@ -488,7 +690,8 @@ class FarmScene extends Phaser.Scene {
       this.load.image(`crop-${crop.id}-0`, asset(`${dir}/cron_start.png`));
       this.load.image(`crop-${crop.id}-end`, asset(`${dir}/cron_end.png`));
       for (let stage = 1; stage <= crop.stages; stage++) {
-        this.load.image(`crop-${crop.id}-${stage}`, asset(`${dir}/${stage}.png`));
+        const frame = stage === crop.stages ? crop.readyFrame : stage;
+        this.load.image(`crop-${crop.id}-${stage}`, asset(`${dir}/${frame}.png`));
       }
     }
   }
@@ -497,20 +700,17 @@ class FarmScene extends Phaser.Scene {
     this.background = this.add.image(0, 0, `theme-${snapshot.farm.theme}`);
     this.ground = this.add.container(0, 0);
     this.paintFieldBank();
-    this.bankImage = this.add.image(0, 0, 'field-bank').setOrigin(0);
-    this.ground.add(this.bankImage);
+    this.ground.add(this.add.image(0, 0, 'field-bank').setOrigin(0));
     this.createPlotTextures();
     const soilScale = (tileWidth - 8) / this.textures.get('soil').getSourceImage().width;
-    this.soilTiles = defaultPositions.map(([x, y]) => this.add.image(x, y - 5, 'soil').setScale(soilScale));
+    this.soilTiles = positions.map(([x, y]) => this.add.image(x, y - 5, 'soil').setScale(soilScale));
     const grassScale = (tileWidth - 8) / this.textures.get('locked-grass').getSourceImage().width;
-    this.grassTiles = defaultLocked.map(([x, y]) => this.add.image(x, y - 3, 'locked-grass').setScale(grassScale));
-    this.ground.add([...this.soilTiles, ...this.grassTiles].sort((a, b) => a.y - b.y));
-    for (const [x, y] of defaultLocked) {
-      const gate = this.add.image(x - 40, y + 19, 'locked-gate').setOrigin(.5, .8);
-      this.gates.push(gate);
-      this.ground.add(gate);
+    const grassTiles = lockedPositions.map(([x, y]) => this.add.image(x, y - 3, 'locked-grass').setScale(grassScale));
+    this.ground.add([...this.soilTiles, ...grassTiles].sort((a, b) => a.y - b.y));
+    for (const [x, y] of lockedPositions) {
+      this.ground.add(this.add.image(x - 40, y + 19, 'locked-gate').setOrigin(.5, .8));
     }
-    this.visuals = defaultPositions.map(([x, y]) => {
+    this.visuals = positions.map(([x, y]) => {
       const plant = this.add.image(x, y - 6, 'crop-1-0').setOrigin(.5, .84).setScale(cropScale).setVisible(false);
       const label = this.add.text(x, y + 16, '', {
         fontFamily: 'system-ui, sans-serif',
@@ -584,7 +784,6 @@ class FarmScene extends Phaser.Scene {
     highlightContext.fillRect(0, 0, soil.width, soil.height);
     highlight.refresh();
 
-    // Keep the chained gate from the middle of the sprite and align it with the plot edge.
     const fence = this.textures.get('fence-locked').getSourceImage() as HTMLImageElement;
     const gateWidth = 62;
     const gateHeight = 61;
@@ -645,20 +844,6 @@ class FarmScene extends Phaser.Scene {
     const { width: viewWidth, height: viewHeight } = this.scale.gameSize;
     const isPortrait = viewWidth < viewHeight;
 
-    this.bankImage.setVisible(true);
-
-    positions.forEach(([x, y], i) => {
-      this.soilTiles[i]?.setPosition(x, y - 5);
-      this.visuals[i]?.plant.setPosition(x, y - 6);
-      this.visuals[i]?.label.setPosition(x, y + 16);
-    });
-
-    lockedPositions.forEach(([x, y], i) => {
-      this.grassTiles[i]?.setPosition(x, y - 3).setVisible(true);
-      this.gates[i]?.setPosition(x - 40, y + 19).setVisible(true);
-    });
-
-    // Scale up 3x3 diamond on mobile portrait to fit width without being tiny
     const zoom = isPortrait
       ? Math.min((viewWidth / 680) * 0.98, 0.65)
       : Math.min(viewWidth / width, viewHeight / height, 1.25) * .84;
@@ -669,7 +854,7 @@ class FarmScene extends Phaser.Scene {
       : (viewHeight - height * zoom) / 2 + viewHeight * fieldOffset;
     this.layoutBackground();
     this.ground.setPosition(left, top).setScale(zoom);
-    [...positions, ...lockedPositions].forEach(([x, y], index) => {
+    positions.concat(lockedPositions).forEach(([x, y], index) => {
       const button = plotButtons[index];
       if (button) {
         button.style.display = 'block';
@@ -688,7 +873,7 @@ class FarmScene extends Phaser.Scene {
       this.paintFieldBank();
       this.layout();
     }
-    const now = snapshot.serverTime + performance.now() - receivedAt;
+    const now = farmTime();
     this.visuals.forEach((visual, index) => this.renderPlot(index, snapshot.farm.plots[index], now, visual));
   }
 
@@ -700,10 +885,12 @@ class FarmScene extends Phaser.Scene {
       const crop = crops[plot.cropId - 1];
       const stage = stageAt(crop, plot, now);
       const frame = `crop-${crop.id}-${plot.harvested ? 'end' : stage}`;
-      if (visual.plant.texture.key !== frame) visual.plant.setTexture(frame); visual.plant.setScale(getCropScale(crop.id));
+      if (visual.plant.texture.key !== frame) {
+        visual.plant.setTexture(frame).setScale(getCropScale(crop.id));
+      }
       const remaining = Math.ceil((ripeAt(crop, plot) - now) / 1_000);
       if (plot.harvested) status = 'Cần dọn đất';
-      else if (stage === crop.stages) status = 'Đã chín';
+      else if (remaining <= 0) status = 'Đã chín';
       else status = `${crop.name} · ${remaining}s`;
     }
     if (visual.label.text !== status) {
@@ -715,21 +902,19 @@ class FarmScene extends Phaser.Scene {
 }
 
 async function start(): Promise<void> {
-  try {
+  if (new URLSearchParams(location.search).get('demo') === 'offline') {
+    const { openOfflineFarm } = await import('./offline-farm.ts');
+    offlineFarm = openOfflineFarm();
+    crops = offlineFarm.catalog;
+    setSnapshot(offlineFarm.initial);
+  } else {
     const [catalog, initial] = await Promise.all([
-      request<Crop[]>('crops'),
-      request<FarmResponse>('farm'),
+      request<Crop[]>(FARM_API.catalog.path),
+      request<FarmSessionResponse>(FARM_API.read.path),
     ]);
     crops = catalog;
     setSnapshot(initial);
-  } catch (err) {
-    console.info('Backend không khả dụng, chạy ở chế độ Standalone (Offline Mode):', err);
-    isStandalone = true;
-    crops = defaultCrops;
-    localFarm = getLocalFarm();
-    setSnapshot({ farm: localFarm, serverTime: Date.now() });
   }
-
   new Phaser.Game({
     type: Phaser.CANVAS,
     parent: 'game',
@@ -741,7 +926,6 @@ async function start(): Promise<void> {
   });
 }
 
-void start().catch((error) => {
-  console.error('Lỗi khởi tạo game:', error);
-  hint.textContent = 'Gặp sự cố khi khởi động trò chơi. Hãy tải lại trang.';
+void start().catch(() => {
+  hint.textContent = 'Chưa kết nối được máy chủ FarmVerse. Kiểm tra backend rồi tải lại trang.';
 });
