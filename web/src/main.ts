@@ -8,6 +8,7 @@ import type { FarmVisit, PlayerPage, StealResponse } from '../../shared/communit
 import type { openOfflineFarm } from './offline-farm.ts';
 import { createCommunity, createPlayerAvatar, playerPath } from './community.ts';
 import { createMissions } from './missions.ts';
+import { farmLoading } from './loading.ts';
 import './style.css';
 
 const width = 800;
@@ -1729,26 +1730,63 @@ class FarmScene extends Phaser.Scene {
   private soilTiles: Phaser.GameObjects.Image[] = [];
   private highlightedPlot?: number;
   private visuals: { plant: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text }[] = [];
+  private interfaceReady!: Promise<void>;
+  private ready = false;
 
   constructor() { super('Farm'); }
 
   preload(): void {
-    themes.forEach(({ file }, index) => this.load.image(`theme-${index + 1}`, asset(`background/${file}`)));
-    this.load.image('soil', asset('soil/web-raised-bed.png'));
-    this.load.image('locked-grass', asset('soil/web-raised-grass.png'));
-    this.load.image('fence-locked', asset('soil/fence-locked.png'));
+    const textures: [key: string, path: string][] = [
+      ...themes.map(({ file }, index): [string, string] => [`theme-${index + 1}`, `background/${file}`]),
+      ['soil', 'soil/web-raised-bed.png'],
+      ['locked-grass', 'soil/web-raised-grass.png'],
+      ['fence-locked', 'soil/fence-locked.png'],
+    ];
+    const interfaceImages = new Map([...document.images].map(image => [image.src, image]));
     for (const crop of crops) {
       const dir = `crops/crop${crop.id}`;
-      this.load.image(`crop-${crop.id}-0`, asset(`${dir}/cron_start.png`));
-      this.load.image(`crop-${crop.id}-end`, asset(`${dir}/cron_end.png`));
+      const seed = new Image();
+      seed.src = asset(`${dir}/seed.png`);
+      interfaceImages.set(seed.src, seed);
+      textures.push([`crop-${crop.id}-0`, `${dir}/cron_start.png`], [`crop-${crop.id}-end`, `${dir}/cron_end.png`]);
       for (let stage = 1; stage <= crop.stages; stage++) {
         const frame = stage === crop.stages ? crop.readyFrame : stage;
-        this.load.image(`crop-${crop.id}-${stage}`, asset(`${dir}/${frame}.png`));
+        textures.push([`crop-${crop.id}-${stage}`, `${dir}/${frame}.png`]);
       }
     }
+
+    farmLoading.assets(textures.length + interfaceImages.size);
+    this.load.on(Phaser.Loader.Events.FILE_COMPLETE, farmLoading.fileLoaded);
+    this.load.once(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
+      console.error('Không tải được tài nguyên FarmVerse:', file.url);
+      farmLoading.fail('Chưa tải được tài nguyên nông trại.');
+    });
+    for (const [key, path] of textures) this.load.image(key, asset(path));
+    this.interfaceReady = Promise.all([...interfaceImages.values()].map(async image => {
+      await image.decode();
+      farmLoading.fileLoaded();
+    })).then(() => {}).catch(error => {
+      console.error('Không tải được ảnh giao diện FarmVerse:', error);
+      farmLoading.fail('Chưa tải được ảnh giao diện nông trại.');
+    });
   }
 
   create(): void {
+    void this.interfaceReady.then(() => {
+      if (farmLoading.failed) return;
+      this.createFarm();
+      this.ready = true;
+      this.game.events.once(Phaser.Core.Events.POST_RENDER, () => {
+        farmLoading.finish();
+        if (!farmLoading.failed && session?.account) void checkActivitySummary(true);
+      });
+    }).catch(error => {
+      console.error('Không mở được cảnh nông trại:', error);
+      farmLoading.fail('Chưa mở được nông trại.');
+    });
+  }
+
+  private createFarm(): void {
     this.background = this.add.image(0, 0, `theme-${snapshot.farm.theme}`);
     this.ground = this.add.container(0, 0);
     this.paintFieldBank();
@@ -1924,6 +1962,7 @@ class FarmScene extends Phaser.Scene {
   }
 
   update(): void {
+    if (!this.ready) return;
     const theme = `theme-${visit?.theme ?? snapshot.farm.theme}`;
     if (this.background.texture.key !== theme) {
       this.background.setTexture(theme);
@@ -1988,8 +2027,8 @@ async function start(): Promise<void> {
     ]);
     crops = catalog;
     setSnapshot(initial);
-    if (initial.account) void checkActivitySummary(true);
   }
+  if (farmLoading.failed) return;
   new Phaser.Game({
     type: Phaser.CANVAS,
     parent: 'game',
@@ -2034,6 +2073,8 @@ const missions = createMissions(field, farmTime,
   async () => Boolean(await send({ type: 'checkIn' })));
 
 initActivityControls();
-void start().catch(() => {
-  hint.textContent = 'Chưa kết nối được máy chủ FarmVerse. Kiểm tra backend rồi tải lại trang.';
+farmLoading.start();
+void start().catch(error => {
+  console.error('Không khởi động được FarmVerse:', error);
+  farmLoading.fail(offlineMode ? 'Chưa mở được bản chơi offline.' : 'Chưa kết nối được máy chủ FarmVerse.');
 });

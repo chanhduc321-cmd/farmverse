@@ -4,9 +4,30 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>FarmVerse · Nông trại vui vẻ</title>
+    <link rel="stylesheet" href="/src/loading.css">
   </head>
   <body>
-    <main>
+    <section id="farm-loading" aria-labelledby="farm-loading-title">
+      <div class="farm-loading-card">
+        <div class="farm-loading-art" aria-hidden="true">
+          <div class="farm-loading-sun"></div>
+          <div class="farm-loading-bed">
+            <img src="/crops/crop1/5.png" alt="" width="112" height="104">
+            <img src="/crops/crop2/5.png" alt="" width="112" height="104">
+          </div>
+        </div>
+        <div class="farm-loading-content">
+          <h1 id="farm-loading-title">FarmVerse</h1>
+          <div class="farm-loading-status">
+            <p id="farm-loading-message" role="status">Đang mở nông trại…</p>
+            <span id="farm-loading-percent" aria-hidden="true" hidden>0%</span>
+          </div>
+          <progress id="farm-loading-progress" aria-label="Tiến độ tải tài nguyên" max="100"></progress>
+          <button id="farm-loading-retry" type="button" hidden>Thử lại</button>
+        </div>
+      </div>
+    </section>
+    <main inert>
       <h1 class="sr-only">FarmVerse · Nông trại vui vẻ</h1>
       <section class="field" aria-label="Nông trại">
         <div id="game"></div>
