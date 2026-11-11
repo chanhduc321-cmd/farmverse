@@ -11,49 +11,88 @@
       <section class="field" aria-label="Nông trại">
         <div id="game"></div>
 
-        <!-- Top HUD: Player, XP, Coins, Plots -->
-        <header class="meters" aria-label="Thông tin nông trại">
-          <!-- Avatar with Lv badge -->
-          <div class="hud-avatar-box">
-            <img src="/face/1-1.GIF" alt="" class="hud-avatar-img">
-            <span class="hud-level-pill">Lv.<strong id="level">1</strong></span>
-          </div>
+        <!-- Top HUD Row -->
+        <div class="farm-hud-row">
+          <header class="meters" aria-label="Thông tin nông trại">
+            <!-- Avatar with Lv badge -->
+            <div class="hud-avatar-box">
+              <img src="/face/1-1.GIF" alt="" class="hud-avatar-img">
+              <span class="hud-level-pill">Lv.<strong id="level">1</strong></span>
+            </div>
 
-          <!-- Player info & stats in 2 aligned rows -->
-          <div class="hud-player-stats">
-            <!-- Row 1: Player name & Coins -->
-            <div class="hud-top-row">
-              <button type="button" class="hud-account-btn" id="hud-account-btn" aria-haspopup="dialog" title="Quản lý tài khoản">
-                <span class="hud-name" id="hud-name">Khách</span>
-                <span class="hud-account-badge" id="hud-account-badge">Đăng nhập</span>
+            <!-- Player info & stats in 2 aligned rows -->
+            <div class="hud-player-stats">
+              <!-- Row 1: Player name & Coins -->
+              <div class="hud-top-row">
+                <button type="button" class="hud-account-btn" id="hud-account-btn" aria-haspopup="dialog" title="Quản lý tài khoản">
+                  <span class="hud-name" id="hud-name">Khách</span>
+                  <span class="hud-account-badge" id="hud-account-badge">Đăng nhập</span>
+                </button>
+                <div class="hud-gold-chip">
+                  <span class="coin-icon" aria-hidden="true"></span>
+                  <strong id="coins">—</strong> <span class="coin-unit">Gold</span>
+                </div>
+              </div>
+
+              <!-- Row 2: XP bar & Field plots bar on the SAME line -->
+              <div class="hud-bottom-row">
+                <div class="hud-bar-capsule hud-xp-capsule">
+                  <div class="hud-bar-fill xp-fill" id="xp-fill"></div>
+                  <span class="hud-bar-star">⭐</span>
+                  <span class="hud-bar-label" id="xp">0/200 XP</span>
+                  <progress id="xp-bar" class="sr-only" max="200" value="0"></progress>
+                </div>
+
+                <div class="hud-bar-capsule hud-field-capsule">
+                  <div class="hud-bar-fill field-fill" id="field-fill"></div>
+                  <span class="hud-bar-sprout">🌱</span>
+                  <span class="hud-bar-label" id="field-count">0/6 ô</span>
+                  <progress id="field-bar" class="sr-only" max="6" value="0"></progress>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <div class="farm-hud-menu">
+            <button type="button" id="farm-hud-toggle" class="hud-action-btn" aria-controls="farm-hud-actions" aria-expanded="true" aria-label="Thu gọn tiện ích Farm">
+              <span aria-hidden="true">▴</span>
+            </button>
+            <div class="farm-hud-actions" id="farm-hud-actions">
+              <button type="button" class="hud-action-btn" id="activity-open" aria-haspopup="dialog" aria-label="Nhật ký hoạt động" title="Nhật ký hoạt động" disabled>
+                <img class="hud-action-icon" src="/icon/activity-journal.png" alt="">
+                <span id="activity-unread-badge" class="activity-badge" hidden>0</span>
               </button>
-              <div class="hud-gold-chip">
-                <span class="coin-icon" aria-hidden="true"></span>
-                <strong id="coins">—</strong> <span class="coin-unit">Gold</span>
-              </div>
-            </div>
-
-            <!-- Row 2: XP bar & Field plots bar on the SAME line -->
-            <div class="hud-bottom-row">
-              <div class="hud-bar-capsule hud-xp-capsule">
-                <div class="hud-bar-fill xp-fill" id="xp-fill"></div>
-                <span class="hud-bar-star">⭐</span>
-                <span class="hud-bar-label" id="xp">0/200 XP</span>
-                <progress id="xp-bar" class="sr-only" max="200" value="0"></progress>
-              </div>
-
-              <div class="hud-bar-capsule hud-field-capsule">
-                <div class="hud-bar-fill field-fill" id="field-fill"></div>
-                <span class="hud-bar-sprout">🌱</span>
-                <span class="hud-bar-label" id="field-count">0/6 ô</span>
-                <progress id="field-bar" class="sr-only" max="6" value="0"></progress>
-              </div>
             </div>
           </div>
-        </header>
+        </div>
+
+        <!-- Floating Global Game Toast -->
+        <div id="game-toast" class="game-toast" role="status" aria-live="polite" hidden>
+          <span class="game-toast-icon" id="game-toast-icon" aria-hidden="true">🌱</span>
+          <span class="game-toast-msg" id="game-toast-msg"></span>
+        </div>
 
         <!-- Hit areas overlay for Phaser plots -->
         <div id="plot-targets" class="plot-targets"></div>
+
+        <!-- Floating Plot Tooltip Card -->
+        <div id="plot-tooltip" class="plot-tooltip" role="tooltip" aria-hidden="true">
+          <div class="plot-tooltip-arrow"></div>
+          <div class="plot-tooltip-body">
+            <div class="plot-tooltip-header">
+              <span class="plot-tooltip-icon" id="tooltip-icon">🌱</span>
+              <div class="plot-tooltip-title-wrap">
+                <strong class="plot-tooltip-title" id="tooltip-title">Ô đất 1</strong>
+                <span class="plot-tooltip-badge" id="tooltip-badge">Đất trống</span>
+              </div>
+            </div>
+            <p class="plot-tooltip-desc" id="tooltip-desc">Bấm để gieo hạt giống</p>
+            <div class="plot-tooltip-meta" id="tooltip-meta">
+              <span class="tooltip-xp" id="tooltip-xp">⭐ +5 XP</span>
+              <span class="tooltip-timer" id="tooltip-timer">⏳ Còn 15s</span>
+            </div>
+          </div>
+        </div>
 
         <!-- Left Menu: Top-down Dropdown (Secondary options, Themes) -->
         <div class="top-dropdown top-dropdown-left" id="drawer-left" aria-label="Menu tùy chọn">
@@ -62,11 +101,16 @@
             <span class="dropdown-arrow">▾</span>
           </button>
           <div class="dropdown-menu-list" id="drawer-left-content">
-            <button type="button" class="menu-btn" data-tool="account" title="Tài khoản">
+            <button type="button" class="menu-btn" data-tool="account" title="Quản lý tài khoản">
               <img src="/face/1-1.GIF" alt="">
               <span id="menu-account-label">Tài khoản</span>
             </button>
-            <button type="button" class="menu-btn" data-tool="theme" disabled>
+            <button type="button" class="menu-btn" id="menu-activity-btn" title="Nhật ký hoạt động">
+              <span class="drawer-menu-icon" aria-hidden="true">📜</span>
+              <span>Nhật ký</span>
+              <span id="menu-activity-badge" class="activity-badge menu-badge" hidden>0</span>
+            </button>
+            <button type="button" class="menu-btn" data-tool="theme" disabled title="Đổi giao diện nền">
               <img src="/icon/topbutton%20(10).png" alt="">
               <span>Đổi nền</span>
             </button>
@@ -80,15 +124,15 @@
             <span class="drawer-icon"><img src="/icon/topbutton%20(2).png" alt=""></span>
           </button>
           <div class="drawer-content" id="drawer-right-content">
-            <button type="button" class="menu-btn" data-tool="shop" disabled>
+            <button type="button" class="menu-btn" data-tool="shop" disabled title="Tiệm hạt giống (Phím 1)">
               <img src="/icon/topbutton%20(2).png" alt="">
               <span>Tiệm hạt</span>
             </button>
-            <button type="button" class="menu-btn" data-tool="bag" disabled>
+            <button type="button" class="menu-btn" data-tool="bag" disabled title="Túi hạt & Gieo trồng (Phím 2)">
               <img src="/icon/topbutton%20(12).png" alt="">
               <span>Túi hạt</span>
             </button>
-            <button type="button" class="menu-btn" data-tool="warehouse" disabled>
+            <button type="button" class="menu-btn" data-tool="warehouse" disabled title="Kho nông sản (Phím 3)">
               <img src="/icon/topbutton%20(8).png" alt="">
               <span>Kho nông sản</span>
             </button>
@@ -96,8 +140,11 @@
         </aside>
 
         <!-- Instructions Toast (Status & Tips) -->
-        <div class="instructions">
-          <p id="hint">Đang mở nông trại…</p>
+        <div class="instructions" role="region" aria-label="Hướng dẫn canh tác">
+          <div class="instructions-header">
+            <span class="guide-badge">GỢI Ý</span>
+            <p id="hint">Đang mở nông trại…</p>
+          </div>
           <p id="feedback" role="status"></p>
         </div>
 
@@ -107,39 +154,64 @@
             <img src="/icon/topbutton%20(10).png" alt="">
             <span>Đổi nền</span>
           </button>
-          <button type="button" class="dock-btn desktop-only" data-tool="shop" disabled title="Tiệm hạt giống">
+          <button type="button" class="dock-btn desktop-only" data-tool="shop" disabled title="Tiệm hạt giống (Phím 1)">
             <img src="/icon/topbutton%20(2).png" alt="">
             <span>Tiệm hạt</span>
           </button>
-          <button type="button" class="dock-btn desktop-only" data-tool="warehouse" disabled title="Kho nông sản">
+          <button type="button" class="dock-btn desktop-only" data-tool="warehouse" disabled title="Kho nông sản (Phím 3)">
             <img src="/icon/topbutton%20(8).png" alt="">
             <span>Kho</span>
           </button>
-          <button type="button" class="dock-btn" data-tool="bag" disabled title="Túi hạt giống">
+          <button type="button" class="dock-btn" data-tool="bag" disabled title="Túi hạt & Gieo trồng (Phím 2)">
             <img src="/icon/topbutton%20(12).png" alt="">
             <span>Gieo hạt</span>
           </button>
-          <button type="button" class="dock-btn" data-tool="clear" aria-pressed="false" disabled title="Dọn đất sau thu hoạch">
+          <button type="button" class="dock-btn" data-tool="clear" aria-pressed="false" disabled title="Xẻng dọn đất (Phím 4)">
             <img src="/icon/topbutton%20(6).png" alt="">
             <span>Xẻng</span>
           </button>
-          <button type="button" class="dock-btn" data-tool="harvest" aria-pressed="false" disabled title="Thu hoạch cây chín">
+          <button type="button" class="dock-btn" data-tool="harvest" aria-pressed="false" disabled title="Thu hoạch cây chín (Phím 5)">
             <img src="/icon/topbutton%20(4).png" alt="">
             <span>Thu hoạch</span>
+          </button>
+          <button type="button" class="dock-btn" data-tool="water" aria-pressed="false" disabled title="Tưới nước miễn phí">
+            <img src="/icon/topbutton%20(14).png" alt="">
+            <span>Tưới nước</span>
+          </button>
+          <button type="button" class="dock-btn" data-tool="fertilize" aria-pressed="false" disabled title="Bón phân · 5 Gold">
+            <img src="/icon/topbutton%20(12).png" alt="">
+            <span>Bón phân</span>
           </button>
         </nav>
       </section>
     </main>
 
+    <div id="guide-shade" hidden aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+    <section id="farm-guide" hidden role="region" aria-labelledby="farm-guide-title" aria-describedby="farm-guide-message">
+      <h2 id="farm-guide-title">Cùng trồng nhé!</h2>
+      <p id="farm-guide-message" aria-live="polite"></p>
+      <p id="farm-guide-feedback" role="status"></p>
+      <div class="farm-guide-actions">
+        <button type="button" id="guide-skip">Bỏ qua hướng dẫn</button>
+        <button type="button" id="guide-action">Bắt đầu</button>
+      </div>
+    </section>
+
     <!-- Modal Popup for Shop / Bag / Warehouse -->
     <dialog id="inventory" aria-labelledby="inventory-title">
       <div class="dialog-wrapper">
+        <!-- Floating Game Toast for Inventory dialog -->
+        <div id="inventory-toast" class="modal-toast" role="status" aria-live="polite" hidden>
+          <span class="modal-toast-icon" id="inventory-toast-icon" aria-hidden="true">🌱</span>
+          <span class="modal-toast-msg" id="inventory-toast-msg"></span>
+        </div>
+
         <header class="inventory-header">
           <div class="inventory-heading">
             <img id="inventory-icon" src="/icon/topbutton%20(2).png" alt="">
             <div>
-              <h2 id="inventory-title">Tiệm hạt giống</h2>
-              <p id="inventory-description">Mua hạt để bắt đầu gieo trồng</p>
+              <h2 id="inventory-title">Tiệm hạt</h2>
+              <p id="inventory-description">Chọn giống và số hạt muốn mua.</p>
             </div>
           </div>
           <div class="inventory-actions">
@@ -155,19 +227,24 @@
         </nav>
 
         <div id="inventory-content" class="inventory-content"></div>
-        <p id="panel-feedback" role="status"></p>
+        <p id="panel-feedback" class="sr-only" role="status"></p>
       </div>
     </dialog>
 
     <!-- Modal Popup for Account -->
     <dialog id="account" aria-labelledby="account-title">
       <div class="dialog-wrapper">
+        <div id="account-toast" class="account-toast" role="alert" aria-live="assertive" hidden>
+          <span class="account-toast-icon" id="account-toast-icon" aria-hidden="true">⚠️</span>
+          <span class="account-toast-msg" id="account-toast-msg"></span>
+        </div>
+
         <header class="account-header">
           <div class="account-heading">
             <img class="account-avatar-img" src="/face/1-1.GIF" alt="">
             <div>
               <h2 id="account-title">Tài khoản FarmVerse</h2>
-              <p id="account-description">Đăng ký để lưu vĩnh viễn nông trại</p>
+              <p id="account-description">Tạo tài khoản để lưu nông trại đang chơi</p>
             </div>
           </div>
           <form method="dialog"><button class="inventory-close" type="submit" aria-label="Đóng cửa sổ">×</button></form>
@@ -181,31 +258,31 @@
         <div class="account-body">
           <!-- Register view -->
           <div class="account-view" id="view-register">
-            <p class="account-tip">🌱 Tài khoản mới nhận đúng ruộng đang chơi, gồm cây, Gold, XP, túi hạt và kho.</p>
+            <p class="account-tip">🌱 Giữ nguyên nông trại đang chơi khi tạo tài khoản mới.</p>
             <form id="form-register" class="account-form" novalidate>
               <div class="form-group">
-                <label for="reg-username">Tên đăng nhập <small>(3–24 ký tự a-z, 0-9, _)</small></label>
-                <input type="text" id="reg-username" autocomplete="username" minlength="3" maxlength="24" required placeholder="Ví dụ: nongdan_01">
+                <label for="reg-username">Tên đăng nhập <small>(3–24 ký tự)</small></label>
+                <input type="text" id="reg-username" autocomplete="username" minlength="3" maxlength="24" required placeholder="Nhập tên tài khoản" aria-describedby="account-toast-msg">
               </div>
               <div class="form-group">
                 <label for="reg-password">Mật khẩu <small>(15–128 ký tự)</small></label>
-                <input type="password" id="reg-password" autocomplete="new-password" minlength="15" maxlength="128" required placeholder="Nhập ít nhất 15 ký tự">
+                <input type="password" id="reg-password" autocomplete="new-password" minlength="15" maxlength="128" required placeholder="Nhập ít nhất 15 ký tự" aria-describedby="account-toast-msg">
               </div>
-              <button type="submit" class="account-btn account-btn-submit" id="btn-submit-register">Tạo tài khoản &amp; Lưu ruộng</button>
+              <button type="submit" class="account-btn account-btn-submit" id="btn-submit-register">Tạo tài khoản</button>
             </form>
           </div>
 
           <!-- Login view -->
           <div class="account-view" id="view-login" hidden>
-            <p class="account-tip">🌾 Đăng nhập để mở lại ruộng đã gắn với tài khoản của bạn.</p>
+            <p class="account-tip">🌾 Mở lại nông trại đã gắn với tài khoản của bạn.</p>
             <form id="form-login" class="account-form" novalidate>
               <div class="form-group">
                 <label for="login-username">Tên đăng nhập</label>
-                <input type="text" id="login-username" autocomplete="username" minlength="3" maxlength="24" required placeholder="Tên tài khoản">
+                <input type="text" id="login-username" autocomplete="username" minlength="3" maxlength="24" required placeholder="Nhập tên tài khoản" aria-describedby="account-toast-msg">
               </div>
               <div class="form-group">
                 <label for="login-password">Mật khẩu</label>
-                <input type="password" id="login-password" autocomplete="current-password" minlength="15" maxlength="128" required placeholder="Mật khẩu">
+                <input type="password" id="login-password" autocomplete="current-password" minlength="15" maxlength="128" required placeholder="Nhập mật khẩu" aria-describedby="account-toast-msg">
               </div>
               <button type="submit" class="account-btn account-btn-submit" id="btn-submit-login">Đăng nhập</button>
             </form>
@@ -218,9 +295,9 @@
                 <img src="/face/1-1.GIF" alt="" class="profile-avatar-img">
               </div>
               <div class="profile-info">
-                <span class="profile-badge">Đã gắn ruộng</span>
+                <span class="profile-badge">Đang đăng nhập</span>
                 <h3 class="profile-username" id="profile-username">—</h3>
-                <p class="profile-hint">Nông trại được lưu an toàn trên hệ thống.</p>
+                <p class="profile-hint">Tiến độ nông trại tự động lưu vào tài khoản này.</p>
               </div>
             </div>
             <p class="account-tip account-tip-warning">⚠️ Đăng xuất sẽ chuyển về phiên Khách mới với ruộng độc lập.</p>
@@ -245,8 +322,37 @@
             </div>
             <button type="button" class="account-btn account-btn-submit" id="btn-retry-sync">Thử lại tải phiên</button>
           </div>
+        </div>
+      </div>
+    </dialog>
 
-          <p id="account-feedback" class="account-feedback" role="status" aria-live="polite"></p>
+    <!-- Modal Popup for Activity Log -->
+    <dialog id="activity" aria-labelledby="activity-title">
+      <div class="dialog-wrapper">
+        <header class="activity-header">
+          <div class="activity-heading">
+            <span class="activity-header-icon" aria-hidden="true">📜</span>
+            <div>
+              <h2 id="activity-title">Nhật ký nông trại</h2>
+              <p id="activity-description">Ghé thăm và biến động hoa màu</p>
+            </div>
+          </div>
+          <form method="dialog"><button class="inventory-close" type="submit" aria-label="Đóng cửa sổ">×</button></form>
+        </header>
+
+        <div class="activity-body">
+          <ul id="activity-list" class="activity-list" aria-label="Danh sách hoạt động"></ul>
+          <p id="activity-feedback" role="status"></p>
+
+          <div id="activity-empty" class="activity-empty" hidden>
+            <span class="activity-empty-icon" aria-hidden="true">🌾</span>
+            <p>Chưa có lượt ghé thăm hay biến động nào.</p>
+            <small>Khi có bạn bè ghé thăm hoặc hái quả, nhật ký sẽ hiện ở đây.</small>
+          </div>
+
+          <div class="activity-footer">
+            <button type="button" id="activity-more" class="activity-more-btn" hidden>Xem thêm</button>
+          </div>
         </div>
       </div>
     </dialog>

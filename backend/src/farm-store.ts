@@ -1,5 +1,5 @@
 import pg from 'pg';
-import type { QueryResultRow } from 'pg';
+import type { PoolClient, QueryResultRow } from 'pg';
 import type { Farm, FarmMutation, FarmResponse } from '../../shared/farm.mts';
 import { applyAction, createFarm, FarmError } from './farm.ts';
 import { createMerchant, resolveMerchant } from './merchant.ts';
@@ -18,6 +18,27 @@ const farms = new Map<string, Farm>();
 const merchants = new Map<string, MerchantState>();
 
 export class FarmStorageError extends Error {}
+
+export async function transactFarm<T>(operation: (client: PoolClient) => Promise<T>): Promise<T> {
+  if (!pool) throw new FarmStorageError('Chế độ tài khoản cần PostgreSQL.');
+  let client: PoolClient | undefined;
+  let discard = false;
+  try {
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const result = await operation(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    if (client) {
+      try { await client.query('ROLLBACK'); } catch { discard = true; }
+    }
+    console.warn('Giao dịch lưu tiến độ thất bại.', (error as { code?: string }).code ?? '');
+    throw new FarmStorageError('Chưa lưu được tiến độ Farm.');
+  } finally {
+    client?.release(discard);
+  }
+}
 
 export async function queryFarmDatabase<Row extends QueryResultRow>(sql: string, values: unknown[] = []) {
   if (!pool) throw new FarmStorageError('Chế độ tài khoản cần PostgreSQL.');

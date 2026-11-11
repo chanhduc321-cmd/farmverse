@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ripeAt, stageAt } from '../../shared/farm.mts';
+import { ripeYield } from '../../shared/farm-rules.mts';
 import { crops } from '../src/catalog.ts';
 import { applyAction, createFarm, parseAction } from '../src/farm.ts';
 
@@ -30,13 +31,13 @@ test('buy, plant, harvest, sell, and clear preserve GOLD, inventory, XP, and rev
   applyAction(farm, buy, 0);
   assert.throws(() => applyAction(farm, buy, 0), /vừa thay đổi/);
   assert.equal(farm.gold, 180);
-  applyAction(farm, { type: 'plant', plot: 0, cropId: 1, expectedRevision: 1 }, 0);
+  applyAction(farm, { type: 'plant', plot: 0, cropId: 1, expectedRevision: 1 }, 0, () => 0);
   assert.equal(farm.seeds[1], 1);
   assert.equal(farm.xp, 5);
   const harvest = { type: 'harvest', plot: 0, expectedRevision: 2 } as const;
   assert.throws(() => applyAction(farm, harvest, 29_999), /chưa chín/);
   assert.throws(() => applyAction(farm, { type: 'clear', plot: 0, expectedRevision: 2 }, 30_000), /Chỉ dọn/);
-  applyAction(farm, harvest, 30_000, () => 0);
+  applyAction(farm, harvest, 30_000);
   assert.throws(() => applyAction(farm, { ...harvest, expectedRevision: 3 }, 30_000), /đã thu hoạch/);
   assert.throws(() => applyAction(farm, { type: 'plant', plot: 0, cropId: 1, expectedRevision: 3 }, 30_000), /đất trống/);
   assert.equal(farm.produce[1], 10);
@@ -51,9 +52,29 @@ test('buy, plant, harvest, sell, and clear preserve GOLD, inventory, XP, and rev
   applyAction(farm, { type: 'clear', plot: 0, expectedRevision: 4 }, 30_000);
   assert.equal(farm.plots[0], null);
   assert.equal(farm.xp, 9);
-  applyAction(farm, { type: 'plant', plot: 0, cropId: 1, expectedRevision: 5 }, 30_000);
-  applyAction(farm, { type: 'harvest', plot: 0, expectedRevision: 6 }, 60_000, () => 0.9999);
+  applyAction(farm, { type: 'plant', plot: 0, cropId: 1, expectedRevision: 5 }, 30_000, () => 0.9999);
+  applyAction(farm, { type: 'harvest', plot: 0, expectedRevision: 6 }, 60_000);
   assert.equal(farm.produce[1], 37);
+});
+
+test('ripe crop yield survives serialization and old saves harvest without rerolling', () => {
+  const farm = createFarm();
+  farm.seeds[1] = 1;
+  applyAction(farm, { type: 'plant', plot: 0, cropId: 1, expectedRevision: 0 }, 100, () => 0.5);
+  farm.plots[1] = { cropId: 1, plantedAt: 200, harvested: false };
+  const saved = JSON.stringify(farm);
+  const restored: typeof farm = JSON.parse(saved);
+  const crop = crops[0];
+  assert.equal(ripeYield(crop, restored.plots[0]!, 0, 30_099), undefined);
+  assert.equal(ripeYield(crop, restored.plots[0]!, 0, 30_100), 20);
+  const legacyYield = ripeYield(crop, restored.plots[1]!, 1, 30_200)!;
+  assert.ok(legacyYield >= 10 && legacyYield <= 29);
+  assert.equal(ripeYield(crop, farm.plots[1], 1, 90_000), legacyYield);
+  const unexpectedRoll = () => { throw new Error('Harvest rerolled yield'); };
+  applyAction(restored, { type: 'harvest', plot: 0, expectedRevision: 1 }, 60_000, unexpectedRoll);
+  applyAction(restored, { type: 'harvest', plot: 1, expectedRevision: 2 }, 60_000, unexpectedRoll);
+  assert.equal(restored.produce[1], 20 + legacyYield);
+  assert.equal(ripeYield(crop, restored.plots[0]!, 0, 60_000), undefined);
 });
 
 test('shop level is advisory, XP carries over, and mutation inputs enforce limits', () => {
@@ -71,4 +92,47 @@ test('shop level is advisory, XP carries over, and mutation inputs enforce limit
   assert.equal(parseAction('buy', { ...order, cropId: 16 }), undefined);
   assert.equal(parseAction('plant', { ...order, plot: 6 }), undefined);
   assert.equal(parseAction('clear', { plot: 0 }), undefined);
+});
+
+test('water and fertilizer shorten one crop lifecycle without changing its identity or yield', () => {
+  const farm = createFarm();
+  const plantedAt = 100_000;
+  farm.plots[0] = { cropId: 1, plantedAt, harvested: false, yieldRoll: 0 };
+  const crop = crops[0];
+  const run = (type: 'water' | 'fertilize' | 'harvest', now: number) =>
+    applyAction(farm, { type, plot: 0, expectedRevision: farm.revision }, now);
+
+  run('water', plantedAt + 1_000);
+  assert.equal(ripeAt(crop, farm.plots[0]!), plantedAt + 27_000);
+  assert.equal(farm.gold, 200);
+  assert.throws(() => run('water', plantedAt + 2_000), /đã tưới/);
+  run('fertilize', plantedAt + 2_000);
+  assert.equal(farm.gold, 195);
+  assert.throws(() => run('fertilize', plantedAt + 3_000), /đã bón/);
+  const saved: typeof farm = JSON.parse(JSON.stringify(farm));
+  assert.equal(saved.plots[0]!.plantedAt, plantedAt);
+  assert.equal(ripeAt(crop, saved.plots[0]!), plantedAt + 21_000);
+  assert.equal(stageAt(crop, saved.plots[0]!, plantedAt + 20_999), 4);
+  assert.equal(stageAt(crop, saved.plots[0]!, plantedAt + 21_000), 5);
+  run('harvest', plantedAt + 21_000);
+  assert.equal(farm.produce[1], 10);
+  assert.equal(farm.xp, 1);
+  assert.equal(farm.revision, 3);
+});
+
+test('growth boosts validate funds, crop state and plot range', () => {
+  const farm = createFarm();
+  assert.equal(parseAction('water', { plot: 6, expectedRevision: 0 }), undefined);
+  const action = { type: 'fertilize', plot: 0, expectedRevision: 0 } as const;
+  assert.throws(() => applyAction(farm, action, 1), /cây đang lớn/);
+  farm.plots[0] = { cropId: 1, plantedAt: 0, harvested: false };
+  farm.gold = 4;
+  assert.throws(() => applyAction(farm, action, 1), /5 Gold/);
+  assert.equal(farm.plots[0]!.fertilized, undefined);
+  assert.equal(farm.gold, 4);
+  farm.gold = 5;
+  assert.match(applyAction(farm, action, 25_000), /đã chín/);
+  assert.equal(ripeAt(crops[0], farm.plots[0]!), 24_000);
+  assert.throws(() => applyAction(farm, { type: 'water', plot: 0, expectedRevision: 1 }, 25_000), /đã chín/);
+  assert.equal(farm.gold, 0);
 });

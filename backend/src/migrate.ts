@@ -8,7 +8,7 @@ if (!connectionString) {
 } else {
   const pool = new pg.Pool({ connectionString, connectionTimeoutMillis: 2_000 });
   try {
-    for (const name of ['003_crop_farm_guest.sql', '004_farm_accounts.sql', '005_farm_merchant.sql']) {
+    for (const name of ['003_crop_farm_guest.sql', '004_farm_accounts.sql', '005_farm_merchant.sql', '006_farm_community.sql', '007_farm_activity.sql']) {
       const migration = new URL(`../migrations/${name}`, import.meta.url);
       await pool.query(await readFile(migration, 'utf8'));
     }

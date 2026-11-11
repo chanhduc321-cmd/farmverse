@@ -9,7 +9,9 @@ import type { Farm, FarmSessionResponse } from '../../shared/farm.mts';
 import { MERCHANT_API, MERCHANT_ERROR_STATUS, isMerchantOfferRequest } from '../../shared/merchant.mts';
 import type { MerchantErrorCode, MerchantErrorResponse } from '../../shared/merchant.mts';
 import { accountLifetimeSeconds, findAccountSession, hashToken, loginAccount, logoutAccount, parseCredentials, registerAccount } from './account-store.ts';
+import { activityRoutes } from './activity-routes.ts';
 import { crops } from './catalog.ts';
+import { communityRoutes } from './community-routes.ts';
 import { FarmError, parseAction } from './farm.ts';
 import { checkFarmStorage, farmStorageMode, FarmStorageError, mutateFarm, readFarm, registerFarm, requestMerchant } from './farm-store.ts';
 import type { MerchantAction } from './merchant.ts';
@@ -191,7 +193,7 @@ app.post(ACCOUNT_API.logout.path, async (context) => {
   return context.body(null, 204);
 });
 
-for (const type of ['buy', 'sell', 'plant', 'harvest', 'clear', 'theme'] as const) {
+for (const type of ['buy', 'sell', 'plant', 'harvest', 'clear', 'water', 'fertilize', 'theme', 'claimMission', 'checkIn'] as const) {
   app.post(FARM_API[type].path, async (context) => {
     const session = await farmSession(context);
     if (!session) return context.json({ error: 'Phiên chơi đã hết. Hãy tải lại trang.' }, 401);
@@ -220,6 +222,16 @@ for (const kind of ['accept', 'reject'] as const) {
     return merchantRequest(context, { ...body, kind });
   });
 }
+
+app.route('/', communityRoutes(async (context) => {
+  const session = await farmSession(context);
+  if (session?.tokenHash) return { id: session.id, tokenHash: session.tokenHash };
+}));
+
+app.route('/', activityRoutes(async (context) => {
+  const session = await farmSession(context);
+  if (session?.tokenHash) return { id: session.id, tokenHash: session.tokenHash };
+}));
 
 serve({ fetch: app.fetch, hostname: '127.0.0.1', port: Number(process.env.PORT ?? 8092) },
   ({ address, port }) => console.log(`FarmVerse API listening at http://${address}:${port} (${farmStorageMode})`));

@@ -12,7 +12,7 @@ pnpm exec tsx --env-file=.env src/index.ts
 
 Dùng `PORT=8092` trong `.env` để khớp proxy mặc định của web. Nếu cổng PostgreSQL 5432 đang được dùng, chọn cổng khác qua `POSTGRES_PORT` và dùng cùng cổng trong `DATABASE_URL`. Nếu dùng database có sẵn, đặt `DATABASE_URL` theo thông tin kết nối của database đó.
 
-`DATABASE_URL` chọn chế độ PostgreSQL. Có thể chạy lại migrations `003` đến `005` trên tiến độ đã lưu. Phiên Guest và phiên tài khoản dùng cookie HttpOnly 30 ngày ở chế độ này. Khi backend khởi động lại, cùng cookie mở đúng Gold, XP, Túi hạt, Kho, thời điểm gieo và trạng thái NPC đã lưu. `/health` trả 503 nếu schema hoặc kết nối chưa sẵn sàng.
+`DATABASE_URL` chọn chế độ PostgreSQL. Có thể chạy lại migrations `003` đến `006` trên tiến độ đã lưu. Phiên Guest và phiên tài khoản dùng cookie HttpOnly 30 ngày ở chế độ này. Khi backend khởi động lại, cùng cookie mở đúng Gold, XP, Túi hạt, Kho, thời điểm gieo và trạng thái NPC đã lưu. `/health` trả 503 nếu schema hoặc kết nối chưa sẵn sàng.
 
 API tạo tài khoản gắn đúng ruộng của phiên Guest hiện tại. Đăng nhập từ trình duyệt khác mở lại ruộng đã gắn. Chế độ RAM hỗ trợ chơi Guest để thử nhanh. [API tài khoản](../docs/API.md#accounts-t-24)
 

@@ -13,6 +13,8 @@ Call `GET /api/farm` first to start or resume a Guest session with an HttpOnly c
 | `POST /api/farm/harvest` | `plot` | Harvest a ripe crop and mark the plot for clearing |
 | `POST /api/farm/sell` | `cropId`, `quantity` | Sell up to 999 items within warehouse stock |
 | `POST /api/farm/clear` | `plot` | Clear a harvested plot |
+| `POST /api/farm/water` | `plot` | Water a growing crop once per lifecycle and reduce its base growth time by 10% |
+| `POST /api/farm/fertilize` | `plot` | Spend 5 Gold once per lifecycle on a growing crop and reduce its base growth time by 20% |
 
 `plot` is the zero-based position from 0 to 5. A stale revision returns HTTP 409. Read the current farm before retrying. [Shared Farm contract](../shared/farm.mts)
 
@@ -74,3 +76,28 @@ Merchant offers in this interface use GOLD. C03 Micro uses the separate testnet 
 ### Errors
 
 Errors use `{ "error": { "code": "STALE_MERCHANT", "message": "..." } }`. The shared `MERCHANT_ERROR_STATUS` maps codes to HTTP status. Request validation is required at runtime. `isMerchantOfferRequest` checks the request shape, and the server checks session ownership, active offer identity, affordability, capacity, and timing against persisted state.
+
+## Community (T-36)
+
+Community routes require a signed-in PostgreSQL account and migration `006`. Use the same browser cookies and API prefix as Farm. [Shared route templates and response types](../shared/community.mts)
+
+| Browser request | Input | Result |
+|---|---|---|
+| `GET /api/community/players` | Query `list` set to `residents`, `friends` or `invitations`, with optional `q` and `offset` | `PlayerPage` with up to 25 usernames and `nextOffset`. Invitations lists pending incoming requests. |
+| `POST /api/community/friends/:username/invite` | `{}` | 204. Sends an invitation. |
+| `POST /api/community/friends/:username/confirm` | `{}` | 204. The recipient confirms the named sender. Both players appear in each other's friends lists. |
+| `GET /api/community/farms/:username` | Target username | `FarmVisit` with plot snapshots, remaining ripe fruit and `canSteal` for the current visitor. |
+| `POST /api/community/farms/:username/steal` | `{ plot, plantedAt }` | `StealResponse` with the visitor's updated `farm`, updated `visit` and `serverTime`. |
+
+Search filters the current list by username substring. Residents lists the other accounts. Use the zero-based plot index and `plantedAt` from the visit response to identify the crop. A successful steal moves exactly one fruit into the visitor's warehouse. Each visitor can steal once per crop and the host keeps at least one fruit. After HTTP 409, display `{ error }` and refresh the visit. [Gameplay rules](FARMVERSE_GAMEPLAY_AMENDMENT_01.md#thăm-ruộng-và-steal-t-36)
+
+## Farm activity (T-42)
+
+Activity routes require the signed-in account and migration `007`. The server identifies the owner from the session cookie. [Shared response types](../shared/activity.mts)
+
+| Browser request | Input | Result |
+|---|---|---|
+| `GET /api/activity` | Optional `offset`, `limit` from 1 to 50 and `through` | Newest events first, unread summary and next offset. For subsequent pages, set `through` to the first event ID from the initial page to keep the list stable. |
+| `POST /api/activity/read` | JSON `{ "through": "event-id" }` | Mark events up to the displayed event for the current owner. Returns the remaining unread count. |
+
+After displaying the first page, acknowledge its newest event ID. An event that arrives during the read remains unread. The summary lists up to five distinct visitors and totals the fruit taken in unread events. Visits from the same player to the same Farm are grouped within ten minutes. Successful steals and their journal events commit in the same transaction.

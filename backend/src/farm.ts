@@ -8,7 +8,15 @@ export function parseAction(type: FarmMutation['type'], value: unknown): FarmMut
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return;
   const { expectedRevision, cropId, quantity, plot } = value as Record<string, unknown>;
   if (typeof expectedRevision !== 'number' || !Number.isSafeInteger(expectedRevision) || expectedRevision < 0) return;
-  if (type === 'theme') return { type, expectedRevision };
+  if (type === 'theme' || type === 'checkIn') return { type, expectedRevision };
+  if (type === 'claimMission') {
+    const { mission, day } = value as Record<string, unknown>;
+    if (mission === 'first') return { type, mission, expectedRevision };
+    if (mission === 'daily' && typeof day === 'number' && Number.isSafeInteger(day) && day >= 0) {
+      return { type, mission, day, expectedRevision };
+    }
+    return;
+  }
   if (type === 'buy' || type === 'sell') {
     if (typeof cropId !== 'number' || !Number.isInteger(cropId) || !crops[cropId - 1]) return;
     if (typeof quantity !== 'number' || !Number.isSafeInteger(quantity)) return;
