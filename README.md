@@ -1,4 +1,4 @@
-# FarmVerse
+# Nông Trại Mộng Mơ
 
 A browser-playable casual farming game. Buy seeds, grow crops, harvest, and sell produce to fund the next batch.
 
@@ -36,7 +36,7 @@ For architecture details, pricing formulas, NPC state transitions, and acceptanc
 
 ## Run locally
 
-The local Farm build uses in-memory sessions. [Setup and commands](web/README.md)
+The Farm build connects to the Hono API and PostgreSQL through `backend/.env`. API connection failures show a retry screen. [Setup and commands](web/README.md) · [Database migration and Vercel setup](docs/POSTGRES_MIGRATION_PLAN.md)
 
 ## Honesty & limits
 

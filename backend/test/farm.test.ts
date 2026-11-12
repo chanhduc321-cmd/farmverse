@@ -5,6 +5,20 @@ import { ripeYield } from '../../shared/farm-rules.mts';
 import { crops } from '../src/catalog.ts';
 import { applyAction, createFarm, parseAction } from '../src/farm.ts';
 
+test('Pet selection validates species and uses the Farm revision', () => {
+  const farm = createFarm();
+  assert.equal(farm.pet, 'dog');
+  for (const pet of ['cat', 'goose', 'dog'] as const) {
+    const action = parseAction('selectPet', { pet, expectedRevision: farm.revision })!;
+    applyAction(farm, action, 0);
+    assert.equal(farm.pet, pet);
+    assert.throws(() => applyAction(farm, action, 0), /vừa thay đổi/);
+  }
+  for (const pet of ['fox', null, {}, 0]) {
+    assert.equal(parseAction('selectPet', { pet, expectedRevision: farm.revision }), undefined);
+  }
+});
+
 test('all 15 varieties reach every frame and ripen at the approved time', () => {
   const expected = [30, 180, 150, 160, 270, 285, 300, 330, 360, 390, 588, 450, 672, 510, 756];
   assert.equal(crops.length, expected.length);
@@ -98,18 +112,21 @@ test('water and fertilizer shorten one crop lifecycle without changing its ident
   const farm = createFarm();
   const plantedAt = 100_000;
   farm.plots[0] = { cropId: 1, plantedAt, harvested: false, yieldRoll: 0 };
+  applyAction(farm, { type: 'buyFertilizer', quantity: 2, expectedRevision: 0 }, plantedAt);
   const crop = crops[0];
   const run = (type: 'water' | 'fertilize' | 'harvest', now: number) =>
     applyAction(farm, { type, plot: 0, expectedRevision: farm.revision }, now);
 
   run('water', plantedAt + 1_000);
   assert.equal(ripeAt(crop, farm.plots[0]!), plantedAt + 27_000);
-  assert.equal(farm.gold, 200);
+  assert.equal(farm.gold, 190);
+  assert.equal(farm.fertilizer, 2);
   assert.throws(() => run('water', plantedAt + 2_000), /đã tưới/);
   run('fertilize', plantedAt + 2_000);
-  assert.equal(farm.gold, 195);
+  assert.equal(farm.gold, 190);
   assert.throws(() => run('fertilize', plantedAt + 3_000), /đã bón/);
   const saved: typeof farm = JSON.parse(JSON.stringify(farm));
+  assert.equal(saved.fertilizer, 1);
   assert.equal(saved.plots[0]!.plantedAt, plantedAt);
   assert.equal(ripeAt(crop, saved.plots[0]!), plantedAt + 21_000);
   assert.equal(stageAt(crop, saved.plots[0]!, plantedAt + 20_999), 4);
@@ -117,22 +134,39 @@ test('water and fertilizer shorten one crop lifecycle without changing its ident
   run('harvest', plantedAt + 21_000);
   assert.equal(farm.produce[1], 10);
   assert.equal(farm.xp, 1);
-  assert.equal(farm.revision, 3);
+  assert.equal(farm.revision, 4);
 });
 
-test('growth boosts validate funds, crop state and plot range', () => {
+test('growth boosts validate stock, crop state and plot range', () => {
   const farm = createFarm();
   assert.equal(parseAction('water', { plot: 6, expectedRevision: 0 }), undefined);
   const action = { type: 'fertilize', plot: 0, expectedRevision: 0 } as const;
   assert.throws(() => applyAction(farm, action, 1), /cây đang lớn/);
   farm.plots[0] = { cropId: 1, plantedAt: 0, harvested: false };
-  farm.gold = 4;
-  assert.throws(() => applyAction(farm, action, 1), /5 Gold/);
+  delete farm.fertilizer;
+  assert.throws(() => applyAction(farm, action, 1), /hết phân/);
   assert.equal(farm.plots[0]!.fertilized, undefined);
-  assert.equal(farm.gold, 4);
-  farm.gold = 5;
-  assert.match(applyAction(farm, action, 25_000), /đã chín/);
+  assert.equal(farm.gold, 200);
+  applyAction(farm, { type: 'buyFertilizer', quantity: 1, expectedRevision: 0 }, 2);
+  farm.gold = 0;
+  assert.match(applyAction(farm, { ...action, expectedRevision: 1 }, 25_000), /đã chín/);
   assert.equal(ripeAt(crops[0], farm.plots[0]!), 24_000);
-  assert.throws(() => applyAction(farm, { type: 'water', plot: 0, expectedRevision: 1 }, 25_000), /đã chín/);
+  assert.throws(() => applyAction(farm, { type: 'water', plot: 0, expectedRevision: 2 }, 25_000), /đã chín/);
+  assert.equal(farm.fertilizer, 0);
   assert.equal(farm.gold, 0);
+});
+
+test('fertilizer orders validate quantity and change stock and Gold once', () => {
+  const farm = createFarm();
+  const order = { quantity: 2, expectedRevision: 0 };
+  for (const quantity of [0, 1.5, 100]) {
+    assert.equal(parseAction('buyFertilizer', { ...order, quantity }), undefined);
+  }
+  const purchase = parseAction('buyFertilizer', order)!;
+  applyAction(farm, purchase, 0);
+  assert.throws(() => applyAction(farm, purchase, 0), /vừa thay đổi/);
+  assert.throws(() => applyAction(farm, { type: 'buyFertilizer', quantity: 99, expectedRevision: 1 }, 0), /Không đủ Gold/);
+  assert.equal(farm.fertilizer, 2);
+  assert.equal(farm.gold, 190);
+  assert.equal(farm.revision, 1);
 });

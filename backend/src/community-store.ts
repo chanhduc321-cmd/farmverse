@@ -12,11 +12,17 @@ export async function listPlayers(visitorId: string, list: PlayerList, search: s
   const { rows } = await queryFarmDatabase<{ username: string }>(`
     SELECT username FROM farm_accounts AS player
     WHERE farm_id <> $1 AND strpos(username, $3) > 0
-      AND ($2 = 'residents' OR EXISTS (
+      AND (($2 = 'residents' AND NOT EXISTS (
+        SELECT 1 FROM farm_friendships
+        WHERE confirmed AND (
+          (sender_id = $1 AND recipient_id = player.farm_id)
+          OR (recipient_id = $1 AND sender_id = player.farm_id)
+        )
+      )) OR ($2 <> 'residents' AND EXISTS (
         SELECT 1 FROM farm_friendships
         WHERE (recipient_id = $1 AND sender_id = player.farm_id AND confirmed = ($2 = 'friends'))
            OR ($2 = 'friends' AND confirmed AND sender_id = $1 AND recipient_id = player.farm_id)
-      ))
+      )))
     ORDER BY username
     LIMIT $4 OFFSET $5
   `, [visitorId, list, search, PAGE_SIZE + 1, offset]);
@@ -49,7 +55,7 @@ export async function confirmFriend(recipientId: string, username: string): Prom
 
 function farmVisit(username: string, farm: Farm, taken: readonly number[], now: number): FarmVisit {
   return {
-    username, theme: farm.theme, serverTime: now,
+    username, theme: farm.theme, serverTime: now, pet: farm.pet ?? 'dog',
     plots: farm.plots.map((plot, index) => {
       if (!plot) return null;
       const { cropId, plantedAt, harvested, watered, fertilized } = plot;
@@ -115,30 +121,23 @@ Promise<StealResponse | CommunityError> {
       INSERT INTO farm_crop_steals (host_id, plot_index, planted_at, visitor_id)
       VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING
     `, [hostId, action.plot, action.plantedAt, visitorId]);
-    if (!inserted.rowCount) return { status: 409, error: 'Bạn đã lấy quả ở vụ này.' };
+    if (!inserted.rowCount) return { status: 409, error: 'Bạn đã thử lấy quả ở vụ này.' };
 
+    // Every farm has a Pet. Free guarding is the approved temporary T-41 rule.
+    // Consume the attempt and record its actual outcome in the same transaction.
     await recordActivity(client, {
       hostId,
       visitorId,
-      type: 'steal',
+      type: 'pet_block',
       plotIndex: action.plot,
       cropId: plot.cropId,
       plantedAt: action.plantedAt,
-      amount: 1,
+      amount: 0,
     });
-
-    plot.fruitTaken = (plot.fruitTaken ?? 0) + 1;
-    visitor.produce[plot.cropId] = (visitor.produce[plot.cropId] ?? 0) + 1;
-    host.revision++;
-    visitor.revision++;
-    await client.query(`
-      UPDATE farm_guest_progress SET state = CASE WHEN session_id = $1 THEN $3::jsonb ELSE $4::jsonb END
-      WHERE session_id IN ($1, $2)
-    `, [visitorId, hostId, visitor, host]);
     const { rows: taken } = await client.query<{ plot_index: number }>(`
       SELECT plot_index FROM farm_crop_steals
       WHERE host_id = $1 AND visitor_id = $2 AND planted_at = ($3::jsonb->'plots'->plot_index::integer->>'plantedAt')::bigint
     `, [hostId, visitorId, host]);
-    return { farm: visitor, visit: farmVisit(username, host, taken.map(row => row.plot_index), now), serverTime: now };
+    return { farm: visitor, visit: farmVisit(username, host, taken.map(row => row.plot_index), now), serverTime: now, blocked: true };
   });
 }

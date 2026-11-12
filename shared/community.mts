@@ -1,4 +1,4 @@
-import type { FarmResponse, Plot } from './farm.mts';
+import type { FarmResponse, PetSpecies, Plot } from './farm.mts';
 
 export const COMMUNITY_API = {
   players: '/community/players',
@@ -18,6 +18,7 @@ export interface FarmVisit {
   username: string;
   theme: number;
   serverTime: number;
+  pet?: PetSpecies;
   plots: (Pick<Plot, 'cropId' | 'plantedAt' | 'harvested' | 'watered' | 'fertilized'> & { remainingFruit: number | null; canSteal: boolean } | null)[];
 }
 
@@ -28,4 +29,5 @@ export interface StealRequest {
 
 export interface StealResponse extends FarmResponse {
   visit: FarmVisit;
+  blocked: boolean;
 }

@@ -9,6 +9,11 @@ export function parseAction(type: FarmMutation['type'], value: unknown): FarmMut
   const { expectedRevision, cropId, quantity, plot } = value as Record<string, unknown>;
   if (typeof expectedRevision !== 'number' || !Number.isSafeInteger(expectedRevision) || expectedRevision < 0) return;
   if (type === 'theme' || type === 'checkIn') return { type, expectedRevision };
+  if (type === 'selectPet') {
+    const { pet } = value as Record<string, unknown>;
+    if (pet === 'dog' || pet === 'cat' || pet === 'goose') return { type, pet, expectedRevision };
+    return;
+  }
   if (type === 'claimMission') {
     const { mission, day } = value as Record<string, unknown>;
     if (mission === 'first') return { type, mission, expectedRevision };
@@ -17,12 +22,14 @@ export function parseAction(type: FarmMutation['type'], value: unknown): FarmMut
     }
     return;
   }
-  if (type === 'buy' || type === 'sell') {
-    if (typeof cropId !== 'number' || !Number.isInteger(cropId) || !crops[cropId - 1]) return;
-    if (typeof quantity !== 'number' || !Number.isSafeInteger(quantity)) return;
-    const min = type === 'buy' ? 1 : 0;
-    const max = type === 'buy' ? 99 : 999;
-    if (quantity >= min && quantity <= max) return { type, cropId, quantity, expectedRevision };
+  if (type === 'buy' || type === 'buyFertilizer' || type === 'sell') {
+    const min = type === 'sell' ? 0 : 1;
+    const max = type === 'sell' ? 999 : 99;
+    if (typeof quantity !== 'number' || !Number.isSafeInteger(quantity) || quantity < min || quantity > max) return;
+    if (type === 'buyFertilizer') return { type, quantity, expectedRevision };
+    if (typeof cropId === 'number' && Number.isInteger(cropId) && crops[cropId - 1]) {
+      return { type, cropId, quantity, expectedRevision };
+    }
     return;
   }
   if (typeof plot !== 'number' || !Number.isInteger(plot) || plot < 0 || plot >= 6) return;

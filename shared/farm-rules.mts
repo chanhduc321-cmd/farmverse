@@ -4,8 +4,8 @@ import { claimMissionReward, recordCheckIn, recordMissionAction } from './progre
 
 export function createFarm(): Farm {
   return {
-    revision: 0, gold: 200, xp: 0, level: 1, theme: 1, seeds: {}, produce: {},
-    plots: Array.from({ length: 6 }, () => null),
+    revision: 0, gold: 200, xp: 0, level: 1, theme: 1, seeds: {}, fertilizer: 0, produce: {},
+    plots: Array.from({ length: 6 }, () => null), pet: 'dog',
   };
 }
 
@@ -41,6 +41,9 @@ export function applyFarmAction(farm: Farm, action: FarmMutation, now: number, c
 
 function applyMutation(farm: Farm, action: FarmMutation, now: number, crops: readonly Crop[], random: () => number): string {
   switch (action.type) {
+    case 'selectPet':
+      farm.pet = action.pet;
+      return 'Đã đổi Pet giữ nhà.';
     case 'checkIn':
       if (!recordCheckIn(farm, now)) throw new FarmError('Hôm nay đã điểm danh.');
       return 'Đã điểm danh hôm nay.';
@@ -60,6 +63,13 @@ function applyMutation(farm: Farm, action: FarmMutation, now: number, crops: rea
       farm.gold -= cost;
       farm.seeds[crop.id] = (farm.seeds[crop.id] ?? 0) + action.quantity;
       return `Đã mua ${action.quantity} hạt ${crop.name.toLowerCase()}.`;
+    }
+    case 'buyFertilizer': {
+      const cost = FERTILIZER_COST * action.quantity;
+      if (farm.gold < cost) throw new FarmError('Không đủ Gold để mua phân bón.');
+      farm.gold -= cost;
+      farm.fertilizer = (farm.fertilizer ?? 0) + action.quantity;
+      return `Đã mua ${action.quantity} bịch phân bón.`;
     }
     case 'sell': {
       const crop = crops[action.cropId - 1];
@@ -82,14 +92,14 @@ function applyMutation(farm: Farm, action: FarmMutation, now: number, crops: rea
     case 'harvest': {
       const plot = farm.plots[action.plot];
       if (!plot) throw new FarmError('Ô đất trống. Chọn hạt trong Túi để gieo.');
-      if (plot.harvested) throw new FarmError('Ô đã thu hoạch. Dùng Xẻng để dọn.');
+      if (plot.harvested) throw new FarmError('Ô đã thu hoạch. Bấm gốc để dọn.');
       const crop = crops[plot.cropId - 1];
       const quantity = ripeYield(crop, plot, action.plot, now);
       if (quantity === undefined) throw new FarmError('Cây chưa chín.');
       farm.produce[crop.id] = (farm.produce[crop.id] ?? 0) + quantity;
       plot.harvested = true;
       addXp(farm, 1);
-      return `Đã thu hoạch ${quantity} ${crop.name.toLowerCase()}. Dùng Xẻng để dọn ô.`;
+      return `Đã thu hoạch ${quantity} ${crop.name.toLowerCase()}. Bấm gốc để dọn.`;
     }
     case 'water':
     case 'fertilize': {
@@ -104,12 +114,13 @@ function applyMutation(farm: Farm, action: FarmMutation, now: number, crops: rea
         plot.watered = true;
       } else {
         if (plot.fertilized) throw new FarmError('Vụ này đã bón phân rồi.');
-        if (farm.gold < FERTILIZER_COST) throw new FarmError(`Cần ${FERTILIZER_COST} Gold để bón phân.`);
+        const available = farm.fertilizer ?? 0;
+        if (available < 1) throw new FarmError('Đã hết phân bón. Mua thêm ở Tiệm hạt.');
         plot.fertilized = true;
-        farm.gold -= FERTILIZER_COST;
+        farm.fertilizer = available - 1;
       }
       const remaining = Math.ceil((ripeAt(crop, plot) - now) / 1_000);
-      const care = isWater ? 'Đã tưới nước' : `Đã bón phân · -${FERTILIZER_COST} Gold`;
+      const care = isWater ? 'Đã tưới nước' : 'Đã bón phân';
       return remaining > 0 ? `${care}. Còn ${remaining}s nữa chín.` : `${care}. Cây đã chín!`;
     }
     case 'clear':

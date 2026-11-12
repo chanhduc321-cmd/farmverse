@@ -3,7 +3,7 @@ export const ACTIVITY_API = {
   markRead: '/activity/read',
 } as const;
 
-export type ActivityType = 'visit' | 'steal';
+export type ActivityType = 'visit' | 'steal' | 'pet_block';
 
 export interface ActivityEvent {
   id: string;
@@ -20,6 +20,7 @@ export interface ActivityEvent {
 export interface ActivitySummary {
   unreadCount: number;
   recentStolenFruit: number;
+  recentBlockedSteals: number;
   recentVisitors: string[];
 }
 

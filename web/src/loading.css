@@ -7,7 +7,7 @@
   overflow: auto;
   padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right))
     max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  background: radial-gradient(ellipse at 50% 34%, #416038, #1b392b 56%, #11291f);
+  background: radial-gradient(ellipse at 50% 20%, #fff0c8 0%, #e5edbd 56%, #acd09a 100%);
   color: #30412a;
   font-family: system-ui, sans-serif;
 }
@@ -17,19 +17,19 @@
 .farm-loading-card {
   width: min(100%, 440px);
   overflow: hidden;
-  border: 2px solid #f3d484;
+  border: 3px solid #fff8e2;
   border-radius: 28px;
   background: #fff5da;
-  box-shadow: 0 16px 0 #11291f55, 0 24px 64px #091e18a6;
+  box-shadow: 0 7px 0 #52704733, 0 22px 45px #4d682d3b;
 }
 .farm-loading-art {
   position: relative;
   isolation: isolate;
   display: grid;
   place-items: end center;
-  height: 174px;
+  height: clamp(178px, 30vh, 224px);
   overflow: hidden;
-  background: linear-gradient(168deg, #f4d692, #f9e8b7 53%, #f3e5ad 54%, #d2df9b);
+  background: linear-gradient(#a5dce6, #d9efe5 72%, #eaf0c5);
 }
 .farm-loading-art::before,
 .farm-loading-art::after {
@@ -38,12 +38,12 @@
   z-index: -1;
   inset: 63% -24% -45%;
   border-radius: 50% 50% 0 0;
-  background: #97b963;
+  background: #afd07b;
   transform: rotate(9deg);
 }
 .farm-loading-art::after {
   inset: 77% -17% -40%;
-  background: #6f984d;
+  background: #85b663;
   transform: rotate(-8deg);
 }
 .farm-loading-sun {
@@ -54,48 +54,60 @@
   width: 55px;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: #fff2c5;
-  box-shadow: 0 0 0 12px #fff2c552, 0 0 0 24px #fff2c528;
+  background: #fff1ae;
+  box-shadow: 0 0 0 10px #fff3c168, 0 0 0 20px #fff3c132;
 }
-.farm-loading-bed {
-  position: relative;
-  display: flex;
-  align-items: end;
-  justify-content: center;
-  padding-bottom: 12px;
-}
-.farm-loading-bed::before {
-  content: '';
+.farm-loading-cloud {
   position: absolute;
   z-index: -1;
-  inset: auto 8px 9px;
-  height: 24px;
+  top: 42px;
+  left: 12%;
+  width: 65px;
+  height: 17px;
+  border-radius: 999px;
+  background: #fffff4;
+  opacity: .85;
+}
+.farm-loading-cloud::before,
+.farm-loading-cloud::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 10px;
+  width: 24px;
+  aspect-ratio: 1;
   border-radius: 50%;
-  background: #5b442a;
-  box-shadow: inset 0 5px #775533, 0 6px 8px #38542770;
+  background: inherit;
 }
-.farm-loading-bed img {
-  width: 112px;
-  height: 104px;
-  object-fit: contain;
-  object-position: bottom;
-  filter: drop-shadow(0 3px 2px #2d45294d);
+.farm-loading-cloud::after {
+  left: 26px;
+  width: 29px;
 }
-.farm-loading-bed img + img { margin-left: -22px; transform: translateY(-7px) scale(.92); }
+.farm-loading-dog {
+  width: 164px;
+  aspect-ratio: 1;
+  margin-bottom: 7px;
+  background: url('/pets/dog/dog-idle.png') 0 0 / 700% 100% no-repeat;
+  animation: farm-loading-blink 2.8s steps(6, end) infinite;
+}
+@keyframes farm-loading-blink {
+  0%, 52% { background-position-x: 0%; }
+  87%, 100% { background-position-x: 100%; }
+}
 
 .farm-loading-content {
-  padding: 18px clamp(18px, 6vw, 34px) 26px;
-  border-top: 1px solid #e1b96a;
-  background: linear-gradient(#fff8e7, #fbefce);
+  padding: 19px clamp(16px, 6vw, 34px) 24px;
+  background: #fff8e7;
 }
 #farm-loading-title {
-  margin: 0 0 18px;
+  margin: 0 0 16px;
   color: #24472f;
-  font-size: clamp(2.3rem, 8vw, 3.25rem);
+  font-size: clamp(1.65rem, 6vw, 2.5rem);
   font-weight: 900;
-  letter-spacing: -.055em;
-  line-height: 1.05;
+  letter-spacing: -.035em;
+  line-height: 1.15;
   text-align: center;
+  text-wrap: balance;
 }
 .farm-loading-status {
   display: flex;
@@ -116,17 +128,17 @@
   appearance: none;
   border: 0;
   border-radius: 12px;
-  background: #e5d7b3;
+  background: #e9dec0;
 }
 #farm-loading-progress::-webkit-progress-bar { background: transparent; }
 #farm-loading-progress::-webkit-progress-value {
   border-radius: 12px;
-  background: linear-gradient(#a8c76f, #518341);
+  background: linear-gradient(#8ac755, #518d44);
   transition: width .18s ease-out;
 }
 #farm-loading-progress::-moz-progress-bar {
   border-radius: 12px;
-  background: linear-gradient(#a8c76f, #518341);
+  background: linear-gradient(#8ac755, #518d44);
 }
 #farm-loading-progress:indeterminate {
   background: linear-gradient(110deg, #e5d7b3 33%, #86ad5f 48% 52%, #e5d7b3 67%) 100% / 260%;
@@ -147,10 +159,10 @@
 @media (max-height: 440px) and (orientation: landscape) {
   .farm-loading-card { display: grid; grid-template-columns: 40% 1fr; width: min(100%, 570px); }
   .farm-loading-art { height: auto; min-height: 158px; }
-  .farm-loading-content { align-content: center; padding: 16px 22px; border-top: 0; border-left: 1px solid #e1b96a; }
-  .farm-loading-bed img { width: 96px; height: 88px; }
+  .farm-loading-content { align-content: center; padding: 16px 22px; }
+  .farm-loading-dog { width: 142px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  #farm-loading-progress:indeterminate { animation: none; }
+  #farm-loading-progress:indeterminate, .farm-loading-dog { animation: none; }
   #farm-loading-progress::-webkit-progress-value { transition: none; }
 }

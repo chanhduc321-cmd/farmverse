@@ -230,15 +230,11 @@ export function createCommunity(options: CommunityOptions) {
 
   return {
     focus: () => opener.focus(),
-    updateAccess(hasAccess: boolean, blocked: boolean, offline: boolean) {
+    updateAccess(hasAccess: boolean, blocked: boolean) {
       available = hasAccess;
       opener.disabled = blocked;
-      opener.title = offline ? 'Thăm ruộng bạn bè mẫu'
-        : available ? 'Mở danh sách Bạn bè và Cư dân' : 'Đăng nhập để thăm ruộng và kết bạn';
-      opener.setAttribute('aria-label', offline ? 'Bạn bè mẫu' : 'Bạn bè và Cư dân');
-      tabs.querySelectorAll<HTMLButtonElement>('button').forEach(tab => {
-        tab.hidden = offline && tab.dataset.playerList !== 'friends';
-      });
+      opener.title = available ? 'Mở danh sách Bạn bè và Cư dân' : 'Đăng nhập để thăm ruộng và kết bạn';
+      opener.setAttribute('aria-label', 'Bạn bè và Cư dân');
       if (!available && dialog.open) dialog.close();
     },
   };

@@ -119,3 +119,17 @@ Script sẽ tự động:
 1. Nhận diện các cột đối tượng theo khoảng trống nền trắng.
 2. Tách nền alpha trong suốt cho từng đối tượng (loại bỏ `#FFFFFF`).
 3. Xuất ra từng file chuẩn: `{crop}_seed.png`, `{crop}_stage1_sprout.png`, ..., `{crop}_item.png`.
+
+## 6. Rà soát bộ sprite hiện tại (T-28)
+
+T-28 tích hợp lại bộ ảnh hiện có của 15 giống. Điểm neo trên ruộng là `(.5, .84)`, tỷ lệ `.52` cho ID 1–5 và `.95` cho ID 6–15.
+
+| Vai trò | Tên cũ → tên hiện tại trong `image/crops/crop{id}/` | Kết quả đối chiếu |
+|---|---|---|
+| Hạt trong Tiệm và Túi | `seed.png` | ID 1–5 dùng ảnh gói hạt riêng, khớp tệp nguồn. ID 6–15 dùng icon 48×48. |
+| Vừa gieo | `cron_start.png` → `planted.png` | Dùng lại ảnh cũ của từng thư mục. |
+| Các giai đoạn trên ô | `{n}.png` → `stage-{n}.png` | ID 3 và 4 chín ở giai đoạn 4, hiển thị `stage-5.png`. ID 11, 13, 15 dùng `stage-6.png` khi chín. |
+| Nông sản trong Kho | `seed.png` → `produce.png` hoặc `stage-{readyFrame}.png` | Dâu tây, Ngô, Củ cải trắng và Cà rốt dùng ảnh nông sản riêng từ `art/source/crops`. Các giống còn lại dùng hình cây chín. |
+| Ô đã hái, chờ dọn | `cron_end.png` | Dùng ảnh ô sau thu hoạch hiện có của từng giống. |
+
+ID 5 vẫn là **Khoai lang** trong danh mục. Hình cây chín hiện có còn mang dáng củ khoai tây. Chủ dự án chốt dùng bộ ảnh hiện có cho T-28. Store NPC sẽ nghiệm thu khi mở lại T-25. [Danh mục 15 giống](../FARMVERSE_GAMEPLAY_AMENDMENT_01.md#danh-mục-và-mốc-chín)

@@ -14,7 +14,7 @@ Mở nút **Bạn bè** dạng icon ở góc trên bên phải Farm, cùng hàng
 
 Chạy `pnpm --dir backend exec tsx --test test/farm.test.ts` để kiểm tra mốc của 15 giống, giá và tồn kho, XP, hành động lặp và vòng dọn ô.
 
-Chọn **Tưới nước** hoặc **Bón phân** trên thanh công cụ rồi bấm cây đang lớn. Mỗi vụ dùng mỗi loại một lần. Nước miễn phí giảm 10% thời gian gốc, bón phân tốn 5 Gold và giảm 20%. Dùng cả hai giảm 30%. [Luật chăm cây T-46](FARMVERSE_GAMEPLAY_AMENDMENT_01.md#chăm-cây-t-46)
+Chọn **Tưới nước** hoặc **Bón phân** trên thanh công cụ rồi bấm cây đang lớn. Mỗi vụ dùng mỗi loại một lần. Nước miễn phí giảm 10% thời gian gốc, một bịch phân giảm 20%. Dùng cả hai giảm 30%. Mua phân trong Tiệm hạt với giá 5 Gold mỗi bịch. [Luật chăm cây T-46](FARMVERSE_GAMEPLAY_AMENDMENT_01.md#chăm-cây-t-46) · [Thao tác theo ô đất T-47](FARMVERSE_GAMEPLAY_AMENDMENT_01.md#thao-tác-theo-ô-đất-t-47)
 
 ## Phạm vi MVP đã chốt
 
@@ -60,6 +60,45 @@ Khung hướng dẫn có đuôi thoại manga, dùng nền xanh đậm, viền v
 
 Mỗi người chơi có một Pet cá nhân trong Farm để chăm sóc. Pet có cử động và biểu cảm vui, kèm thông báo nhẹ khi có sự kiện. Khi khách thực hiện Steal, Pet xuất hiện ngay trên ruộng và phản ứng với hành động đó.
 
-Khi khách thực hiện một lượt Steal hợp lệ, Pet đủ năng lượng sẽ chạy ra chặn và quả vẫn thuộc vụ của chủ ruộng. Pet thiếu năng lượng sẽ đứng nhìn và khách lấy đúng 1 quả theo luật T-36.
+Chủ dự án chốt ngày 12/11/2026: Pet chặn miễn phí, chưa trừ năng lượng. Mỗi lượt Steal hợp lệ hiện đều bị Pet chặn, quả trên cây và Kho của hai bên giữ nguyên. Mỗi khách chỉ thử một lần trên mỗi ô/vụ, kể cả bị chặn. Gửi lặp không tạo thêm nhật ký. Backend ghi sự kiện Pet chặn cùng giao dịch giữ lượt; nhật ký của chủ ruộng ghi người khách, giống cây, ô đất và thời gian. Khi vào Farm, thông báo và badge tính cả lượt Pet chặn.
 
-Đề xuất cho Pet đi quanh nhà, vẫy đuôi khi được vuốt ve và phản ứng khi được cho ăn. Cần chốt cách nhận Pet, cách hồi năng lượng, ngưỡng đủ năng lượng và chi phí năng lượng cho mỗi lần chặn.
+Luật đủ năng lượng thì chặn, thiếu thì đứng nhìn là hướng phát triển sau. Cho ăn, hồi và chi phí năng lượng chờ chốt tiếp T-41. Hiện không trừ năng lượng hay tự gán chi phí.
+
+### Sprite chó
+
+Các sheet gốc do chủ dự án gửi nằm trong [thư mục nguồn](../art/source/pets/dog). Bản dùng trong game là PNG nền trong suốt tại `image/pets/dog/`. Mỗi frame 176×176, xếp ngang theo thứ tự gốc, mốc đặt chân ở (88, 158).
+
+| Trạng thái | Tệp | Số frame | Nơi xem |
+|---|---|---|---|
+| Đứng chớp mắt | `dog-idle.png` | 7 | Màn tải Farm và demo Phaser |
+| Nằm ngủ | `dog-sleep.png` | 6 | Demo Phaser trong `.local/animation` |
+| Đói | `dog-hungry.png` | 7 | Demo Phaser, chờ chốt luật đói và cho ăn |
+| Chặn Steal | `dog-guard.png` | 7 | Farm khi API xác nhận Pet chặn; cắt từ sheet chủ dự án gửi, nền trong suốt, mốc chân (88, 158) |
+
+### Sprite mèo
+
+Các [sheet gốc](../art/source/pets/cat) do chủ dự án gửi. Các sprite có nền trong suốt, mỗi sheet 1024 × 128 px gồm 8 frame 128 × 128 px với mốc đặt chân (64, 116), tương ứng origin Phaser `(0.5, 0.90625)`. Xem chuyển động trong demo Phaser tại `.local/animation/index.html`.
+
+| Trạng thái | Sprite | Phát trong demo |
+|---|---|---|
+| Ngủ | [cat-sleep.png](../image/pets/cat/cat-sleep.png) | Lặp ở 4 fps |
+| Vui vẻ | [cat-happy.png](../image/pets/cat/cat-happy.png) | Một lần ở 8 fps, dừng ở tư thế đứng |
+| Chống trộm | [cat-guard.png](../image/pets/cat/cat-guard.png) | Một lần ở 8 fps, giữ tư thế cảnh giác |
+| Đói | [cat-hungry.png](../image/pets/cat/cat-hungry.png) | Một lần ở 8 fps, chờ chốt luật đói và cho ăn |
+| Đi bộ | [cat-walk.png](../image/pets/cat/cat-walk.png) | Lặp ở 8 fps. Trong Farm, nhịp chân chậm lại khi mèo đổi hướng. |
+
+### Sprite ngỗng
+
+Các [sheet gốc](../art/source/pets/goose) do chủ dự án gửi. Ba dải PNG nền trong suốt tại `image/pets/goose/` có 8 frame 128 × 128 px mỗi dải, với mốc chân (64, 116).
+
+| Trạng thái | Sprite | Nơi dùng |
+|---|---|---|
+| Đi bộ | [goose-walk.png](../image/pets/goose/goose-walk.png) | Farm và demo Phaser |
+| Cúi mổ | [goose-peck.png](../image/pets/goose/goose-peck.png) | Farm khi chạm Pet và demo Phaser |
+| Chặn Steal | [goose-guard.png](../image/pets/goose/goose-guard.png) | Farm khi API xác nhận Pet chặn và demo Phaser |
+
+### Bản thử tương tác trong Farm
+
+Chó xuất hiện mặc định khi vào ruộng. Nút dấu chân cho phép đổi sang mèo hoặc ngỗng. Pet đi qua lại liên tục quanh vị trí của nó. Chỗ mặc định là góc dưới bên trái, phía trên thanh công cụ. Khi góc dưới sát ô đất, Pet chuyển lên dưới bảng hồ sơ. Chạm hoặc vuốt nhanh để Pet phản ứng vui và hiện bong bóng thoại. Giữ khoảng ¼ giây rồi kéo để đặt Pet ở một chỗ trống. Pet tiếp tục đi lại sau khi được thả và về góc nếu thả lên ô đất, HUD hoặc thanh công cụ. Kích thước khung hình Pet là 90 px trên điện thoại, 100 px trên màn hình trung bình và 120 px trên desktop lớn. Pet đứng yên khi bật giảm chuyển động. Loài đã chọn lưu trong PostgreSQL; vị trí kéo chỉ áp dụng cho phiên hiện tại.
+
+Loài được backend lưu cùng tiến độ Farm, giữ qua tải lại và đăng nhập. Vị trí kéo tiếp tục chỉ áp dụng cho phiên hiện tại. Chó dùng `dog-happy.png`, gồm 7 frame vui mừng. Mèo và ngỗng phát sprite đi bộ khi di chuyển. Khi được chạm, mèo phát clip vui mừng, ngỗng cúi mổ rồi quay lại đi bộ. Cả ba loài phát clip chặn và bong bóng thoại khi API xác nhận kết quả; giảm chuyển động chỉ hiện thông báo.
