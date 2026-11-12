@@ -12,11 +12,17 @@ export async function listPlayers(visitorId: string, list: PlayerList, search: s
   const { rows } = await queryFarmDatabase<{ username: string }>(`
     SELECT username FROM farm_accounts AS player
     WHERE farm_id <> $1 AND strpos(username, $3) > 0
-      AND ($2 = 'residents' OR EXISTS (
+      AND (($2 = 'residents' AND NOT EXISTS (
+        SELECT 1 FROM farm_friendships
+        WHERE confirmed AND (
+          (sender_id = $1 AND recipient_id = player.farm_id)
+          OR (recipient_id = $1 AND sender_id = player.farm_id)
+        )
+      )) OR ($2 <> 'residents' AND EXISTS (
         SELECT 1 FROM farm_friendships
         WHERE (recipient_id = $1 AND sender_id = player.farm_id AND confirmed = ($2 = 'friends'))
            OR ($2 = 'friends' AND confirmed AND sender_id = $1 AND recipient_id = player.farm_id)
-      ))
+      )))
     ORDER BY username
     LIMIT $4 OFFSET $5
   `, [visitorId, list, search, PAGE_SIZE + 1, offset]);
@@ -49,7 +55,7 @@ export async function confirmFriend(recipientId: string, username: string): Prom
 
 function farmVisit(username: string, farm: Farm, taken: readonly number[], now: number): FarmVisit {
   return {
-    username, theme: farm.theme, serverTime: now,
+    username, theme: farm.theme, serverTime: now, pet: farm.pet,
     plots: farm.plots.map((plot, index) => {
       if (!plot) return null;
       const { cropId, plantedAt, harvested, watered, fertilized } = plot;

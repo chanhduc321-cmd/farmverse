@@ -4,19 +4,22 @@ The Node.js service owns state. In development, the browser calls `/api/...` thr
 
 ## Session and Farm
 
-Call `GET /api/farm` first to start or resume a Guest session with an HttpOnly cookie. If the browser has a valid account session, this endpoint opens its farm. `GET /api/crops` returns the 15 crop definitions. Farm responses include the current farm revision and server time. Set `DATABASE_URL` and apply the migrations for persistent sessions. The default local mode uses RAM. [Gameplay](FARMVERSE_GAMEPLAY.md) · [Backend setup](../backend/README.md)
+Call `GET /api/farm` first to start or resume a Guest session with an HttpOnly cookie. If the browser has a valid account session, this endpoint opens its farm. `GET /api/crops` returns the 15 crop definitions. Farm responses include the current farm revision and server time. Backend scripts load `DATABASE_URL` from `backend/.env`. Vercel requires the same server-side variable. Connection failures show a retry screen. [Gameplay](FARMVERSE_GAMEPLAY.md) · [Backend setup](../backend/README.md)
 
 | Browser request | JSON fields alongside `expectedRevision` | Effect |
 |---|---|---|
 | `POST /api/farm/buy` | `cropId`, `quantity` | Buy 1–99 seeds |
+| `POST /api/farm/buy-fertilizer` | `quantity` | Buy 1–99 bags of fertilizer for 5 Gold per bag |
 | `POST /api/farm/plant` | `cropId`, `plot` | Consume one seed and plant in a vacant plot |
 | `POST /api/farm/harvest` | `plot` | Harvest a ripe crop and mark the plot for clearing |
 | `POST /api/farm/sell` | `cropId`, `quantity` | Sell up to 999 items within warehouse stock |
 | `POST /api/farm/clear` | `plot` | Clear a harvested plot |
 | `POST /api/farm/water` | `plot` | Water a growing crop once per lifecycle and reduce its base growth time by 10% |
-| `POST /api/farm/fertilize` | `plot` | Spend 5 Gold once per lifecycle on a growing crop and reduce its base growth time by 20% |
+| `POST /api/farm/fertilize` | `plot` | Use one bag of fertilizer once per lifecycle on a growing crop and reduce its base growth time by 20% |
 
 `plot` is the zero-based position from 0 to 5. A stale revision returns HTTP 409. Read the current farm before retrying. [Shared Farm contract](../shared/farm.mts)
+
+`farm.fertilizer` is the number of bags available. Older saves may omit the field, which represents zero bags.
 
 ## Accounts (T-24)
 

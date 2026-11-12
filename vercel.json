@@ -1,6 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "pnpm install",
-  "buildCommand": "pnpm  build",
-  "framework": "vite"
+  "framework": "vite",
+  "installCommand": "pnpm --dir backend install --frozen-lockfile && pnpm --dir web install --frozen-lockfile",
+  "buildCommand": "pnpm --dir web build",
+  "outputDirectory": "web/dist",
+  "functions": {
+    "api/farmverse.ts": { "includeFiles": "image/crops/crop*/crop.txt" }
+  },
+  "rewrites": [
+    { "source": "/api/:route*", "destination": "/api/farmverse?__farm_route=:route*" }
+  ]
 }

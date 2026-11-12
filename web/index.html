@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>FarmVerse · Nông trại vui vẻ</title>
+    <title>Nông Trại Mộng Mơ</title>
     <link rel="stylesheet" href="/src/loading.css">
   </head>
   <body>
@@ -11,15 +11,13 @@
       <div class="farm-loading-card">
         <div class="farm-loading-art" aria-hidden="true">
           <div class="farm-loading-sun"></div>
-          <div class="farm-loading-bed">
-            <img src="/crops/crop1/5.png" alt="" width="112" height="104">
-            <img src="/crops/crop2/5.png" alt="" width="112" height="104">
-          </div>
+          <div class="farm-loading-cloud"></div>
+          <div class="farm-loading-dog"></div>
         </div>
         <div class="farm-loading-content">
-          <h1 id="farm-loading-title">FarmVerse</h1>
+          <h1 id="farm-loading-title">Nông Trại Mộng Mơ</h1>
           <div class="farm-loading-status">
-            <p id="farm-loading-message" role="status">Đang mở nông trại…</p>
+            <p id="farm-loading-message" role="status">Đang chuẩn bị ruộng cho bạn…</p>
             <span id="farm-loading-percent" aria-hidden="true" hidden>0%</span>
           </div>
           <progress id="farm-loading-progress" aria-label="Tiến độ tải tài nguyên" max="100"></progress>
@@ -28,7 +26,7 @@
       </div>
     </section>
     <main inert>
-      <h1 class="sr-only">FarmVerse · Nông trại vui vẻ</h1>
+      <h1 class="sr-only">Nông Trại Mộng Mơ</h1>
       <section class="field" aria-label="Nông trại">
         <div id="game"></div>
 
@@ -59,14 +57,12 @@
               <div class="hud-bottom-row">
                 <div class="hud-bar-capsule hud-xp-capsule">
                   <div class="hud-bar-fill xp-fill" id="xp-fill"></div>
-                  <span class="hud-bar-star">⭐</span>
                   <span class="hud-bar-label" id="xp">0/200 XP</span>
                   <progress id="xp-bar" class="sr-only" max="200" value="0"></progress>
                 </div>
 
                 <div class="hud-bar-capsule hud-field-capsule">
                   <div class="hud-bar-fill field-fill" id="field-fill"></div>
-                  <span class="hud-bar-sprout">🌱</span>
                   <span class="hud-bar-label" id="field-count">0/6 ô</span>
                   <progress id="field-bar" class="sr-only" max="6" value="0"></progress>
                 </div>
@@ -89,7 +85,6 @@
 
         <!-- Floating Global Game Toast -->
         <div id="game-toast" class="game-toast" role="status" aria-live="polite" hidden>
-          <span class="game-toast-icon" id="game-toast-icon" aria-hidden="true">🌱</span>
           <span class="game-toast-msg" id="game-toast-msg"></span>
         </div>
 
@@ -100,17 +95,14 @@
         <div id="plot-tooltip" class="plot-tooltip" role="tooltip" aria-hidden="true">
           <div class="plot-tooltip-arrow"></div>
           <div class="plot-tooltip-body">
-            <div class="plot-tooltip-header">
-              <span class="plot-tooltip-icon" id="tooltip-icon">🌱</span>
-              <div class="plot-tooltip-title-wrap">
-                <strong class="plot-tooltip-title" id="tooltip-title">Ô đất 1</strong>
-                <span class="plot-tooltip-badge" id="tooltip-badge">Đất trống</span>
-              </div>
+            <div class="plot-tooltip-title-wrap">
+              <strong class="plot-tooltip-title" id="tooltip-title">Ô đất 1</strong>
+              <span class="plot-tooltip-badge" id="tooltip-badge">Đất trống</span>
             </div>
             <p class="plot-tooltip-desc" id="tooltip-desc">Bấm để gieo hạt giống</p>
             <div class="plot-tooltip-meta" id="tooltip-meta">
-              <span class="tooltip-xp" id="tooltip-xp">⭐ +5 XP</span>
-              <span class="tooltip-timer" id="tooltip-timer">⏳ Còn 15s</span>
+              <span class="tooltip-xp" id="tooltip-xp">+5 XP</span>
+              <span class="tooltip-timer" id="tooltip-timer">Còn 15s</span>
             </div>
           </div>
         </div>
@@ -127,7 +119,6 @@
               <span id="menu-account-label">Tài khoản</span>
             </button>
             <button type="button" class="menu-btn" id="menu-activity-btn" title="Nhật ký hoạt động">
-              <span class="drawer-menu-icon" aria-hidden="true">📜</span>
               <span>Nhật ký</span>
               <span id="menu-activity-badge" class="activity-badge menu-badge" hidden>0</span>
             </button>
@@ -187,20 +178,12 @@
             <img src="/icon/topbutton%20(12).png" alt="">
             <span>Gieo hạt</span>
           </button>
-          <button type="button" class="dock-btn" data-tool="clear" aria-pressed="false" disabled title="Xẻng dọn đất (Phím 4)">
-            <img src="/icon/topbutton%20(6).png" alt="">
-            <span>Xẻng</span>
-          </button>
-          <button type="button" class="dock-btn" data-tool="harvest" aria-pressed="false" disabled title="Thu hoạch cây chín (Phím 5)">
-            <img src="/icon/topbutton%20(4).png" alt="">
-            <span>Thu hoạch</span>
-          </button>
           <button type="button" class="dock-btn" data-tool="water" aria-pressed="false" disabled title="Tưới nước miễn phí">
             <img src="/icon/topbutton%20(14).png" alt="">
             <span>Tưới nước</span>
           </button>
-          <button type="button" class="dock-btn" data-tool="fertilize" aria-pressed="false" disabled title="Bón phân · 5 Gold">
-            <img src="/icon/topbutton%20(12).png" alt="">
+          <button type="button" class="dock-btn" data-tool="fertilize" aria-pressed="false" disabled title="Bón phân">
+            <img src="/icon/fertilizer-sack.png" alt="">
             <span>Bón phân</span>
           </button>
         </nav>
@@ -223,7 +206,6 @@
       <div class="dialog-wrapper">
         <!-- Floating Game Toast for Inventory dialog -->
         <div id="inventory-toast" class="modal-toast" role="status" aria-live="polite" hidden>
-          <span class="modal-toast-icon" id="inventory-toast-icon" aria-hidden="true">🌱</span>
           <span class="modal-toast-msg" id="inventory-toast-msg"></span>
         </div>
 
@@ -232,7 +214,7 @@
             <img id="inventory-icon" src="/icon/topbutton%20(2).png" alt="">
             <div>
               <h2 id="inventory-title">Tiệm hạt</h2>
-              <p id="inventory-description">Chọn giống và số hạt muốn mua.</p>
+              <p id="inventory-description">Mua hạt giống và phân bón.</p>
             </div>
           </div>
           <div class="inventory-actions">
@@ -256,7 +238,6 @@
     <dialog id="account" aria-labelledby="account-title">
       <div class="dialog-wrapper">
         <div id="account-toast" class="account-toast" role="alert" aria-live="assertive" hidden>
-          <span class="account-toast-icon" id="account-toast-icon" aria-hidden="true">⚠️</span>
           <span class="account-toast-msg" id="account-toast-msg"></span>
         </div>
 
@@ -264,7 +245,7 @@
           <div class="account-heading">
             <img class="account-avatar-img" src="/face/1-1.GIF" alt="">
             <div>
-              <h2 id="account-title">Tài khoản FarmVerse</h2>
+              <h2 id="account-title">Tài khoản Nông Trại Mộng Mơ</h2>
               <p id="account-description">Tạo tài khoản để lưu nông trại đang chơi</p>
             </div>
           </div>
@@ -279,7 +260,7 @@
         <div class="account-body">
           <!-- Register view -->
           <div class="account-view" id="view-register">
-            <p class="account-tip">🌱 Giữ nguyên nông trại đang chơi khi tạo tài khoản mới.</p>
+            <p class="account-tip">Giữ nguyên nông trại đang chơi khi tạo tài khoản mới.</p>
             <form id="form-register" class="account-form" novalidate>
               <div class="form-group">
                 <label for="reg-username">Tên đăng nhập <small>(3–24 ký tự)</small></label>
@@ -295,7 +276,7 @@
 
           <!-- Login view -->
           <div class="account-view" id="view-login" hidden>
-            <p class="account-tip">🌾 Mở lại nông trại đã gắn với tài khoản của bạn.</p>
+            <p class="account-tip">Mở lại nông trại đã gắn với tài khoản của bạn.</p>
             <form id="form-login" class="account-form" novalidate>
               <div class="form-group">
                 <label for="login-username">Tên đăng nhập</label>
@@ -318,17 +299,14 @@
               <div class="profile-info">
                 <span class="profile-badge">Đang đăng nhập</span>
                 <h3 class="profile-username" id="profile-username">—</h3>
-                <p class="profile-hint">Tiến độ nông trại tự động lưu vào tài khoản này.</p>
               </div>
             </div>
-            <p class="account-tip account-tip-warning">⚠️ Đăng xuất sẽ chuyển về phiên Khách mới với ruộng độc lập.</p>
             <button type="button" class="account-btn account-btn-logout" id="btn-account-logout">Đăng xuất</button>
           </div>
 
-          <!-- Unavailable view (RAM or demo offline) -->
+          <!-- Unavailable view for the local RAM backend -->
           <div class="account-view" id="view-unavailable" hidden>
             <div class="unavailable-card">
-              <span class="unavailable-icon">🔒</span>
               <h3>Chế độ tài khoản chưa khả dụng</h3>
               <p id="unavailable-text">Hệ thống tài khoản cần PostgreSQL để lưu trữ. Bạn đang chơi ở phiên tạm thời.</p>
             </div>
@@ -337,7 +315,6 @@
           <!-- Sync error view (when session loading fails after logout or network error) -->
           <div class="account-view" id="view-sync-error" hidden>
             <div class="unavailable-card">
-              <span class="unavailable-icon">⚠️</span>
               <h3>Chưa tải được phiên nông trại</h3>
               <p id="sync-error-text">Không thể đồng bộ dữ liệu phiên từ máy chủ. Thao tác thay đổi Farm tạm thời bị khóa.</p>
             </div>
@@ -352,11 +329,8 @@
       <div class="dialog-wrapper">
         <header class="activity-header">
           <div class="activity-heading">
-            <span class="activity-header-icon" aria-hidden="true">📜</span>
-            <div>
-              <h2 id="activity-title">Nhật ký nông trại</h2>
-              <p id="activity-description">Ghé thăm và biến động hoa màu</p>
-            </div>
+            <h2 id="activity-title">Nhật ký nông trại</h2>
+            <p id="activity-description">Ghé thăm và biến động hoa màu</p>
           </div>
           <form method="dialog"><button class="inventory-close" type="submit" aria-label="Đóng cửa sổ">×</button></form>
         </header>
@@ -366,7 +340,6 @@
           <p id="activity-feedback" role="status"></p>
 
           <div id="activity-empty" class="activity-empty" hidden>
-            <span class="activity-empty-icon" aria-hidden="true">🌾</span>
             <p>Chưa có lượt ghé thăm hay biến động nào.</p>
             <small>Khi có bạn bè ghé thăm hoặc hái quả, nhật ký sẽ hiện ở đây.</small>
           </div>

@@ -12,7 +12,7 @@ Vòng chơi đích là mua hạt → chọn giống trong túi → gieo → đ�
 | Shop hạt | Hiển thị đủ 15 giống, giá hạt và cấp ghi trên thẻ. Mua 1–99 hạt/lần, trừ đúng số GOLD và thêm đúng số hạt vào túi. Cấp trên thẻ là thông tin tham khảo. | Thay gieo miễn phí bằng chi phí hạt và thay C01-AC-05 bằng kiểm tra giao dịch đủ số dư. |
 | Túi và gieo | Chọn giống đang có trong túi. Bấm ô trống trừ 1 hạt, ghi thời điểm gieo và cộng 5 XP. | API giữ quyền quyết định hạt và trạng thái ô. |
 | Sinh trưởng | Mỗi giống có từ 4 đến 6 frame sau lúc gieo. Mốc vào frame thứ k là `unitTime × k × (k + 1) / 2` giây. Frame cuối đánh dấu chín. Dùng mốc thời gian máy chủ cho cả lúc đang chơi và sau tải lại. | Thay thời gian chín 10 giây bằng cấu hình từng giống. |
-| Thu hoạch và dọn | Từ mốc chín, mỗi vụ có sản lượng cố định 10–29 quả của giống đó. Hái chuyển số quả của vụ vào kho, cộng 1 XP và đưa ô sang trạng thái cần dọn. Dùng Xẻng để dọn, cộng 3 XP rồi ô mới trống. | Kho Farm lưu số lượng theo từng giống. NPC C02 dùng trực tiếp Dâu tây và Ngô trong kho theo T-25. |
+| Thu hoạch và dọn | Từ mốc chín, mỗi vụ có sản lượng cố định 10–29 quả của giống đó. Bấm cây chín chuyển số quả của vụ vào kho, cộng 1 XP và đưa ô sang trạng thái cần dọn. Bấm gốc để dọn, cộng 3 XP rồi ô mới trống. | Kho Farm lưu số lượng theo từng giống. NPC C02 dùng trực tiếp Dâu tây và Ngô trong kho theo T-25. |
 | Kho và bán | Chọn nông sản trong kho, nhập số lượng tối đa 999 và trong giới hạn đang sở hữu. Cộng GOLD bằng số lượng nhân đơn giá. Số lượng 0 giữ nguyên trạng thái. | Thay nút bán từng lúa của Farm bằng bán theo lô trong Kho. NPC C02 là luồng giao dịch riêng. |
 | XP và cấp | Ngưỡng lên cấp bằng cấp hiện tại nhân 200 XP. Lấy phần XP vượt ngưỡng sang cấp kế tiếp. | Thêm tiến trình theo XP. |
 | Thăm ruộng | Tài khoản đăng nhập có thể thăm ruộng của mọi tài khoản có tên người chơi. Chọn người từ danh sách Bạn bè hoặc Cư dân. | T-36 triển khai quyền thăm, kết bạn và Steal theo luật bên dưới. |
@@ -20,9 +20,17 @@ Vòng chơi đích là mua hạt → chọn giống trong túi → gieo → đ�
 
 ## Chăm cây (T-46)
 
-Chủ dự án duyệt ngày 11/11/2026. Tưới nước miễn phí giảm 10% thời gian sinh trưởng gốc. Bón phân giảm 20% thời gian gốc và trừ 5 Gold khi dùng thành công. Mỗi loại dùng một lần trên mỗi vụ và chỉ dùng trên cây đang lớn.
+Chủ dự án duyệt ngày 11/11/2026. Tưới nước miễn phí giảm 10% thời gian sinh trưởng gốc. Bón phân giảm 20% thời gian gốc. Mỗi loại dùng một lần trên mỗi vụ và chỉ dùng trên cây đang lớn. T-47 cập nhật cách mua và dùng phân bên dưới.
 
 Dùng cả hai cộng dồn giảm 30%. Nếu thời gian đã qua đủ để chín theo mốc mới, cây chín ngay. Ví dụ Dâu tây cần 30 giây, còn 27 giây khi tưới, 24 giây khi bón hoặc 21 giây khi dùng cả hai, tính từ lúc gieo. Lưu lượt chăm theo vụ để giai đoạn, thời gian chín và khả năng thu hoạch hoặc lấy quả đồng nhất ở ruộng mình và ruộng khách.
+
+## Thao tác theo ô đất (T-47)
+
+Chủ dự án duyệt ngày 12/11/2026. Bấm cây chín để hái, bấm gốc để dọn và bấm ô trống để gieo giống đang chọn hoặc mở Túi hạt. Bấm cây đang lớn để xem thời gian còn lại.
+
+Chọn Tưới nước hoặc Bón phân để dùng qua nhiều ô. Con trỏ trên ruộng hiện bình tưới hoặc bịch phân khi dùng chuột. Ô dùng được công cụ có viền trên cả desktop và điện thoại. Nếu cây đã chín, tắt công cụ rồi bấm cây để hái. Bấm lại nút đang chọn hoặc nhấn Escape để tắt công cụ.
+
+Tiệm hạt bán phân với giá 5 Gold mỗi bịch và cho mua 1–99 bịch mỗi lần. Bón thành công dùng một bịch từ số phân đang có. Chọn hoặc dùng Bón phân khi hết phân sẽ mở Tiệm hạt. Số bịch còn lại lưu cùng tiến độ Farm. Hồ sơ cũ bắt đầu với 0 bịch và giữ lượt bón của các vụ đang trồng.
 
 ## Danh mục và mốc chín
 

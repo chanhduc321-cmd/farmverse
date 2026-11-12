@@ -34,7 +34,6 @@ export const farmLoading = {
   },
   assets(count: number): void {
     total = count;
-    message.textContent = 'Đang tải tài nguyên…';
     percent.hidden = false;
     updateProgress(0);
   },

@@ -4,6 +4,7 @@ export const FARM_API = {
   read: { path: '/farm' },
   catalog: { path: '/crops' },
   buy: { path: '/farm/buy' },
+  buyFertilizer: { path: '/farm/buy-fertilizer' },
   sell: { path: '/farm/sell' },
   plant: { path: '/farm/plant' },
   harvest: { path: '/farm/harvest' },
@@ -48,6 +49,8 @@ export interface Plot {
   fertilized?: boolean;
 }
 
+export type PetSpecies = 'dog' | 'cat' | 'goose';
+
 export interface Farm {
   revision: number;
   gold: number;
@@ -55,9 +58,12 @@ export interface Farm {
   level: number;
   theme: number;
   seeds: Record<number, number>;
+  /** Saves created before fertilizer was sold omit this field. */
+  fertilizer?: number;
   produce: Record<number, number>;
   plots: (Plot | null)[];
   progression?: FarmProgression;
+  pet?: PetSpecies;
 }
 
 export interface FarmResponse {
@@ -73,6 +79,7 @@ export interface FarmSessionResponse extends FarmResponse {
 
 export type FarmAction =
   | { type: 'buy' | 'sell'; cropId: number; quantity: number }
+  | { type: 'buyFertilizer'; quantity: number }
   | { type: 'plant'; plot: number; cropId: number }
   | { type: 'harvest' | 'clear' | 'water' | 'fertilize'; plot: number }
   | { type: 'theme' }

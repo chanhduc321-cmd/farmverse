@@ -8,8 +8,10 @@ import type { MerchantAction, MerchantResult, MerchantState } from './merchant.t
 const connectionString = process.env.DATABASE_URL;
 const pool = connectionString ? new pg.Pool({
   connectionString,
-  connectionTimeoutMillis: 2_000,
-  query_timeout: 2_000,
+  connectionTimeoutMillis: 5_000,
+  query_timeout: 10_000,
+  max: process.env.VERCEL ? 1 : 5,
+  idleTimeoutMillis: 10_000,
 }) : undefined;
 pool?.on('error', () => console.warn('Kết nối PostgreSQL đang rảnh bị ngắt.'));
 
@@ -56,7 +58,11 @@ export async function checkFarmStorage(): Promise<void> {
       (SELECT claimed FROM farm_guest_progress LIMIT 1),
       (SELECT merchant_state IS NOT NULL FROM farm_guest_progress LIMIT 1),
       (SELECT username FROM farm_accounts LIMIT 1),
-      (SELECT token_hash FROM farm_account_sessions LIMIT 1)
+      (SELECT token_hash FROM farm_account_sessions LIMIT 1),
+      (SELECT confirmed FROM farm_friendships LIMIT 1),
+      (SELECT planted_at FROM farm_crop_steals LIMIT 1),
+      (SELECT last_activity_read_at FROM farm_accounts LIMIT 1),
+      (SELECT created_at FROM farm_activities LIMIT 1)
   `);
 }
 

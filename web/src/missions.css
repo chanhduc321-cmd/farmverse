@@ -18,6 +18,9 @@
   background: #fbf2dc;
   color: #304629;
 }
+#missions[open] {
+  animation: popIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
 #missions::backdrop { background: #132c2066; }
 #missions header {
   display: flex;
@@ -51,8 +54,13 @@
   padding: 4px 0;
   border-radius: 6px;
   background: #eee1c4;
+  transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28), background-color 0.2s ease;
 }
-.streak-days li.checked { background: #d8ebbe; color: #315c29; }
+.streak-days li.checked {
+  background: #d8ebbe;
+  color: #315c29;
+  transform: scale(1.03);
+}
 .streak-days [data-day-mark] { display: grid; place-items: center; height: 24px; font-weight: 850; }
 .streak-days small { font-size: .65rem; white-space: nowrap; }
 .streak-days img { width: 24px; height: 24px; object-fit: contain; }
@@ -65,5 +73,20 @@
   color: #493419;
   font: inherit;
   font-weight: 750;
+  transition: transform 0.12s ease, filter 0.15s ease, box-shadow 0.2s ease;
+}
+#missions :is([data-claim], [data-attend]):hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+#missions :is([data-claim], [data-attend]):active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+#missions [data-claim]:not(:disabled) {
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
+}
+@media (prefers-reduced-motion: reduce) {
+  #missions[open] { animation: none; }
+  .streak-days li, #missions :is([data-claim], [data-attend]) { transition: none; }
 }
 #missions [hidden], #missions :is([data-mission-feedback], [data-streak-feedback]):empty { display: none; }

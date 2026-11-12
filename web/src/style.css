@@ -128,6 +128,29 @@ button:disabled { cursor: default; opacity: .6; }
   pointer-events: auto;
   touch-action: manipulation;
 }
+.field[data-care-tool="water"] {
+  --care-color: #a7eaff;
+  --care-cursor: url('/icon/topbutton (14).png') 7 14, pointer;
+}
+.field[data-care-tool="fertilize"] {
+  --care-color: #e7ffad;
+  --care-cursor: url('/icon/topbutton (12).png') 23 30, pointer;
+}
+@media (any-hover: hover) and (any-pointer: fine) {
+  .field[data-care-tool] #game,
+  .field[data-care-tool] .plot-targets button {
+    cursor: var(--care-cursor);
+  }
+}
+.plot-targets button.is-care-target::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: var(--care-color);
+  clip-path: polygon(evenodd, 50% 0, 100% 50%, 50% 100%, 0 50%, 50% 0,
+    50% 4%, 4% 50%, 50% 96%, 96% 50%, 50% 4%);
+}
 .plot-targets button:focus-visible {
   outline: 2px solid #fef08a !important;
   outline-offset: -2px;
@@ -344,15 +367,6 @@ button:disabled { cursor: default; opacity: .6; }
   background: linear-gradient(180deg, #4ade80 0%, #22c55e 50%, #15803d 100%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), inset 0 -1px 0 rgba(0, 0, 0, 0.35);
 }
-.hud-bar-star,
-.hud-bar-sprout {
-  position: relative;
-  z-index: 2;
-  margin-left: 3px;
-  font-size: 9px;
-  line-height: 1;
-  flex: none;
-}
 .hud-bar-label {
   position: relative;
   z-index: 2;
@@ -365,7 +379,6 @@ button:disabled { cursor: default; opacity: .6; }
   line-height: 16px;
   letter-spacing: 0.2px;
   white-space: nowrap;
-  margin-right: 4px;
 }
 
 /* ─── TOP DROPDOWN MENU (LEFT: THEMES & OPTIONS) ─── */
@@ -614,7 +627,15 @@ button:disabled { cursor: default; opacity: .6; }
   border-color: #10b981;
   color: #065f46;
   box-shadow: 0 0 12px rgba(16, 185, 129, 0.45), 0 2px 0 #047857;
-  transform: translateY(-2px);
+  transform: translateY(-2px) scale(1.04);
+}
+.is-bumped {
+  animation: hudBump 0.32s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+@keyframes hudBump {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.14); }
+  100% { transform: scale(1); }
 }
 
 @media (max-width: 480px) {
@@ -787,16 +808,6 @@ button:disabled { cursor: default; opacity: .6; }
   flex-direction: column;
   gap: 4px;
   text-align: left;
-}
-.plot-tooltip-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.plot-tooltip-icon {
-  font-size: 16px;
-  line-height: 1;
-  flex-shrink: 0;
 }
 .plot-tooltip-title-wrap {
   display: flex;
@@ -1431,7 +1442,6 @@ button:disabled { cursor: default; opacity: .6; }
   align-items: center;
   gap: 6px;
 }
-.unavailable-icon { font-size: 1.8rem; }
 .unavailable-card h3 { font-size: 0.98rem; color: #52381a; margin: 0; }
 .unavailable-card p { font-size: 0.8rem; color: #6d5332; line-height: 1.4; margin: 0; }
 
@@ -1471,14 +1481,7 @@ button:disabled { cursor: default; opacity: .6; }
   flex: none;
 }
 .activity-heading {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   min-width: 0;
-}
-.activity-header-icon {
-  font-size: 2rem;
-  line-height: 1;
 }
 .activity-heading h2 {
   margin: 0;
@@ -1510,9 +1513,6 @@ button:disabled { cursor: default; opacity: .6; }
   gap: 8px;
 }
 .activity-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
   padding: 10px 12px;
   border: 1.5px solid #ecd8ab;
   border-radius: 14px;
@@ -1524,28 +1524,7 @@ button:disabled { cursor: default; opacity: .6; }
   border-color: #eab308;
   box-shadow: 0 0 0 1px rgba(234, 179, 8, 0.35);
 }
-.activity-item-icon-box {
-  flex: none;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 1.2rem;
-  background: #f5ebd3;
-  border: 1px solid #dfc79b;
-}
-.activity-steal .activity-item-icon-box {
-  background: #fee2e2;
-  border-color: #fca5a5;
-}
-.activity-visit .activity-item-icon-box {
-  background: #e0f2fe;
-  border-color: #bae6fd;
-}
 .activity-item-content {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -1558,7 +1537,6 @@ button:disabled { cursor: default; opacity: .6; }
 .visitor-name {
   color: #15803d;
   font-weight: 750;
-  margin-right: 4px;
 }
 .stolen-amount {
   color: #dc2626;
@@ -1598,10 +1576,6 @@ button:disabled { cursor: default; opacity: .6; }
   padding: 36px 16px;
   text-align: center;
   color: #796e5d;
-}
-.activity-empty-icon {
-  font-size: 2.5rem;
-  margin-bottom: 8px;
 }
 .activity-empty p {
   margin: 0;
@@ -1757,13 +1731,6 @@ button:disabled { cursor: default; opacity: .6; }
   box-shadow: 0 8px 24px rgba(2, 132, 199, 0.35), 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.game-toast-icon,
-.modal-toast-icon,
-.account-toast-icon {
-  font-size: 0.95rem;
-  flex: none;
-  line-height: 1;
-}
 
 .game-toast-msg,
 .modal-toast-msg,

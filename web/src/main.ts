@@ -5,10 +5,10 @@ import { ACTIVITY_API } from '../../shared/activity.mts';
 import type { ActivityPage } from '../../shared/activity.mts';
 import { COMMUNITY_API } from '../../shared/community.mts';
 import type { FarmVisit, PlayerPage, StealResponse } from '../../shared/community.mts';
-import type { openOfflineFarm } from './offline-farm.ts';
 import { createCommunity, createPlayerAvatar, playerPath } from './community.ts';
 import { createMissions } from './missions.ts';
 import { farmLoading } from './loading.ts';
+import { createFarmPet, loadPetSprites } from './pets.ts';
 import './style.css';
 
 const width = 800;
@@ -30,6 +30,18 @@ const themes = [
   { file: 'web-theme-4.jpg', fieldOffset: .12, bank: ['#e7ae58', '#bd7c31'] },
 ];
 const asset = (path: string) => `/${path}`;
+
+function cropArt(crop: Crop) {
+  const dir = `crops/crop${crop.id}`;
+  const frame = (number: number) => `${dir}/stage-${number}.png`;
+  return {
+    seed: `${dir}/seed.png`,
+    planted: `${dir}/planted.png`,
+    harvested: `${dir}/cron_end.png`,
+    produce: crop.id <= 4 ? `${dir}/produce.png` : frame(crop.readyFrame),
+    frame,
+  };
+}
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
 const buttons = [...document.querySelectorAll<HTMLButtonElement>('[data-tool]')];
 const dialog = document.querySelector<HTMLDialogElement>('#inventory')!;
@@ -45,10 +57,8 @@ const feedback = document.querySelector<HTMLParagraphElement>('#feedback')!;
 const panelFeedback = document.querySelector<HTMLParagraphElement>('#panel-feedback')!;
 const gameToast = document.querySelector<HTMLElement>('#game-toast');
 const gameToastMsg = document.querySelector<HTMLElement>('#game-toast-msg');
-const gameToastIcon = document.querySelector<HTMLElement>('#game-toast-icon');
 const inventoryToast = document.querySelector<HTMLElement>('#inventory-toast');
 const inventoryToastMsg = document.querySelector<HTMLElement>('#inventory-toast-msg');
-const inventoryToastIcon = document.querySelector<HTMLElement>('#inventory-toast-icon');
 const activityDialog = document.querySelector<HTMLDialogElement>('#activity')!;
 const activityOpenBtn = document.querySelector<HTMLButtonElement>('#activity-open');
 const menuActivityBtn = document.querySelector<HTMLButtonElement>('#menu-activity-btn');
@@ -89,12 +99,6 @@ function showGameToast(
 
   gameToastMsg.textContent = message;
   gameToast.className = `game-toast is-${type}`;
-  if (gameToastIcon) {
-    gameToastIcon.textContent =
-      type === 'success' ? '✅' :
-      type === 'error' ? '⚠️' :
-      type === 'warning' ? '⚠️' : 'ℹ️';
-  }
   gameToast.hidden = false;
 
   if (durationMs > 0) {
@@ -129,12 +133,6 @@ function showInventoryToast(
 
   inventoryToastMsg.textContent = message;
   inventoryToast.className = `modal-toast is-${type}`;
-  if (inventoryToastIcon) {
-    inventoryToastIcon.textContent =
-      type === 'success' ? '✅' :
-      type === 'error' ? '⚠️' :
-      type === 'warning' ? '⚠️' : 'ℹ️';
-  }
   inventoryToast.hidden = false;
 
   if (durationMs > 0) {
@@ -201,7 +199,6 @@ const profileUsername = document.querySelector<HTMLElement>('#profile-username')
 const unavailableText = document.querySelector<HTMLElement>('#unavailable-text')!;
 const accountToast = document.querySelector<HTMLElement>('#account-toast');
 const accountToastMsg = document.querySelector<HTMLElement>('#account-toast-msg');
-const accountToastIcon = document.querySelector<HTMLElement>('#account-toast-icon');
 const regUsernameInput = document.querySelector<HTMLInputElement>('#reg-username');
 const regPasswordInput = document.querySelector<HTMLInputElement>('#reg-password');
 const loginUsernameInput = document.querySelector<HTMLInputElement>('#login-username');
@@ -238,9 +235,6 @@ function showAccountToast(
 
   accountToastMsg.textContent = message;
   accountToast.className = `account-toast is-${type}`;
-  if (accountToastIcon) {
-    accountToastIcon.textContent = type === 'error' ? '⚠️' : type === 'success' ? '✅' : 'ℹ️';
-  }
   accountToast.hidden = false;
 
   if (inputToShake) {
@@ -273,7 +267,6 @@ function setAccountFeedback(
 }
 
 const plotTooltip = document.querySelector<HTMLDivElement>('#plot-tooltip')!;
-const tooltipIcon = document.querySelector<HTMLElement>('#tooltip-icon')!;
 const tooltipTitle = document.querySelector<HTMLElement>('#tooltip-title')!;
 const tooltipBadge = document.querySelector<HTMLElement>('#tooltip-badge')!;
 const tooltipDesc = document.querySelector<HTMLParagraphElement>('#tooltip-desc')!;
@@ -296,15 +289,17 @@ let guidePanelCompleted = false;
 let guideSpotlight: HTMLElement | undefined;
 
 type Panel = 'shop' | 'bag' | 'warehouse';
-type Tool = { type: 'plant'; cropId: number } | { type: 'harvest' | 'clear' | 'water' | 'fertilize' };
+type CareTool = 'water' | 'fertilize';
+type PlotAction = Extract<FarmAction, { plot: number }>;
+const noFertilizer = 'Đã hết phân bón. Mua thêm ở Tiệm hạt.';
 const panelInfo = {
-  shop: { title: 'Tiệm hạt', description: 'Chọn giống và số hạt muốn mua.', icon: 2 },
+  shop: { title: 'Tiệm hạt', description: 'Mua hạt giống và phân bón.', icon: 2 },
   bag: { title: 'Túi hạt', description: 'Chọn hạt rồi bấm ô đất trống để gieo.', icon: 12 },
   warehouse: { title: 'Kho nông sản', description: 'Chọn nông sản và số quả muốn bán.', icon: 8 },
 };
 let activePanel: Panel = 'shop';
-let activeTool: Tool = { type: 'harvest' };
-let toolSelection = 0;
+let selectedCropId: number | undefined;
+let activeCareTool: CareTool | undefined;
 let activeAccountTab: 'register' | 'login' = 'register';
 let accountSubmitting = false;
 let sessionSynchronized = false;
@@ -318,12 +313,9 @@ let visit: FarmVisit | undefined;
 let visitReceivedAt = 0;
 let visitPending = false;
 let crops: Crop[] = [];
-let offlineFarm: ReturnType<typeof openOfflineFarm> | undefined;
-let offlineMode = new URLSearchParams(location.search).get('demo') === 'offline';
 const plotButtons: HTMLButtonElement[] = [];
 
 async function request<T>(path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-  if (offlineMode) throw new Error('Tính năng này cần kết nối máy chủ.');
   const response = await fetch(`/api${path}`, body !== undefined ? {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -332,7 +324,7 @@ async function request<T>(path: string, body?: unknown, signal?: AbortSignal): P
   } : { signal });
   if (!response.ok) {
     const result = await response.json().catch(() => null) as { error?: string } | null;
-    throw new Error(result?.error ?? 'Chưa kết nối được máy chủ FarmVerse.', { cause: response.status });
+    throw new Error(result?.error ?? 'Chưa kết nối được máy chủ Nông Trại Mộng Mơ.', { cause: response.status });
   }
   if (response.status === 204) {
     return undefined as unknown as T;
@@ -340,22 +332,60 @@ async function request<T>(path: string, body?: unknown, signal?: AbortSignal): P
   return await response.json() as T;
 }
 
+let goldCountFrame = 0;
+let activeScene: FarmScene | undefined;
+
+function animateCoins(from: number, to: number): void {
+  if (goldCountFrame) cancelAnimationFrame(goldCountFrame);
+  if (reduceMotion.matches || from === to) {
+    coins.textContent = String(to);
+    return;
+  }
+  const startedAt = performance.now();
+  const duration = 260;
+  const tick = (now: number) => {
+    const t = Math.min(1, (now - startedAt) / duration);
+    const eased = 1 - (1 - t) * (1 - t);
+    coins.textContent = String(Math.round(from + (to - from) * eased));
+    if (t < 1) goldCountFrame = requestAnimationFrame(tick);
+    else goldCountFrame = 0;
+  };
+  goldCountFrame = requestAnimationFrame(tick);
+}
+
+function bumpStat(element: HTMLElement | null): void {
+  if (!element || reduceMotion.matches) return;
+  element.classList.remove('is-bumped');
+  void element.offsetWidth;
+  element.classList.add('is-bumped');
+}
+
 function setSnapshot(next: FarmResponse | FarmSessionResponse): void {
+  const prevGold = snapshot?.farm.gold;
+  const prevLevel = snapshot?.farm.level;
   snapshot = next;
   if ('accountsAvailable' in next) {
     if (!sessionSynchronized || session?.account?.username !== next.account?.username) {
-      activeTool = { type: 'harvest' };
+      selectedCropId = undefined;
+      activeCareTool = undefined;
     }
     session = next;
     sessionSynchronized = true;
     updateToolHint();
   }
-  if (offlineFarm) sessionSynchronized = true;
   receivedAt = performance.now();
   missions.update(next.farm);
   coins.textContent = String(next.farm.gold);
+  if (prevGold !== undefined && prevGold !== next.farm.gold) {
+    animateCoins(prevGold, next.farm.gold);
+    bumpStat(coins.parentElement);
+  }
   panelCoins.textContent = next.farm.gold.toLocaleString('vi-VN');
   level.textContent = String(next.farm.level);
+  if (prevLevel !== undefined && prevLevel !== next.farm.level) {
+    bumpStat(level.parentElement);
+    if (next.farm.level > prevLevel) activeScene?.playLevelUp();
+  }
   xpBar.max = next.farm.level * 200;
   xpBar.value = next.farm.xp;
   xp.textContent = `${xpBar.value}/${xpBar.max} XP`;
@@ -373,13 +403,7 @@ function setSnapshot(next: FarmResponse | FarmSessionResponse): void {
   }
 
   // Cập nhật tên và trạng thái tài khoản trên HUD
-  if (offlineFarm) {
-    hudName.textContent = 'Demo offline';
-    hudAccountBadge.textContent = 'Offline';
-    hudAccountBtn.classList.add('is-offline');
-    hudAccountBtn.classList.remove('is-authenticated');
-    if (menuAccountLabel) menuAccountLabel.textContent = 'Demo offline';
-  } else if (session?.account) {
+  if (session?.account) {
     hudName.textContent = session.account.username;
     hudAccountBadge.textContent = 'Tài khoản';
     hudAccountBtn.classList.add('is-authenticated');
@@ -394,8 +418,8 @@ function setSnapshot(next: FarmResponse | FarmSessionResponse): void {
     if (menuAccountLabel) menuAccountLabel.textContent = 'Tài khoản';
   }
 
-  if (activeTool.type === 'plant' && !(snapshot.farm.seeds[activeTool.cropId] > 0)) {
-    activeTool = { type: 'harvest' };
+  if (selectedCropId !== undefined && !(snapshot.farm.seeds[selectedCropId] > 0)) {
+    selectedCropId = undefined;
   }
   updateToolHint();
   if (dialog.open && activePanel !== 'shop') {
@@ -406,8 +430,7 @@ function setSnapshot(next: FarmResponse | FarmSessionResponse): void {
 
 function updateCommunityAccess(): void {
   const available = sessionSynchronized && Boolean(session?.account);
-  const canVisit = available || Boolean(offlineFarm);
-  community.updateAccess(canVisit, busy || accountSubmitting, Boolean(offlineFarm));
+  community.updateAccess(available, busy || accountSubmitting);
   if (activityOpenBtn) {
     activityOpenBtn.disabled = busy || accountSubmitting;
     activityOpenBtn.title = available ? 'Nhật ký hoạt động' : 'Đăng nhập để xem nhật ký hoạt động';
@@ -416,13 +439,14 @@ function updateCommunityAccess(): void {
     updateActivityBadges(0);
     if (activityDialog?.open) activityDialog.close();
   }
-  if (!canVisit && visit) setVisit(undefined);
+  if (!available && visit) setVisit(undefined);
 }
 
 function setVisit(next: FarmVisit | undefined): void {
   const wasVisiting = Boolean(visit);
   hidePlotTooltip();
   visit = next;
+  if (next) activeCareTool = undefined;
   visitReceivedAt = performance.now();
   field.classList.toggle('is-visiting', Boolean(next));
   visitHud.hidden = !next;
@@ -467,7 +491,7 @@ async function runVisitAction(action: () => Promise<void>): Promise<void> {
 }
 
 async function readVisit(username: string): Promise<FarmVisit> {
-  return offlineFarm ? offlineFarm.community.visit(username) : request<FarmVisit>(playerPath(COMMUNITY_API.visit, username));
+  return request<FarmVisit>(playerPath(COMMUNITY_API.visit, username));
 }
 
 async function refreshVisit(username: string): Promise<void> {
@@ -491,7 +515,7 @@ function updateAccountButtons(): void {
 
 function renderAccountView(): void {
   setAccountFeedback('');
-  if (!sessionSynchronized && !offlineFarm) {
+  if (!sessionSynchronized) {
     accountTitle.textContent = 'Chưa tải được phiên';
     accountDescription.textContent = 'Thao tác Farm đang tạm khóa để bảo vệ dữ liệu';
     accountNav.hidden = true;
@@ -501,19 +525,9 @@ function renderAccountView(): void {
     viewUnavailable.hidden = true;
     viewSyncError.hidden = false;
     syncErrorText.textContent = 'Không thể đồng bộ dữ liệu phiên nông trại từ máy chủ. Vui lòng bấm thử lại để tiếp tục chơi.';
-  } else if (offlineFarm) {
-    viewSyncError.hidden = true;
-    accountTitle.textContent = 'Bản chơi Demo offline';
-    accountDescription.textContent = 'Tiến độ được lưu cục bộ trong trình duyệt';
-    accountNav.hidden = true;
-    viewRegister.hidden = true;
-    viewLogin.hidden = true;
-    viewProfile.hidden = true;
-    viewUnavailable.hidden = false;
-    unavailableText.textContent = 'Tiến độ chỉ giữ trong tab này. Tải lại trang để bắt đầu lượt thử mới.';
   } else if (session?.account) {
     viewSyncError.hidden = true;
-    accountTitle.textContent = 'Tài khoản FarmVerse';
+    accountTitle.textContent = 'Tài khoản Nông Trại Mộng Mơ';
     accountDescription.textContent = 'Nông trại đã liên kết với tài khoản';
     accountNav.hidden = true;
     viewRegister.hidden = true;
@@ -533,7 +547,7 @@ function renderAccountView(): void {
     unavailableText.textContent = 'Hệ thống tài khoản cần PostgreSQL để lưu trữ. Hiện backend đang chạy ở chế độ RAM.';
   } else {
     viewSyncError.hidden = true;
-    accountTitle.textContent = 'Tài khoản FarmVerse';
+    accountTitle.textContent = 'Tài khoản Nông Trại Mộng Mơ';
     accountDescription.textContent = activeAccountTab === 'register'
       ? 'Tạo tài khoản để lưu nông trại đang chơi'
       : 'Đăng nhập vào nông trại của bạn';
@@ -568,16 +582,29 @@ function farmTime(): number {
   return snapshot.serverTime + performance.now() - receivedAt;
 }
 
+function careUnavailable(tool: CareTool, plot: Plot | null, now: number): string | undefined {
+  if (!plot || plot.harvested) return 'Chỉ chăm được cây đang lớn.';
+  if (now >= ripeAt(crops[plot.cropId - 1], plot)) return 'Cây đã chín. Tắt công cụ để thu hoạch.';
+  if (tool === 'water' && plot.watered) return 'Cây đã được tưới trong vụ này.';
+  if (tool === 'fertilize' && plot.fertilized) return 'Cây đã được bón phân trong vụ này.';
+  if (tool === 'fertilize' && !(snapshot.farm.fertilizer ?? 0)) return noFertilizer;
+}
+
 function updateToolHint(): void {
-  const message = farmGuide(() => {});
+  const tool = !visit && sessionSynchronized ? activeCareTool : undefined;
+  if (tool) field.dataset.careTool = tool;
+  else delete field.dataset.careTool;
   buttons.forEach((button) => {
     if (button.hasAttribute('aria-pressed')) {
-      button.setAttribute('aria-pressed', String(button.dataset.tool === activeTool.type));
+      button.setAttribute('aria-pressed', String(button.dataset.tool === tool));
     }
+  });
+  plotButtons.slice(0, positions.length).forEach((button, index) => {
+    button.classList.toggle('is-care-target', Boolean(tool && !careUnavailable(tool, snapshot.farm.plots[index], farmTime())));
   });
   if (activeTooltipPlot !== null) updatePlotTooltipContent(activeTooltipPlot);
   updateGuidedTour();
-  hint.textContent = guideActive || visit ? message : '';
+  hint.textContent = guideActive || visit ? farmGuide() : '';
 }
 
 function finishGuidedTour(): void {
@@ -593,9 +620,7 @@ function finishGuidedTour(): void {
   guideShade.hidden = true;
   guidedPanel = undefined;
   document.querySelectorAll('.guide-pulse').forEach(target => target.classList.remove('guide-pulse'));
-  if (!offlineMode) {
-    try { localStorage.setItem(guideStorageKey, '1'); } catch { /* Continue without browser storage. */ }
-  }
+  try { localStorage.setItem(guideStorageKey, '1'); } catch { /* Continue without browser storage. */ }
   hudAccountBtn.focus();
 }
 
@@ -637,12 +662,10 @@ function updateGuidedTour(): void {
   if (!guideChecked) {
     guideChecked = true;
     guideActive = snapshot.farm.revision === 0;
-    if (!offlineMode) {
-      try {
-        guideActive = guideActive && !localStorage.getItem(guideStorageKey);
-        localStorage.setItem(guideStorageKey, '1');
-      } catch { /* Continue without browser storage. */ }
-    }
+    try {
+      guideActive = guideActive && !localStorage.getItem(guideStorageKey);
+      localStorage.setItem(guideStorageKey, '1');
+    } catch { /* Continue without browser storage. */ }
   }
   field.classList.toggle('is-tour-ended', !guideActive);
   if (!guideActive) return;
@@ -669,22 +692,17 @@ function updateGuidedTour(): void {
   const growing = farm.plots.some(plot => plot && !plot.harvested);
   let area: Panel | undefined;
   let plotTarget: number | undefined;
-  let toolTarget: 'harvest' | 'clear' | undefined;
   let label = '';
   let message = '';
   let action = () => {};
-  if (ripe >= 0) {
-    message = activeTool.type === 'clear'
-      ? 'Chọn Thu hoạch rồi chạm vào cây chín để hái quả nhé!'
-      : 'Chín rồi! Chạm vào cây để hái quả nhé.';
-    if (activeTool.type === 'clear') toolTarget = 'harvest';
-    else plotTarget = ripe;
+  if (activeCareTool) {
+    message = farmGuide();
+  } else if (ripe >= 0) {
+    message = 'Chín rồi! Chạm vào cây để hái quả nhé.';
+    plotTarget = ripe;
   } else if (harvested >= 0) {
-    message = activeTool.type === 'clear'
-      ? 'Chạm gốc cây nhấp nháy để dọn đất cho vụ mới nhé!'
-      : 'Chọn Xẻng rồi chạm gốc cây để dọn đất cho vụ mới nhé!';
-    if (activeTool.type !== 'clear') toolTarget = 'clear';
-    else plotTarget = harvested;
+    message = 'Chạm gốc cây nhấp nháy để dọn đất cho vụ mới nhé!';
+    plotTarget = harvested;
   } else if (produce > 0) {
     area = 'warehouse';
     label = 'Mở Kho nông sản';
@@ -693,7 +711,7 @@ function updateGuidedTour(): void {
     const nextRipe = Math.min(...farm.plots.filter(plot => plot && !plot.harvested)
       .map(plot => ripeAt(crops[plot!.cropId - 1], plot!)));
     message = `Cây đang lớn, còn ${Math.max(0, Math.ceil((nextRipe - farmTime()) / 1000))} giây. Bạn cứ khám phá ruộng nhé!`;
-  } else if (activeTool.type === 'plant') {
+  } else if (selectedCropId !== undefined) {
     plotTarget = farm.plots.findIndex(plot => !plot);
     message = 'Hạt sẵn sàng rồi! Chạm ô đất nhấp nháy để gieo nhé.';
   } else if (Object.values(farm.seeds).some(count => count > 0)) {
@@ -716,8 +734,6 @@ function updateGuidedTour(): void {
     if (!introducedAreas.has(next)) spotlight = target;
   }
   if (plotTarget !== undefined && plotTarget >= 0) targets.add(plotButtons[plotTarget]);
-  if (toolTarget) buttons.filter(button => button.dataset.tool === toolTarget)
-    .forEach(button => targets.add(button));
   document.querySelectorAll<HTMLElement>('[data-tool], .plot-targets button, #toggle-right')
     .forEach(target => target.classList.toggle('guide-pulse', targets.has(target)));
   guideMessage.textContent = message;
@@ -747,10 +763,12 @@ document.addEventListener('focusin', event => {
   if (!guideDialog.contains(target) && !guideSpotlight.contains(target)) guideAction.focus();
 });
 
-function farmGuide(highlightTool: (tool: string) => void): string {
+function farmGuide(): string {
   if (visit) return 'Bấm vào ô có chữ “Lấy 1 quả”.';
   if (!snapshot || !crops.length) return 'Đang mở nông trại…';
-  if (!sessionSynchronized && !offlineFarm) return 'Phiên chơi chưa đồng bộ. Thao tác Farm đang tạm khóa.';
+  if (!sessionSynchronized) return 'Phiên chơi chưa đồng bộ. Thao tác Farm đang tạm khóa.';
+  if (activeCareTool === 'water') return 'Chạm cây đang lớn để tưới miễn phí. Bấm lại nút để thoát.';
+  if (activeCareTool === 'fertilize') return 'Chạm cây đang lớn để bón phân. Bấm lại nút để thoát.';
 
   const farm = snapshot.farm;
   const now = farmTime();
@@ -784,39 +802,32 @@ function farmGuide(highlightTool: (tool: string) => void): string {
 
   // Priority 1: Crops ripe and ready to harvest
   if (ripeCount > 0) {
-    highlightTool('harvest');
-    return activeTool.type === 'clear'
-      ? `Có ${ripeCount} ô đã chín. Chọn Thu hoạch (Phím 5), rồi bấm ô để hái quả (+1 XP).`
-      : `Có ${ripeCount} ô đã chín. Bấm vào ô để hái quả (+1 XP).`;
+    return `Có ${ripeCount} ô đã chín. Bấm vào ô để hái quả (+1 XP).`;
   }
 
-  // Priority 2: Harvested plots need clearing with shovel
+  // Priority 2: Harvested plots need clearing
   if (harvestedCount > 0) {
-    highlightTool('clear');
-    return `Có ${harvestedCount} ô cần dọn đất. Chọn Xẻng rồi bấm ô để dọn gốc (+3 XP).`;
+    return `Có ${harvestedCount} ô cần dọn đất. Bấm vào gốc để dọn (+3 XP).`;
   }
 
   // Priority 3: Player actively holding seeds to plant
-  if (activeTool.type === 'plant' && emptyCount > 0) {
-    const crop = crops[activeTool.cropId - 1];
+  if (selectedCropId !== undefined && emptyCount > 0) {
+    const crop = crops[selectedCropId - 1];
     return `Đang chọn hạt ${crop.name}. Bấm vào ô đất trống để gieo (+5 XP).`;
   }
 
   // Priority 4: Player has seeds in bag and has empty plots to plant
   if (totalSeeds > 0 && emptyCount > 0) {
-    highlightTool('bag');
     return `Túi có ${totalSeeds} hạt giống. Mở Túi hạt và chọn hạt để gieo vào ${emptyCount} ô trống (+5 XP).`;
   }
 
   if (totalProduce > 0) {
-    highlightTool('warehouse');
     return `Có ${totalProduce} nông sản trong kho. Mở Kho nông sản để bán lấy Gold.`;
   }
 
   if (totalSeeds === 0 && emptyCount > 0) {
     const seed = crops.reduce((cheapest, crop) => crop.buyPrice < cheapest.buyPrice ? crop : cheapest);
     if (farm.gold >= seed.buyPrice) {
-      highlightTool('shop');
       return `Bạn có ${farm.gold} Gold. Vào Tiệm hạt mua hạt giống (ví dụ ${seed.name} ${seed.buyPrice} Gold).`;
     }
   }
@@ -835,7 +846,6 @@ function updatePlotTooltipContent(plotIndex: number): void {
   const isLocked = plotIndex >= positions.length;
 
   if (isLocked) {
-    tooltipIcon.textContent = '🔒';
     tooltipTitle.textContent = `Ô đất ${plotNum}`;
     tooltipBadge.textContent = 'Đang khóa';
     tooltipBadge.className = 'plot-tooltip-badge badge-locked';
@@ -846,57 +856,46 @@ function updatePlotTooltipContent(plotIndex: number): void {
 
   const plot = snapshot.farm.plots[plotIndex];
   const now = farmTime();
+  const careIssue = activeCareTool && careUnavailable(activeCareTool, plot, now);
 
   if (!plot) {
-    tooltipIcon.textContent = '🌱';
     tooltipTitle.textContent = `Ô đất ${plotNum}`;
     tooltipBadge.textContent = 'Đất trống';
     tooltipBadge.className = 'plot-tooltip-badge';
-    if (activeTool.type === 'plant') {
-      const crop = crops[activeTool.cropId - 1];
-      const cropName = crop ? crop.name : 'hạt giống';
-      tooltipDesc.textContent = `Bấm để gieo ${cropName} (-1 hạt)`;
+    if (careIssue) {
+      tooltipDesc.textContent = careIssue;
+      tooltipMeta.hidden = true;
+    } else if (selectedCropId !== undefined) {
+      tooltipDesc.textContent = `Bấm để gieo ${crops[selectedCropId - 1].name} (-1 hạt)`;
       tooltipMeta.hidden = false;
-      tooltipXp.textContent = '⭐ +5 XP khi gieo';
+      tooltipXp.textContent = '+5 XP khi gieo';
       tooltipTimer.textContent = 'Đất sẵn sàng';
     } else {
-      const totalSeeds = Object.values(snapshot.farm.seeds).reduce((sum, c) => sum + c, 0);
-      if (totalSeeds > 0) {
-        tooltipDesc.textContent = 'Mở Túi hạt (Phím 2) để chọn giống gieo.';
-      } else {
-        tooltipDesc.textContent = 'Mở Tiệm hạt (Phím 1) để mua giống cây.';
-      }
+      tooltipDesc.textContent = 'Bấm để mở Túi hạt.';
       tooltipMeta.hidden = true;
     }
   } else if (plot.harvested) {
-    tooltipIcon.textContent = '🧹';
     tooltipTitle.textContent = `Ô đất ${plotNum} · Gốc cây`;
     tooltipBadge.textContent = 'Cần dọn đất';
     tooltipBadge.className = 'plot-tooltip-badge badge-harvested';
-    tooltipDesc.textContent = activeTool.type === 'clear'
-      ? 'Bấm để dọn sạch gốc cây bằng Xẻng'
-      : 'Chọn Xẻng (Phím 4) rồi bấm vào ô để dọn gốc';
+    tooltipDesc.textContent = careIssue ?? 'Bấm vào gốc để dọn đất.';
     tooltipMeta.hidden = false;
-    tooltipXp.textContent = '⭐ +3 XP khi dọn';
+    tooltipXp.textContent = '+3 XP khi dọn';
     tooltipTimer.textContent = 'Cần dọn dẹp';
   } else {
     const crop = crops[plot.cropId - 1];
     const cropName = crop ? crop.name : 'Cây trồng';
     const remaining = Math.max(0, Math.ceil((ripeAt(crop, plot) - now) / 1000));
     if (remaining <= 0) {
-      tooltipIcon.textContent = '✨';
       tooltipTitle.textContent = `Ô đất ${plotNum} · ${cropName}`;
       tooltipBadge.textContent = 'Đã chín!';
       tooltipBadge.className = 'plot-tooltip-badge badge-ripe';
-      tooltipDesc.textContent = activeTool.type === 'clear'
-        ? 'Chọn Thu hoạch (Phím 5), rồi bấm ô để hái quả.'
-        : 'Bấm vào ô để thu hoạch nông sản về kho.';
+      tooltipDesc.textContent = careIssue ?? 'Bấm vào cây để thu hoạch.';
       tooltipMeta.hidden = false;
-      tooltipXp.textContent = '⭐ +1 XP';
+      tooltipXp.textContent = '+1 XP';
       tooltipTimer.textContent = 'Sản lượng 10–29 quả';
     } else {
       const stage = stageAt(crop, plot, now);
-      tooltipIcon.textContent = '🌿';
       tooltipTitle.textContent = `Ô đất ${plotNum} · ${cropName}`;
       tooltipBadge.textContent = `Giai đoạn ${stage}/${crop.stages}`;
       tooltipBadge.className = 'plot-tooltip-badge badge-growing';
@@ -904,10 +903,16 @@ function updatePlotTooltipContent(plotIndex: number): void {
         plot.watered ? 'Đã tưới' : '',
         plot.fertilized ? 'Đã bón phân' : '',
       ].filter(Boolean);
-      tooltipDesc.textContent = care.length ? care.join(' · ') : 'Cây đang lớn khỏe mạnh.';
+      if (activeCareTool) {
+        tooltipDesc.textContent = careIssue ?? (activeCareTool === 'water'
+          ? 'Bấm để tưới miễn phí.'
+          : 'Bấm để bón phân.');
+      } else {
+        tooltipDesc.textContent = care.length ? care.join(' · ') : 'Cây đang lớn khỏe mạnh.';
+      }
       tooltipMeta.hidden = false;
       tooltipXp.textContent = 'Đang phát triển';
-      tooltipTimer.textContent = `⏳ Còn ${remaining}s nữa chín`;
+      tooltipTimer.textContent = `Còn ${remaining}s nữa chín`;
     }
   }
 }
@@ -962,12 +967,6 @@ function attachPlotTooltip(button: HTMLButtonElement, plot: number): void {
   });
 }
 
-function selectTool(tool: Tool): void {
-  activeTool = tool;
-  toolSelection++;
-  updateToolHint();
-}
-
 function initKeyboardShortcuts(): void {
   document.addEventListener('keydown', (event) => {
     const target = event.target as HTMLElement;
@@ -981,10 +980,15 @@ function initKeyboardShortcuts(): void {
       if (dialog.open) dialog.close();
       if (accountDialog.open) accountDialog.close();
       hidePlotTooltip();
+      if (activeCareTool) {
+        activeCareTool = undefined;
+        setFeedback('');
+        updateToolHint();
+      }
       return;
     }
 
-    if (guideActive && !guideShade.hidden && /^[1-5]$/.test(event.key)) {
+    if (guideActive && !guideShade.hidden && /^[1-3]$/.test(event.key)) {
       event.preventDefault();
       return;
     }
@@ -1000,12 +1004,6 @@ function initKeyboardShortcuts(): void {
     } else if (event.key === '3') {
       event.preventDefault();
       showPanel('warehouse');
-    } else if (event.key === '4') {
-      event.preventDefault();
-      selectTool({ type: 'clear' });
-    } else if (event.key === '5') {
-      event.preventDefault();
-      selectTool({ type: 'harvest' });
     }
   });
 }
@@ -1024,7 +1022,7 @@ async function send(action: FarmAction): Promise<FarmResponse | undefined> {
   updateAccountButtons();
   try {
     const mutation: FarmMutation = { ...action, expectedRevision: snapshot.farm.revision };
-    const result = offlineFarm ? await offlineFarm.apply(mutation) : await request<FarmResponse>(FARM_API[action.type].path, mutation);
+    const result = await request<FarmResponse>(FARM_API[action.type].path, mutation);
     setSnapshot(result);
     if (result.message) {
       setFeedback(result.message, 'success');
@@ -1038,14 +1036,14 @@ async function send(action: FarmAction): Promise<FarmResponse | undefined> {
       dialog.close();
     }
     if (dialog.open) {
-      if (activePanel !== 'shop') renderPanel();
+      if (activePanel !== 'shop' || action.type === 'buyFertilizer') renderPanel();
     }
     return result;
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Thao tác gặp lỗi.';
     setFeedback(msg, 'error');
     if (error instanceof Error && (error.cause === 401 || error.cause === 409)) {
-      const latest = offlineFarm?.read() ?? await request<FarmSessionResponse>(FARM_API.read.path).catch(() => undefined);
+      const latest = await request<FarmSessionResponse>(FARM_API.read.path).catch(() => undefined);
       if (latest) {
         setSnapshot(latest);
         if (dialog.open) renderPanel();
@@ -1062,6 +1060,48 @@ async function send(action: FarmAction): Promise<FarmResponse | undefined> {
   }
 }
 
+function createInventoryCard(name: string, imagePath: string, summary: string) {
+  const item = document.createElement('article');
+  item.className = 'item';
+  const art = document.createElement('div');
+  art.className = 'item-art';
+  const icon = document.createElement('img');
+  icon.src = asset(imagePath);
+  icon.alt = '';
+  art.append(icon);
+  const details = document.createElement('div');
+  details.className = 'item-details';
+  const title = document.createElement('h3');
+  title.textContent = name;
+  const info = document.createElement('small');
+  info.textContent = summary;
+  details.append(title, info);
+  const controls = document.createElement('div');
+  controls.className = 'item-controls';
+  item.append(art, details, controls);
+  return { item, controls };
+}
+
+function appendInventoryOrder(controls: HTMLElement, name: string, type: 'buy' | 'sell', max: number, submit: (quantity: number) => void): void {
+  const { stepper, quantity } = createQuantity(name, max, type === 'buy' ? 1 : 0);
+  const action = document.createElement('button');
+  action.type = 'button';
+  action.className = 'item-action';
+  action.textContent = type === 'buy' ? 'Mua' : 'Bán';
+  action.setAttribute('aria-label', `${action.textContent} ${name}`);
+  action.onclick = () => {
+    if (!quantity.checkValidity()) {
+      quantity.classList.remove('is-invalid');
+      void quantity.offsetWidth;
+      quantity.classList.add('is-invalid');
+      showInventoryToast('Số lượng không hợp lệ.', 'error');
+      return;
+    }
+    submit(quantity.valueAsNumber);
+  };
+  controls.append(stepper, action);
+}
+
 function renderPanel(): void {
   const { title, description, icon: panelIcon } = panelInfo[activePanel];
   dialog.querySelector('#inventory-title')!.textContent = title;
@@ -1069,62 +1109,42 @@ function renderPanel(): void {
   dialog.querySelector<HTMLImageElement>('#inventory-icon')!.src = asset(`icon/topbutton%20(${panelIcon}).png`);
   for (const tab of panelTabs) tab.setAttribute('aria-pressed', String(tab.dataset.panel === activePanel));
   const cards = document.createDocumentFragment();
+  if (activePanel === 'shop') {
+    const { item, controls } = createInventoryCard('Phân bón', 'icon/fertilizer-sack.png',
+      `${FERTILIZER_COST} Gold/bịch · Đang có ${snapshot.farm.fertilizer ?? 0} bịch`);
+    appendInventoryOrder(controls, 'phân bón', 'buy', 99, quantity => void send({ type: 'buyFertilizer', quantity }));
+    cards.append(item);
+  }
   for (const crop of crops) {
     const seeds = snapshot.farm.seeds[crop.id] ?? 0;
     const produce = snapshot.farm.produce[crop.id] ?? 0;
     if (activePanel === 'bag' && seeds === 0) continue;
     if (activePanel === 'warehouse' && produce === 0) continue;
 
-    const item = document.createElement('article');
-    item.className = 'item';
-    const art = document.createElement('div');
-    art.className = 'item-art';
-    const icon = document.createElement('img');
-    icon.src = asset(`crops/crop${crop.id}/seed.png`);
-    icon.alt = '';
-    art.append(icon);
-    const details = document.createElement('div');
-    details.className = 'item-details';
-    const name = document.createElement('h3');
-    name.textContent = crop.name;
-    const info = document.createElement('small');
-    if (activePanel === 'shop') info.textContent = `${crop.buyPrice} Gold/hạt · Cấp tham khảo ${crop.level}`;
-    if (activePanel === 'bag') info.textContent = `Còn ${seeds} hạt`;
-    if (activePanel === 'warehouse') info.textContent = `${produce} quả · ${crop.sellPrice} Gold/quả`;
-    details.append(name, info);
-
-    const controls = document.createElement('div');
-    controls.className = 'item-controls';
-    const action = document.createElement('button');
-    action.type = 'button';
-    action.className = 'item-action';
+    const artPaths = cropArt(crop);
+    const summary = activePanel === 'shop' ? `${crop.buyPrice} Gold/hạt · Cấp tham khảo ${crop.level}`
+      : activePanel === 'bag' ? `Còn ${seeds} hạt` : `${produce} quả · ${crop.sellPrice} Gold/quả`;
+    const { item, controls } = createInventoryCard(crop.name,
+      activePanel === 'warehouse' ? artPaths.produce : artPaths.seed, summary);
     if (activePanel === 'bag') {
+      const action = document.createElement('button');
+      action.type = 'button';
+      action.className = 'item-action';
       action.textContent = 'Chọn gieo';
       action.setAttribute('aria-label', `Chọn gieo ${crop.name}`);
       action.onclick = () => {
         guidePanelCompleted = true;
         dialog.close();
-        selectTool({ type: 'plant', cropId: crop.id });
+        selectedCropId = crop.id;
+        activeCareTool = undefined;
+        updateToolHint();
       };
+      controls.append(action);
     } else {
-      const { stepper, quantity } = createQuantity(crop.name, activePanel === 'shop' ? 99 : Math.min(999, produce), activePanel === 'shop' ? 1 : 0);
       const type = activePanel === 'shop' ? 'buy' : 'sell';
-      action.textContent = type === 'buy' ? 'Mua' : 'Bán';
-      action.setAttribute('aria-label', `${action.textContent} ${crop.name}`);
-      action.onclick = () => {
-        if (!quantity.checkValidity()) {
-          quantity.classList.remove('is-invalid');
-          void quantity.offsetWidth;
-          quantity.classList.add('is-invalid');
-          showInventoryToast('Số lượng không hợp lệ.', 'error');
-          return;
-        }
-        void send({ type, cropId: crop.id, quantity: quantity.valueAsNumber });
-      };
-      controls.append(stepper);
+      appendInventoryOrder(controls, crop.name, type, type === 'buy' ? 99 : Math.min(999, produce),
+        quantity => void send({ type, cropId: crop.id, quantity }));
     }
-    controls.append(action);
-    item.append(art, details, controls);
     cards.append(item);
   }
   if (!cards.firstChild) {
@@ -1196,6 +1216,14 @@ function showPanel(next: Panel): void {
   if (!dialog.open) dialog.showModal();
 }
 
+function openFertilizerShop(): void {
+  activeCareTool = undefined;
+  setFeedback('');
+  showPanel('shop');
+  updateToolHint();
+  showInventoryToast(noFertilizer, 'info');
+}
+
 function formatRelativeTime(timestampMs: number, nowMs: number = Date.now()): string {
   const diffSec = Math.max(0, Math.floor((nowMs - timestampMs) / 1000));
   if (diffSec < 45) return 'Vừa xong';
@@ -1236,7 +1264,7 @@ function updateActivityBadges(unreadCount: number): void {
 }
 
 async function checkActivitySummary(notifyToast: boolean = true): Promise<void> {
-  if (!session?.account || offlineFarm) {
+  if (!session?.account) {
     updateActivityBadges(0);
     return;
   }
@@ -1302,11 +1330,8 @@ async function loadActivities(offset: number, resetList: boolean = false): Promi
       activityList.hidden = false;
       for (const event of page.events) {
         const li = document.createElement('li');
-        li.className = `activity-item ${event.type === 'steal' ? 'activity-steal' : 'activity-visit'} ${event.isUnread ? 'is-unread' : ''}`;
-
-        const iconBox = document.createElement('div');
-        iconBox.className = 'activity-item-icon-box';
-        iconBox.innerHTML = event.type === 'steal' ? '<span class="act-icon">🧺</span>' : '<span class="act-icon">👣</span>';
+        li.className = 'activity-item';
+        li.classList.toggle('is-unread', event.isUnread);
 
         const content = document.createElement('div');
         content.className = 'activity-item-content';
@@ -1317,7 +1342,7 @@ async function loadActivities(offset: number, resetList: boolean = false): Promi
         const name = document.createElement('strong');
         name.className = 'visitor-name';
         name.textContent = event.visitorName;
-        title.append(name);
+        title.append(name, ' ');
 
         if (event.type === 'steal') {
           const actionText = document.createElement('span');
@@ -1357,7 +1382,7 @@ async function loadActivities(offset: number, resetList: boolean = false): Promi
         }
 
         content.append(title, meta);
-        li.append(iconBox, content);
+        li.append(content);
         activityList.append(li);
       }
     }
@@ -1608,10 +1633,14 @@ function attachControls(scene: FarmScene): void {
         openAccountDialog();
       } else if (tool === 'theme') {
         void send({ type: 'theme' });
-      } else if (tool === 'harvest' || tool === 'clear' || tool === 'water' || tool === 'fertilize') {
-        selectTool({ type: tool });
-        if (tool === 'water') setFeedback('Chạm cây đang lớn để tưới miễn phí.', 'info');
-        if (tool === 'fertilize') setFeedback(`Chạm cây đang lớn để bón phân · ${FERTILIZER_COST} Gold.`, 'info');
+      } else if (tool === 'water' || tool === 'fertilize') {
+        if (tool === 'fertilize' && activeCareTool !== tool && !(snapshot.farm.fertilizer ?? 0)) {
+          openFertilizerShop();
+          return;
+        }
+        activeCareTool = activeCareTool === tool ? undefined : tool;
+        setFeedback('');
+        updateToolHint();
       } else if (tool === 'shop' || tool === 'bag' || tool === 'warehouse') {
         showPanel(tool);
       }
@@ -1628,23 +1657,23 @@ function attachControls(scene: FarmScene): void {
     };
     button.onblur = () => scene.highlightPlot();
     attachPlotTooltip(button, plot);
-    let lastToolSelection: number | undefined;
+    button.onkeydown = (event) => {
+      if (event.repeat && (event.key === 'Enter' || event.key === ' ')) event.preventDefault();
+    };
     button.onclick = async (event) => {
       if (!sessionSynchronized) {
         setFeedback('Chưa tải được phiên nông trại. Hãy kiểm tra kết nối và thử lại.', 'error');
         return;
       }
-      if (busy) return;
+      if (busy || event.detail > 1) return;
       const currentVisit = visit;
       if (currentVisit) {
         const crop = currentVisit.plots[plot];
-        if (!crop?.canSteal || event.detail > 1) return;
+        if (!crop?.canSteal) return;
         await runVisitAction(async () => {
           try {
             const action = { plot, plantedAt: crop.plantedAt };
-            const result = offlineFarm
-              ? offlineFarm.community.steal(currentVisit.username, action)
-              : await request<StealResponse>(playerPath(COMMUNITY_API.steal, currentVisit.username), action);
+            const result = await request<StealResponse>(playerPath(COMMUNITY_API.steal, currentVisit.username), action);
             setSnapshot(result);
             setVisit(result.visit);
             setFeedback(`Đã lấy 1 quả ${crops[crop.cropId - 1].name}. Xem trong Kho của bạn.`, 'success');
@@ -1660,20 +1689,43 @@ function attachControls(scene: FarmScene): void {
       }
       const previous = snapshot.farm;
       const current = previous.plots[plot];
+      const now = farmTime();
       if (event.pointerType === 'touch') showPlotTooltip(plot);
-      const tool: Tool = activeTool.type === 'plant' && current && !current.harvested
-        && farmTime() >= ripeAt(crops[current.cropId - 1], current)
-        ? { type: 'harvest' }
-        : activeTool;
-      if (event.detail > 1 && lastToolSelection === toolSelection) return;
-      lastToolSelection = toolSelection;
-      const result = await send({ ...tool, plot });
+      let action: PlotAction;
+      if (activeCareTool) {
+        const issue = careUnavailable(activeCareTool, current, now);
+        if (issue) {
+          if (issue === noFertilizer) {
+            openFertilizerShop();
+            return;
+          }
+          showPlotTooltip(plot);
+          setFeedback(issue, 'warning');
+          return;
+        }
+        action = { type: activeCareTool, plot };
+      } else if (current?.harvested) {
+        action = { type: 'clear', plot };
+      } else if (current) {
+        if (now < ripeAt(crops[current.cropId - 1], current)) {
+          showPlotTooltip(plot);
+          return;
+        }
+        action = { type: 'harvest', plot };
+      } else if (selectedCropId !== undefined) {
+        action = { type: 'plant', cropId: selectedCropId, plot };
+      } else {
+        showPanel('bag');
+        return;
+      }
+
+      const result = await send(action);
       if (!result) return;
-      const cropId = previous.plots[plot]?.cropId;
-      const amount = tool.type === 'harvest' && cropId !== undefined
+      const cropId = current?.cropId;
+      const amount = action.type === 'harvest' && cropId !== undefined
         ? (result.farm.produce[cropId] ?? 0) - (previous.produce[cropId] ?? 0)
         : 0;
-      scene.playPlotFeedback(plot, tool.type, amount);
+      scene.playPlotFeedback(plot, action.type, amount);
     };
     plotTargets.append(button);
     plotButtons.push(button);
@@ -1692,6 +1744,7 @@ function attachControls(scene: FarmScene): void {
     button.append(badge);
     attachPlotTooltip(button, plotIndex);
     button.onclick = () => {
+      scene.wiggleLockedGate(index);
       showPlotTooltip(plotIndex);
       setFeedback(`Ô đất ${plotNumber} đang khóa.`, 'warning');
     };
@@ -1726,13 +1779,23 @@ function attachControls(scene: FarmScene): void {
 }
 
 class FarmScene extends Phaser.Scene {
+  private pet!: ReturnType<typeof createFarmPet>;
   private background!: Phaser.GameObjects.Image;
+  private pondOverlay!: Phaser.GameObjects.Container;
+  private ambientOverlay!: Phaser.GameObjects.Container;
   private ground!: Phaser.GameObjects.Container;
   private soilTiles: Phaser.GameObjects.Image[] = [];
+  private lockedGates: Phaser.GameObjects.Image[] = [];
+  private soilScale = 1;
   private highlightedPlot?: number;
   private visuals: { plant: Phaser.GameObjects.Image; label: Phaser.GameObjects.Text }[] = [];
   private interfaceReady!: Promise<void>;
   private ready = false;
+  private lastSparkleAt = 0;
+  private lastPondRippleAt = 0;
+  private lastAmbientAt = 0;
+  private pondSpotIndex = 0;
+  private lastPlotVisitKey = '';
 
   constructor() { super('Farm'); }
 
@@ -1743,31 +1806,39 @@ class FarmScene extends Phaser.Scene {
       ['locked-grass', 'soil/web-raised-grass.png'],
       ['fence-locked', 'soil/fence-locked.png'],
     ];
-    const interfaceImages = new Map([...document.images].map(image => [image.src, image]));
+    const interfaceImages = new Map([...document.images]
+      .filter(image => !image.closest('#farm-loading'))
+      .map(image => [image.src, image]));
     for (const crop of crops) {
-      const dir = `crops/crop${crop.id}`;
+      const art = cropArt(crop);
       const seed = new Image();
-      seed.src = asset(`${dir}/seed.png`);
+      seed.src = asset(art.seed);
       interfaceImages.set(seed.src, seed);
-      textures.push([`crop-${crop.id}-0`, `${dir}/cron_start.png`], [`crop-${crop.id}-end`, `${dir}/cron_end.png`]);
+      if (crop.id <= 4) {
+        const produce = new Image();
+        produce.src = asset(art.produce);
+        interfaceImages.set(produce.src, produce);
+      }
+      textures.push([`crop-${crop.id}-0`, art.planted], [`crop-${crop.id}-end`, art.harvested]);
       for (let stage = 1; stage <= crop.stages; stage++) {
         const frame = stage === crop.stages ? crop.readyFrame : stage;
-        textures.push([`crop-${crop.id}-${stage}`, `${dir}/${frame}.png`]);
+        textures.push([`crop-${crop.id}-${stage}`, art.frame(frame)]);
       }
     }
 
-    farmLoading.assets(textures.length + interfaceImages.size);
     this.load.on(Phaser.Loader.Events.FILE_COMPLETE, farmLoading.fileLoaded);
     this.load.once(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) => {
-      console.error('Không tải được tài nguyên FarmVerse:', file.url);
+      console.error('Không tải được tài nguyên nông trại:', file.url);
       farmLoading.fail('Chưa tải được tài nguyên nông trại.');
     });
     for (const [key, path] of textures) this.load.image(key, asset(path));
+    const petSprites = loadPetSprites(this.load);
+    farmLoading.assets(textures.length + interfaceImages.size + petSprites);
     this.interfaceReady = Promise.all([...interfaceImages.values()].map(async image => {
       await image.decode();
       farmLoading.fileLoaded();
     })).then(() => {}).catch(error => {
-      console.error('Không tải được ảnh giao diện FarmVerse:', error);
+      console.error('Không tải được ảnh giao diện nông trại:', error);
       farmLoading.fail('Chưa tải được ảnh giao diện nông trại.');
     });
   }
@@ -1788,19 +1859,24 @@ class FarmScene extends Phaser.Scene {
   }
 
   private createFarm(): void {
+    activeScene = this;
     this.background = this.add.image(0, 0, `theme-${snapshot.farm.theme}`);
+    this.pondOverlay = this.add.container(0, 0);
+    this.ambientOverlay = this.add.container(0, 0);
     this.ground = this.add.container(0, 0);
     this.paintFieldBank();
     this.ground.add(this.add.image(0, 0, 'field-bank').setOrigin(0));
     this.createPlotTextures();
-    const soilScale = (tileWidth - 8) / this.textures.get('soil').getSourceImage().width;
-    this.soilTiles = positions.map(([x, y]) => this.add.image(x, y - 5, 'soil').setScale(soilScale));
+    this.soilScale = (tileWidth - 8) / this.textures.get('soil').getSourceImage().width;
+    this.soilTiles = positions.map(([x, y]) => this.add.image(x, y - 5, 'soil').setScale(this.soilScale));
     const grassScale = (tileWidth - 8) / this.textures.get('locked-grass').getSourceImage().width;
     const grassTiles = lockedPositions.map(([x, y]) => this.add.image(x, y - 3, 'locked-grass').setScale(grassScale));
     this.ground.add([...this.soilTiles, ...grassTiles].sort((a, b) => a.y - b.y));
-    for (const [x, y] of lockedPositions) {
-      this.ground.add(this.add.image(x - 40, y + 19, 'locked-gate').setOrigin(.5, .8));
-    }
+    this.lockedGates = lockedPositions.map(([x, y]) => {
+      const gate = this.add.image(x - 40, y + 19, 'locked-gate').setOrigin(.5, .8);
+      this.ground.add(gate);
+      return gate;
+    });
     this.visuals = positions.map(([x, y]) => {
       const plant = this.add.image(x, y - 6, 'crop-1-0').setOrigin(.5, .84).setScale(cropScale).setVisible(false);
       const label = this.add.text(x, y + 16, '', {
@@ -1815,6 +1891,7 @@ class FarmScene extends Phaser.Scene {
     });
     this.ground.add(this.visuals.map(({ plant }) => plant));
     this.ground.add(this.visuals.map(({ label }) => label));
+    this.pet = createFarmPet(this, field, reduceMotion);
     attachControls(this);
     this.layout();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
@@ -1888,32 +1965,139 @@ class FarmScene extends Phaser.Scene {
   }
 
   highlightPlot(index?: number): void {
-    if (this.highlightedPlot !== undefined) this.soilTiles[this.highlightedPlot].setTexture('soil');
+    if (this.highlightedPlot !== undefined) {
+      const prev = this.soilTiles[this.highlightedPlot];
+      prev.setTexture('soil');
+      this.tweens.killTweensOf(prev);
+      if (reduceMotion.matches) prev.setScale(this.soilScale);
+      else this.tweens.add({ targets: prev, scale: this.soilScale, duration: 120, ease: 'Sine.Out' });
+    }
     this.highlightedPlot = index;
-    if (index !== undefined) this.soilTiles[index].setTexture('soil-highlight');
+    if (index !== undefined) {
+      const next = this.soilTiles[index];
+      next.setTexture('soil-highlight');
+      this.tweens.killTweensOf(next);
+      if (!reduceMotion.matches) {
+        this.tweens.add({ targets: next, scale: this.soilScale * 1.025, duration: 120, ease: 'Sine.Out' });
+      }
+    }
   }
 
-  playPlotFeedback(index: number, type: Tool['type'], amount: number): void {
+  private spawnRing(x: number, y: number, color: number, endScale = 1.4, duration = 380): void {
+    const ring = this.add.circle(x, y, 14).setStrokeStyle(2.5, color, 0.9).setFillStyle(color, 0.14).setScale(0.35);
+    this.ground.add(ring);
+    this.tweens.add({
+      targets: ring,
+      scale: endScale,
+      alpha: 0,
+      duration,
+      ease: 'Sine.Out',
+      onComplete: () => ring.destroy(),
+    });
+  }
+
+  private bouncePlant(index: number, targetScale: number, scaleX = 1.12, scaleY = 0.88): void {
+    const { plant } = this.visuals[index];
+    if (!plant.visible) return;
+    this.tweens.killTweensOf(plant);
+    plant.setScale(targetScale * scaleX, targetScale * scaleY);
+    this.tweens.add({
+      targets: plant,
+      scaleX: targetScale,
+      scaleY: targetScale,
+      duration: 240,
+      ease: 'Back.Out',
+    });
+  }
+
+  playPlotFeedback(index: number, type: PlotAction['type'], amount: number): void {
     if (reduceMotion.matches) return;
     const [x, y] = positions[index];
-    const color = type === 'water' ? 0x7bdcf5
-      : type === 'fertilize' ? 0xbce884
-      : type === 'harvest' ? 0xffd675 : 0xe0b477;
-    for (let i = 0; i < 5; i++) {
-      const offset = i - 2;
-      const dot = this.add.circle(x + offset * 6, y + 2, 2 + i % 2, color);
-      this.ground.add(dot);
-      this.tweens.add({
-        targets: dot, x: dot.x + offset * 10, y: y - 22 - i * 3,
-        alpha: 0, duration: 380, ease: 'Sine.Out', onComplete: () => dot.destroy(),
-      });
-    }
-    if (type === 'plant') {
+    const plot = visit?.plots[index] ?? snapshot?.farm.plots[index];
+    const targetScale = plot ? getCropScale(plot.cropId) : cropScale;
+
+    if (type === 'water') {
+      this.spawnRing(x, y, 0x7bdcf5, 1.5, 400);
+      for (let i = 0; i < 6; i++) {
+        const dx = (i - 2.5) * 11;
+        const drop = this.add.circle(x + dx, y - 42 - (i % 2) * 8, 2.5 + (i % 2), 0x7bdcf5);
+        this.ground.add(drop);
+        this.tweens.add({
+          targets: drop,
+          y: y - 2 + (i % 2) * 4,
+          alpha: 0,
+          duration: 320 + i * 25,
+          ease: 'Quad.In',
+          onComplete: () => drop.destroy(),
+        });
+      }
+      this.bouncePlant(index, targetScale, 1.07, 0.92);
+    } else if (type === 'fertilize') {
+      this.spawnRing(x, y, 0xbce884, 1.45, 420);
+      for (let i = 0; i < 6; i++) {
+        const offset = i - 2.5;
+        const dot = this.add.circle(x + offset * 9, y - 4, 2.2 + (i % 2), i % 2 === 0 ? 0xbce884 : 0xfff0a8);
+        this.ground.add(dot);
+        this.tweens.add({
+          targets: dot,
+          x: dot.x + offset * 6,
+          y: y - 34 - (i % 3) * 6,
+          alpha: 0,
+          duration: 460,
+          ease: 'Sine.Out',
+          onComplete: () => dot.destroy(),
+        });
+      }
+      this.bouncePlant(index, targetScale, 1.1, 0.9);
+    } else if (type === 'harvest') {
+      this.spawnRing(x, y, 0xffd675, 1.35, 340);
+      for (let i = 0; i < 6; i++) {
+        const offset = i - 2.5;
+        const dot = this.add.circle(x + offset * 7, y - 10, 2.5 + (i % 2), 0xffd675);
+        this.ground.add(dot);
+        this.tweens.add({
+          targets: dot,
+          x: dot.x + offset * 12,
+          y: y - 36 - (i % 2) * 8,
+          alpha: 0,
+          duration: 400,
+          ease: 'Sine.Out',
+          onComplete: () => dot.destroy(),
+        });
+      }
+      this.bouncePlant(index, targetScale, 1.14, 0.86);
+    } else if (type === 'clear') {
+      for (let i = 0; i < 6; i++) {
+        const offset = i - 2.5;
+        const puff = this.add.circle(x + offset * 8, y, 3.2 + (i % 2), i % 2 === 0 ? 0xc89b6e : 0xe0b477, 0.85);
+        this.ground.add(puff);
+        this.tweens.add({
+          targets: puff,
+          x: puff.x + offset * 11,
+          y: y - 16 - (i % 3) * 4,
+          scale: 1.5,
+          alpha: 0,
+          duration: 420,
+          ease: 'Sine.Out',
+          onComplete: () => puff.destroy(),
+        });
+      }
+    } else {
+      for (let i = 0; i < 5; i++) {
+        const offset = i - 2;
+        const dot = this.add.circle(x + offset * 6, y + 2, 2 + i % 2, 0xe0b477);
+        this.ground.add(dot);
+        this.tweens.add({
+          targets: dot, x: dot.x + offset * 10, y: y - 22 - i * 3,
+          alpha: 0, duration: 380, ease: 'Sine.Out', onComplete: () => dot.destroy(),
+        });
+      }
       const { plant } = this.visuals[index];
       this.tweens.killTweensOf(plant);
-      plant.setScale(cropScale * .78);
-      this.tweens.add({ targets: plant, scaleX: cropScale, scaleY: cropScale, duration: 240, ease: 'Sine.Out' });
+      plant.setScale(targetScale * .72);
+      this.tweens.add({ targets: plant, scaleX: targetScale, scaleY: targetScale, duration: 260, ease: 'Back.Out' });
     }
+
     if (amount > 0) {
       const count = this.add.text(x, y - 28, `+${amount}`, {
         fontFamily: 'system-ui, sans-serif', fontSize: '25px', fontStyle: 'bold',
@@ -1927,10 +2111,173 @@ class FarmScene extends Phaser.Scene {
     }
   }
 
+  wiggleLockedGate(index: number): void {
+    if (reduceMotion.matches) return;
+    const gate = this.lockedGates[index];
+    if (!gate) return;
+    this.tweens.killTweensOf(gate);
+    gate.setAngle(0);
+    this.tweens.add({
+      targets: gate,
+      angle: { from: -6, to: 6 },
+      duration: 65,
+      yoyo: true,
+      repeat: 2,
+      ease: 'Sine.InOut',
+      onComplete: () => gate.setAngle(0),
+    });
+  }
+
+  playLevelUp(): void {
+    if (reduceMotion.matches || !this.ready) return;
+    const [cx, cy] = [width / 2, height / 2 - 40];
+    const palette = [0xffd700, 0xfff176, 0x83d84a, 0x7bdcf5];
+    for (let i = 0; i < 14; i++) {
+      const angle = (Math.PI * 2 * i) / 14;
+      const dist = 55 + (i % 3) * 28;
+      const star = this.add.circle(cx, cy, 3 + (i % 2), palette[i % palette.length]);
+      this.ground.add(star);
+      this.tweens.add({
+        targets: star,
+        x: cx + Math.cos(angle) * dist,
+        y: cy + Math.sin(angle) * dist - 24,
+        alpha: 0,
+        scale: 0.3,
+        duration: 720,
+        ease: 'Cubic.Out',
+        onComplete: () => star.destroy(),
+      });
+    }
+    const banner = this.add.text(cx, cy - 12, 'LÊN CẤP!', {
+      fontFamily: 'system-ui, sans-serif',
+      fontSize: '30px',
+      fontStyle: 'bold',
+      color: '#ffe875',
+      stroke: '#3c2512',
+      strokeThickness: 5,
+    }).setOrigin(.5).setScale(0.7);
+    this.ground.add(banner);
+    this.tweens.add({
+      targets: banner,
+      scale: 1,
+      y: cy - 58,
+      alpha: 0,
+      duration: 1100,
+      ease: 'Back.Out',
+      onComplete: () => banner.destroy(),
+    });
+  }
+
   private layoutBackground(): void {
     const { width: viewWidth, height: viewHeight } = this.scale.gameSize;
     const scale = Math.max(viewWidth / this.background.width, viewHeight / this.background.height);
     this.background.setPosition(viewWidth / 2, viewHeight / 2).setScale(scale);
+    const activeTheme = visit?.theme ?? snapshot.farm.theme;
+    this.pondOverlay.setPosition(this.background.x, this.background.y).setScale(scale).setVisible(activeTheme >= 1 && activeTheme <= 4);
+    this.ambientOverlay.setPosition(this.background.x, this.background.y).setScale(scale).setVisible(!reduceMotion.matches);
+  }
+
+  private spawnAmbientMote(): void {
+    const activeTheme = visit?.theme ?? snapshot.farm.theme;
+    const u = 0.12 + Math.random() * 0.76;
+    const v = 0.14 + Math.random() * 0.65;
+    const px = (u - 0.5) * this.background.width;
+    const py = (v - 0.5) * this.background.height;
+    const color = activeTheme === 3 ? 0xffe484 : activeTheme === 4 ? 0xffd07a : 0xfffbe0;
+    const mote = this.add.circle(px, py, 1.8 + Math.random() * 1.4, color, 0);
+    this.ambientOverlay.add(mote);
+    this.tweens.add({
+      targets: mote,
+      x: px + (Math.random() - 0.5) * 48,
+      y: py - 18 - Math.random() * 24,
+      alpha: { from: 0, to: 0.65 },
+      duration: 1300 + Math.random() * 700,
+      yoyo: true,
+      ease: 'Sine.InOut',
+      onComplete: () => mote.destroy(),
+    });
+  }
+
+  private spawnPondRipple(): void {
+    const activeTheme = visit?.theme ?? snapshot.farm.theme;
+    if (activeTheme === 1) {
+      const spots: [number, number, number][] = [
+        [0.15, 0.19, 1],
+        [0.19, 0.11, 0.85],
+        [0.25, 0.16, 0.9],
+        [0.10, 0.29, 0.85],
+        [0.09, 0.37, 0.8],
+      ];
+      const [u, v, size] = spots[this.pondSpotIndex % spots.length];
+      this.pondSpotIndex += 1;
+      const px = (u - 0.5) * this.background.width;
+      const py = (v - 0.5) * this.background.height;
+
+      const ripple = this.add.ellipse(px, py, 34 * size, 13 * size)
+        .setStrokeStyle(1.8, 0xd8fbff, 0.55)
+        .setFillStyle(0xd8fbff, 0.06)
+        .setAngle(-12)
+        .setScale(0.55);
+      this.pondOverlay.add(ripple);
+      this.tweens.add({
+        targets: ripple,
+        scaleX: 1.9,
+        scaleY: 1.7,
+        alpha: 0,
+        duration: 1850,
+        ease: 'Sine.Out',
+        onComplete: () => ripple.destroy(),
+      });
+
+      const glint = this.add.ellipse(px + 10, py - 6, 16 * size, 3.2 * size, 0xffffff, 0)
+        .setAngle(-18);
+      this.pondOverlay.add(glint);
+      this.tweens.add({
+        targets: glint,
+        x: glint.x + 14,
+        y: glint.y - 4,
+        alpha: { from: 0, to: 0.52 },
+        duration: 600,
+        yoyo: true,
+        ease: 'Sine.InOut',
+        onComplete: () => glint.destroy(),
+      });
+    } else if (activeTheme === 2) {
+      const spots: [number, number][] = [[0.89, 0.30], [0.92, 0.42], [0.95, 0.54]];
+      const [u, v] = spots[this.pondSpotIndex % spots.length];
+      this.pondSpotIndex += 1;
+      const px = (u - 0.5) * this.background.width;
+      const py = (v - 0.5) * this.background.height;
+      const glint = this.add.ellipse(px, py, 18, 3.5, 0xe8fbff, 0).setAngle(22);
+      this.pondOverlay.add(glint);
+      this.tweens.add({
+        targets: glint,
+        x: px + 10,
+        y: py + 12,
+        alpha: { from: 0, to: 0.6 },
+        duration: 650,
+        yoyo: true,
+        ease: 'Sine.InOut',
+        onComplete: () => glint.destroy(),
+      });
+    } else if (activeTheme === 3 || activeTheme === 4) {
+      const u = activeTheme === 3 ? 0.34 + (this.pondSpotIndex % 4) * 0.08 : 0.36 + (this.pondSpotIndex % 4) * 0.09;
+      const v = activeTheme === 3 ? 0.14 + (this.pondSpotIndex % 2) * 0.08 : 0.16 + (this.pondSpotIndex % 2) * 0.09;
+      this.pondSpotIndex += 1;
+      const px = (u - 0.5) * this.background.width;
+      const py = (v - 0.5) * this.background.height;
+      const spark = this.add.circle(px, py, 2.5, activeTheme === 3 ? 0xfff4b0 : 0xffcf70, 0);
+      this.pondOverlay.add(spark);
+      this.tweens.add({
+        targets: spark,
+        scale: 1.8,
+        alpha: { from: 0, to: 0.75 },
+        duration: 500,
+        yoyo: true,
+        ease: 'Sine.InOut',
+        onComplete: () => spark.destroy(),
+      });
+    }
   }
 
   private layout(): void {
@@ -1957,29 +2304,49 @@ class FarmScene extends Phaser.Scene {
         button.style.height = `${tileHeight * zoom}px`;
       }
     });
+    this.pet.layout();
     if (activeTooltipPlot !== null) {
       positionPlotTooltip(activeTooltipPlot);
     }
   }
 
-  update(): void {
+  update(time: number, delta: number): void {
     if (!this.ready) return;
     const theme = `theme-${visit?.theme ?? snapshot.farm.theme}`;
     if (this.background.texture.key !== theme) {
       this.background.setTexture(theme);
       this.paintFieldBank();
       this.layout();
+      if (!reduceMotion.matches) this.cameras.main.fadeIn(220, 20, 35, 22);
     }
     const now = visit ? visit.serverTime + performance.now() - visitReceivedAt : farmTime();
+    const elapsed = performance.now();
+    const visitKey = visit ? `visit:${visit.username}` : 'home';
+    const animateStage = visitKey === this.lastPlotVisitKey;
+    if (!animateStage && this.lastPlotVisitKey && !reduceMotion.matches) {
+      this.cameras.main.fadeIn(220, 20, 35, 22);
+    }
+    this.lastPlotVisitKey = visitKey;
+    const shouldSparkle = !reduceMotion.matches && elapsed - this.lastSparkleAt >= 900;
+    if (shouldSparkle) this.lastSparkleAt = elapsed;
+    if (!reduceMotion.matches && this.pondOverlay.visible && elapsed - this.lastPondRippleAt >= 850) {
+      this.lastPondRippleAt = elapsed;
+      this.spawnPondRipple();
+    }
+    if (!reduceMotion.matches && this.ambientOverlay.visible && elapsed - this.lastAmbientAt >= 750) {
+      this.lastAmbientAt = elapsed;
+      this.spawnAmbientMote();
+    }
+
     this.visuals.forEach((visual, index) => {
       const hostPlot = visit?.plots[index];
-      this.renderPlot(index, visit ? hostPlot ?? null : snapshot.farm.plots[index], now, visual, hostPlot);
+      this.renderPlot(index, visit ? hostPlot ?? null : snapshot.farm.plots[index], now, visual, hostPlot, animateStage, elapsed, shouldSparkle);
     });
-    const elapsed = performance.now();
     if (!visit && elapsed - lastGuideCheck >= 500) {
       lastGuideCheck = elapsed;
       updateToolHint();
     }
+    this.pet.update(time, delta, !visit, !visit && !guideActive, visit?.pet);
   }
 
   private renderPlot(
@@ -1987,24 +2354,64 @@ class FarmScene extends Phaser.Scene {
     plot: Plot | null,
     now: number,
     visual: FarmScene['visuals'][number],
-    hostPlot?: FarmVisit['plots'][number],
+    hostPlot: FarmVisit['plots'][number] | undefined,
+    animateStage: boolean,
+    elapsed: number,
+    shouldSparkle: boolean,
   ): void {
     let status = 'Đất trống';
+    const wasVisible = visual.plant.visible;
     visual.plant.setVisible(Boolean(plot));
     visual.label.setVisible(Boolean(plot));
     if (plot) {
       const crop = crops[plot.cropId - 1];
       const stage = stageAt(crop, plot, now);
       const frame = `crop-${crop.id}-${plot.harvested ? 'end' : stage}`;
+      const targetScale = getCropScale(crop.id);
       if (visual.plant.texture.key !== frame) {
-        visual.plant.setTexture(frame).setScale(getCropScale(crop.id));
+        visual.plant.setTexture(frame);
+        if (animateStage && wasVisible && !reduceMotion.matches) {
+          this.tweens.killTweensOf(visual.plant);
+          visual.plant.setScale(targetScale * .82);
+          this.tweens.add({ targets: visual.plant, scaleX: targetScale, scaleY: targetScale, duration: 240, ease: 'Back.Out' });
+        } else {
+          visual.plant.setScale(targetScale);
+        }
       }
       const remaining = Math.ceil((ripeAt(crop, plot) - now) / 1_000);
+      const isRipe = !plot.harvested && (Boolean(hostPlot?.canSteal) || remaining <= 0);
+      if (!reduceMotion.matches && !plot.harvested) {
+        visual.plant.setAngle(Math.sin(elapsed * 0.0018 + index * 1.15) * 1.8);
+        if (isRipe && !this.tweens.isTweening(visual.plant)) {
+          const pulse = 1 + Math.sin(elapsed * 0.0045 + index) * 0.025;
+          visual.plant.setScale(targetScale * pulse);
+        }
+        if (shouldSparkle && isRipe) {
+          const [px, py] = positions[index];
+          const sx = px + Math.sin(elapsed + index * 2) * 20;
+          const sy = py - 24 - (index % 2) * 6;
+          const sparkle = this.add.circle(sx, sy, 2, 0xfff2a6, 0.9);
+          this.ground.add(sparkle);
+          this.tweens.add({
+            targets: sparkle,
+            y: sy - 16,
+            alpha: 0,
+            scale: 0.4,
+            duration: 550,
+            ease: 'Sine.Out',
+            onComplete: () => sparkle.destroy(),
+          });
+        }
+      } else {
+        visual.plant.setAngle(0);
+      }
       if (plot.harvested) status = visit ? 'Đã hái' : 'Cần dọn đất';
       else if (hostPlot?.canSteal) status = `${hostPlot.remainingFruit} quả · Lấy 1 quả`;
       else if (hostPlot?.remainingFruit != null) status = `${hostPlot.remainingFruit} quả`;
       else if (remaining <= 0) status = 'Đã chín';
       else status = `${crop.name} · ${remaining}s`;
+    } else {
+      visual.plant.setAngle(0);
     }
     if (visual.label.text !== status) {
       visual.label.setText(status);
@@ -2016,33 +2423,22 @@ class FarmScene extends Phaser.Scene {
 }
 
 async function start(): Promise<void> {
-  if (!offlineMode) {
-    const connection = new AbortController();
-    const timeout = window.setTimeout(() => connection.abort(), 8_000);
-    let online: [Crop[], FarmSessionResponse] | undefined;
-    try {
-      online = await Promise.all([
-        request<Crop[]>(FARM_API.catalog.path, undefined, connection.signal),
-        request<FarmSessionResponse>(FARM_API.read.path, undefined, connection.signal),
-      ]);
-    } catch {
-      connection.abort();
-      offlineMode = true;
-    } finally {
-      clearTimeout(timeout);
-    }
-    if (online) {
-      const [catalog, initial] = online;
-      crops = catalog;
-      setSnapshot(initial);
-    }
+  const connection = new AbortController();
+  const timeout = window.setTimeout(() => connection.abort(), 8_000);
+  let initial: FarmSessionResponse;
+  try {
+    [crops, initial] = await Promise.all([
+      request<Crop[]>(FARM_API.catalog.path, undefined, connection.signal),
+      request<FarmSessionResponse>(FARM_API.read.path, undefined, connection.signal),
+    ]);
+  } catch {
+    connection.abort();
+    farmLoading.fail('Chưa kết nối được máy chủ nông trại. Vui lòng thử lại.');
+    return;
+  } finally {
+    clearTimeout(timeout);
   }
-  if (offlineMode) {
-    const { openOfflineFarm } = await import('./offline-farm.ts');
-    offlineFarm = openOfflineFarm();
-    crops = offlineFarm.catalog;
-    setSnapshot(offlineFarm.initial);
-  }
+  setSnapshot(initial);
   if (farmLoading.failed) return;
   new Phaser.Game({
     type: Phaser.CANVAS,
@@ -2069,7 +2465,6 @@ async function refreshCommunitySession(): Promise<void> {
 const community = createCommunity({
   request,
   async listPlayers(list, query, offset) {
-    if (offlineFarm) return offlineFarm.community.listFriends(query);
     const params = new URLSearchParams({ list, q: query, offset: String(offset) });
     return request<PlayerPage>(`${COMMUNITY_API.players}?${params}`);
   },
@@ -2090,6 +2485,6 @@ const missions = createMissions(field, farmTime,
 initActivityControls();
 farmLoading.start();
 void start().catch(error => {
-  console.error('Không khởi động được FarmVerse:', error);
+  console.error('Không khởi động được nông trại:', error);
   farmLoading.fail('Chưa mở được nông trại.');
 });

@@ -1,0 +1,90 @@
+.farm-pet-open[hidden],
+.farm-pet-hit[hidden] { display: none; }
+.farm-pet-open { font-size: 1.2rem; }
+.farm-pet-hit {
+  position: absolute;
+  width: 52px;
+  height: 52px;
+  transform: translate(-50%, -50%);
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  touch-action: none;
+}
+.farm-pet-hit:focus-visible { outline: 2px solid #fff4b3; }
+.farm-pet-hit.is-dragging { cursor: grabbing; }
+.farm-pet-bubble {
+  position: absolute;
+  z-index: 19;
+  transform: translate(-50%, -100%);
+  padding: 6px 10px;
+  border: 1px solid #ead199;
+  border-radius: 12px;
+  background: #203a2d;
+  color: #fff5d9;
+  box-shadow: 0 3px 9px #15301750;
+  font-size: .75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.farm-pet-bubble[hidden] { display: none; }
+.farm-pet-bubble::after {
+  position: absolute;
+  top: 100%;
+  left: var(--pet-tail-x, 50%);
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #ead199;
+  content: '';
+}
+.farm-pet-bubble.is-below { transform: translateX(-50%); }
+.farm-pet-bubble.is-below::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: #ead199;
+}
+.farm-pet-picker {
+  width: min(360px, calc(100% - 24px));
+  padding: 0;
+  border: 2px solid #eac88b;
+  border-radius: 20px;
+  background: #fff8e7;
+  color: #304629;
+}
+.farm-pet-picker::backdrop { background: #132c2066; }
+.farm-pet-picker header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #254631;
+  color: #fff4d4;
+}
+.farm-pet-picker h2 { margin: 0; font-size: 1.1rem; }
+.farm-pet-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px;
+}
+.farm-pet-options button {
+  display: grid;
+  justify-items: center;
+  padding: 8px;
+  border: 1px solid #d6bf8c;
+  border-radius: 12px;
+  background: #f8ebc9;
+  color: inherit;
+  font: inherit;
+  font-weight: 750;
+}
+.farm-pet-portrait {
+  width: min(100%, 90px);
+  aspect-ratio: 1;
+  background-repeat: no-repeat;
+}
+.farm-pet-portrait--dog { background-image: url('/pets/dog/dog-idle.png'); background-size: 700% 100%; }
+.farm-pet-portrait--cat { background-image: url('/pets/cat/cat-happy.png'); background-size: 800% 100%; }
+.farm-pet-portrait--goose { background-image: url('/pets/goose/goose-peck.png'); background-size: 800% 100%; }
