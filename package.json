@@ -3,7 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm --prefix web run build"
+    "build:api": "esbuild api/farmverse.ts --bundle --platform=node --format=esm --target=node22 --packages=bundle --outfile=build-api/farmverse.mjs",
+    "build": "pnpm build:api && pnpm --dir web build"
   },
-    "packageManager": "pnpm@10.0.0"
+  "packageManager": "pnpm@10.0.0",
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
 }
