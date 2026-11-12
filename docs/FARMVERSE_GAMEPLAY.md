@@ -60,9 +60,9 @@ Khung hướng dẫn có đuôi thoại manga, dùng nền xanh đậm, viền v
 
 Mỗi người chơi có một Pet cá nhân trong Farm để chăm sóc. Pet có cử động và biểu cảm vui, kèm thông báo nhẹ khi có sự kiện. Khi khách thực hiện Steal, Pet xuất hiện ngay trên ruộng và phản ứng với hành động đó.
 
-Khi khách thực hiện một lượt Steal hợp lệ, Pet đủ năng lượng sẽ chạy ra chặn và quả vẫn thuộc vụ của chủ ruộng. Pet thiếu năng lượng sẽ đứng nhìn và khách lấy đúng 1 quả theo luật T-36.
+Chủ dự án chốt ngày 12/11/2026: Pet chặn miễn phí, chưa trừ năng lượng. Mỗi lượt Steal hợp lệ hiện đều bị Pet chặn, quả trên cây và Kho của hai bên giữ nguyên. Mỗi khách chỉ thử một lần trên mỗi ô/vụ, kể cả bị chặn. Gửi lặp không tạo thêm nhật ký. Backend ghi sự kiện Pet chặn cùng giao dịch giữ lượt; nhật ký của chủ ruộng ghi người khách, giống cây, ô đất và thời gian. Khi vào Farm, thông báo và badge tính cả lượt Pet chặn.
 
-Đề xuất cho Pet đi quanh nhà, vẫy đuôi khi được vuốt ve và phản ứng khi được cho ăn. Cần chốt cách nhận Pet, cách hồi năng lượng, ngưỡng đủ năng lượng và chi phí năng lượng cho mỗi lần chặn.
+Luật đủ năng lượng thì chặn, thiếu thì đứng nhìn là hướng phát triển sau. Cho ăn, hồi và chi phí năng lượng chờ chốt tiếp T-41. Hiện không trừ năng lượng hay tự gán chi phí.
 
 ### Sprite chó
 
@@ -73,6 +73,7 @@ Các sheet gốc do chủ dự án gửi nằm trong [thư mục nguồn](../art
 | Đứng chớp mắt | `dog-idle.png` | 7 | Màn tải Farm và demo Phaser |
 | Nằm ngủ | `dog-sleep.png` | 6 | Demo Phaser trong `.local/animation` |
 | Đói | `dog-hungry.png` | 7 | Demo Phaser, chờ chốt luật đói và cho ăn |
+| Chặn Steal | `dog-guard.png` | 7 | Farm khi API xác nhận Pet chặn; cắt từ sheet chủ dự án gửi, nền trong suốt, mốc chân (88, 158) |
 
 ### Sprite mèo
 
@@ -94,10 +95,10 @@ Các [sheet gốc](../art/source/pets/goose) do chủ dự án gửi. Ba dải P
 |---|---|---|
 | Đi bộ | [goose-walk.png](../image/pets/goose/goose-walk.png) | Farm và demo Phaser |
 | Cúi mổ | [goose-peck.png](../image/pets/goose/goose-peck.png) | Farm khi chạm Pet và demo Phaser |
-| Chặn Steal | [goose-guard.png](../image/pets/goose/goose-guard.png) | Demo Phaser, chờ nối luật giữ nhà |
+| Chặn Steal | [goose-guard.png](../image/pets/goose/goose-guard.png) | Farm khi API xác nhận Pet chặn và demo Phaser |
 
 ### Bản thử tương tác trong Farm
 
-Chó xuất hiện mặc định khi vào ruộng. Nút dấu chân cho phép đổi sang mèo hoặc ngỗng. Pet đi qua lại liên tục quanh vị trí của nó. Chỗ mặc định là góc dưới bên trái, phía trên thanh công cụ. Khi góc dưới sát ô đất, Pet chuyển lên dưới bảng hồ sơ. Chạm hoặc vuốt nhanh để Pet phản ứng vui và hiện bong bóng thoại. Giữ khoảng ¼ giây rồi kéo để đặt Pet ở một chỗ trống. Pet tiếp tục đi lại sau khi được thả và về góc nếu thả lên ô đất, HUD hoặc thanh công cụ. Kích thước khung hình Pet là 90 px trên điện thoại, 100 px trên màn hình trung bình và 120 px trên desktop lớn. Pet đứng yên khi bật giảm chuyển động. Loài và vị trí đã chọn chỉ áp dụng cho phiên hiện tại.
+Chó xuất hiện mặc định khi vào ruộng. Nút dấu chân cho phép đổi sang mèo hoặc ngỗng. Pet đi qua lại liên tục quanh vị trí của nó. Chỗ mặc định là góc dưới bên trái, phía trên thanh công cụ. Khi góc dưới sát ô đất, Pet chuyển lên dưới bảng hồ sơ. Chạm hoặc vuốt nhanh để Pet phản ứng vui và hiện bong bóng thoại. Giữ khoảng ¼ giây rồi kéo để đặt Pet ở một chỗ trống. Pet tiếp tục đi lại sau khi được thả và về góc nếu thả lên ô đất, HUD hoặc thanh công cụ. Kích thước khung hình Pet là 90 px trên điện thoại, 100 px trên màn hình trung bình và 120 px trên desktop lớn. Pet đứng yên khi bật giảm chuyển động. Loài đã chọn lưu trong PostgreSQL; vị trí kéo chỉ áp dụng cho phiên hiện tại.
 
-Chó dùng `dog-happy.png`, gồm 7 frame vui mừng. Mèo và ngỗng phát sprite đi bộ khi di chuyển. Khi được chạm, mèo phát clip vui mừng, ngỗng cúi mổ rồi quay lại đi bộ. Chốt luồng nhận Pet và lưu sở hữu trước khi nối cho ăn, năng lượng và Steal.
+Loài được backend lưu cùng tiến độ Farm, giữ qua tải lại và đăng nhập. Vị trí kéo tiếp tục chỉ áp dụng cho phiên hiện tại. Chó dùng `dog-happy.png`, gồm 7 frame vui mừng. Mèo và ngỗng phát sprite đi bộ khi di chuyển. Khi được chạm, mèo phát clip vui mừng, ngỗng cúi mổ rồi quay lại đi bộ. Cả ba loài phát clip chặn và bong bóng thoại khi API xác nhận kết quả; giảm chuyển động chỉ hiện thông báo.

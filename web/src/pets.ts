@@ -12,6 +12,7 @@ const species = ['dog', 'cat', 'goose'] as const;
 const clips = [
   ['dog', 'idle', 7], ['dog', 'happy', 7], ['cat', 'happy', 8], ['cat', 'walk', 8],
   ['goose', 'walk', 8], ['goose', 'peck', 8],
+  ['dog', 'guard', 7], ['cat', 'guard', 8], ['goose', 'guard', 8],
 ] as const;
 const texture = (pet: Pet, clip: string) => `pet-${pet}-${clip}`;
 
@@ -29,6 +30,7 @@ export function createFarmPet(
   scene: Phaser.Scene,
   field: HTMLElement,
   reduceMotion: MediaQueryList,
+  selectPet: (pet: Pet) => Promise<unknown>,
 ) {
   const sprite = scene.add.sprite(0, 0, texture('dog', 'idle'), 0).setVisible(false);
   const corner = scene.add.container(0, 0, [sprite]);
@@ -82,6 +84,7 @@ export function createFarmPet(
   let chosen: Pet = 'dog';
   let shown: Pet = chosen;
   let reactionUntil = 0;
+  let guardUntil = 0;
   let displaySize = 90;
   let home = { x: 44, y: 0 };
   let placed = false;
@@ -126,6 +129,7 @@ export function createFarmPet(
     sprite.setOrigin(.5, foot / size).setScale(displaySize / size);
     hit.setAttribute('aria-label', `Vuốt ve ${name.toLowerCase()}`);
     reactionUntil = 0;
+    guardUntil = 0;
   }
   showPet(chosen);
 
@@ -133,8 +137,7 @@ export function createFarmPet(
     const selection = dialog.returnValue;
     const pet = species.find(option => option === selection);
     if (pet) {
-      chosen = pet;
-      showPet(pet);
+      void selectPet(pet);
     }
   });
 
@@ -222,6 +225,12 @@ export function createFarmPet(
   });
 
   return {
+    guard() {
+      stand(shown);
+      say(`${pets[shown].voice} Có mình giữ nhà rồi!`, 2400);
+      guardUntil = reactionUntil;
+      if (!reduceMotion.matches) sprite.play(texture(shown, 'guard'));
+    },
     layout() {
       const bounds = field.getBoundingClientRect();
       const dockTop = dock.getBoundingClientRect().top;
@@ -243,7 +252,8 @@ export function createFarmPet(
       }
       resetPatrol();
     },
-    update(now: number, delta: number, atHome: boolean, interactive: boolean, hostPet?: Pet) {
+    update(now: number, delta: number, atHome: boolean, interactive: boolean, hostPet?: Pet, ownPet: Pet = 'dog') {
+      chosen = ownPet;
       opener.hidden = !interactive;
       sprite.setVisible(atHome || !!hostPet);
       hit.hidden = !interactive;
@@ -251,8 +261,14 @@ export function createFarmPet(
       if (!sprite.visible) return;
       const pet = atHome ? chosen : hostPet!;
       if (shown !== pet) showPet(pet);
+      if (guardUntil && now >= guardUntil) {
+        guardUntil = 0;
+        stand(pet);
+      }
 
-      if (!press && !reduceMotion.matches) {
+      if (now < guardUntil) {
+        sprite.setAngle(0);
+      } else if (!press && !reduceMotion.matches) {
         patrolTime += Math.min(delta, 50);
         const phase = patrolTime / 390;
         const motion = Math.sin(phase);
@@ -282,7 +298,8 @@ export function createFarmPet(
       hit.style.top = `${y - displaySize * .38}px`;
       if (!bubble.hidden) {
         const bubbleBelow = y < displaySize + 40;
-        const bubbleX = Phaser.Math.Clamp(x, 76, field.clientWidth - 76);
+        const halfWidth = Math.min(bubble.offsetWidth / 2 + 8, field.clientWidth / 2);
+        const bubbleX = Phaser.Math.Clamp(x, halfWidth, field.clientWidth - halfWidth);
         bubble.classList.toggle('is-below', bubbleBelow);
         bubble.style.left = `${bubbleX}px`;
         bubble.style.top = `${bubbleBelow ? y + 10 : y - displaySize - 4}px`;

@@ -139,7 +139,7 @@ test('markActivitiesRead: marks unread activities as read', async () => {
   assert.equal(page.events[1].isUnread, false);
 });
 
-test('community integration: visitFarm and stealFruit trigger activities atomically', async () => {
+test('community integration: Pet blocks for free, preserves fruit and records one activity', async () => {
   const host = await createTestAccount('act_host4');
   const visitor = await createTestAccount('act_vis4');
 
@@ -170,13 +170,25 @@ test('community integration: visitFarm and stealFruit trigger activities atomica
   });
 
   assert.ok(!('error' in stealResult));
-  assert.equal(stealResult.farm.produce[1], 1);
+  assert.equal(stealResult.blocked, true);
+  assert.equal(stealResult.farm.produce[1], undefined);
+  assert.equal(stealResult.farm.revision, visitor.farm.revision);
+  assert.equal(stealResult.visit.pet, 'dog');
+  assert.equal(stealResult.visit.plots[1]!.canSteal, false);
+  assert.equal(stealResult.visit.plots[1]!.remainingFruit, visitResult.plots[1]!.remainingFruit);
+  const { rows: [saved] } = await queryFarmDatabase<{ state: typeof host.farm }>(
+    'SELECT state FROM farm_guest_progress WHERE session_id = $1', [host.farmId]);
+  assert.deepEqual(saved.state, host.farm, 'Blocking never changes crops, Gold or energy');
 
   page = await getActivityPage(host.farmId);
   assert.equal(page.events.length, 2);
-  assert.equal(page.events[0].type, 'steal');
+  assert.equal(page.events[0].type, 'pet_block');
   assert.equal(page.events[0].cropName, 'Dâu tây');
   assert.equal(page.events[0].plot, 2);
+  assert.equal(page.events[0].amount, 0);
+  assert.equal(page.summary.recentStolenFruit, 0);
+  assert.equal(page.summary.recentBlockedSteals, 1);
+  assert.equal(page.unreadCount, 2);
 
   // Trying to steal again from the same plot fails and does not create an activity
   const duplicateSteal = await stealFruit(visitor.farmId, visitor.tokenHash, host.username, {
@@ -187,4 +199,37 @@ test('community integration: visitFarm and stealFruit trigger activities atomica
 
   page = await getActivityPage(host.farmId);
   assert.equal(page.events.length, 2);
+});
+
+test('Pet blocks concurrent retries once, blocks distinct visitors and supports legacy saves', async () => {
+  for (const pet of ['dog', 'cat', 'goose', undefined] as const) {
+    const host = await createTestAccount('guard_host');
+    const visitor = await createTestAccount('guard_vis');
+    const other = await createTestAccount('guard_vis');
+    host.farm.pet = pet;
+    host.farm.plots[0] = { cropId: 1, plantedAt: Date.now() - 60_000, harvested: false, yieldRoll: 0, fruitTaken: 8 };
+    await queryFarmDatabase('UPDATE farm_guest_progress SET state = $1 WHERE session_id = $2', [host.farm, host.farmId]);
+    const action = { plot: 0, plantedAt: host.farm.plots[0].plantedAt };
+    const results = await Promise.all([
+      stealFruit(visitor.farmId, visitor.tokenHash, host.username, action),
+      stealFruit(visitor.farmId, visitor.tokenHash, host.username, action),
+      stealFruit(other.farmId, other.tokenHash, host.username, action),
+    ]);
+    assert.equal(results.filter(result => 'blocked' in result && result.blocked).length, 2);
+    assert.equal(results.filter(result => 'status' in result && result.status === 409).length, 1);
+    let page = await getActivityPage(host.farmId);
+    assert.equal(page.events.length, 2);
+    assert.equal(page.summary.recentBlockedSteals, 2);
+    assert.equal(page.summary.recentStolenFruit, 0);
+    const visit = await visitFarm(visitor.farmId, host.username);
+    assert.equal(visit!.plots[0]!.remainingFruit, 2);
+    assert.equal(visit!.pet, pet ?? 'dog');
+    // Invalid attempts neither consume a turn nor generate a block event.
+    const stale = await stealFruit(other.farmId, other.tokenHash, host.username, { ...action, plantedAt: action.plantedAt + 1 });
+    assert.ok('status' in stale && stale.status === 409);
+    page = await getActivityPage(host.farmId);
+    assert.equal(page.summary.recentBlockedSteals, 2);
+    await markActivitiesRead(host.farmId, page.events[0].id);
+    assert.equal((await getActivityPage(host.farmId)).summary.recentBlockedSteals, 0);
+  }
 });

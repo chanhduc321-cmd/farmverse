@@ -5,7 +5,7 @@ import { claimMissionReward, recordCheckIn, recordMissionAction } from './progre
 export function createFarm(): Farm {
   return {
     revision: 0, gold: 200, xp: 0, level: 1, theme: 1, seeds: {}, fertilizer: 0, produce: {},
-    plots: Array.from({ length: 6 }, () => null),
+    plots: Array.from({ length: 6 }, () => null), pet: 'dog',
   };
 }
 
@@ -41,6 +41,9 @@ export function applyFarmAction(farm: Farm, action: FarmMutation, now: number, c
 
 function applyMutation(farm: Farm, action: FarmMutation, now: number, crops: readonly Crop[], random: () => number): string {
   switch (action.type) {
+    case 'selectPet':
+      farm.pet = action.pet;
+      return 'Đã đổi Pet giữ nhà.';
     case 'checkIn':
       if (!recordCheckIn(farm, now)) throw new FarmError('Hôm nay đã điểm danh.');
       return 'Đã điểm danh hôm nay.';

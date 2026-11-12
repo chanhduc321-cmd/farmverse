@@ -29,4 +29,5 @@ export interface StealRequest {
 
 export interface StealResponse extends FarmResponse {
   visit: FarmVisit;
+  blocked: boolean;
 }

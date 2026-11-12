@@ -5,6 +5,20 @@ import { ripeYield } from '../../shared/farm-rules.mts';
 import { crops } from '../src/catalog.ts';
 import { applyAction, createFarm, parseAction } from '../src/farm.ts';
 
+test('Pet selection validates species and uses the Farm revision', () => {
+  const farm = createFarm();
+  assert.equal(farm.pet, 'dog');
+  for (const pet of ['cat', 'goose', 'dog'] as const) {
+    const action = parseAction('selectPet', { pet, expectedRevision: farm.revision })!;
+    applyAction(farm, action, 0);
+    assert.equal(farm.pet, pet);
+    assert.throws(() => applyAction(farm, action, 0), /vừa thay đổi/);
+  }
+  for (const pet of ['fox', null, {}, 0]) {
+    assert.equal(parseAction('selectPet', { pet, expectedRevision: farm.revision }), undefined);
+  }
+});
+
 test('all 15 varieties reach every frame and ripen at the approved time', () => {
   const expected = [30, 180, 150, 160, 270, 285, 300, 330, 360, 390, 588, 450, 672, 510, 756];
   assert.equal(crops.length, expected.length);

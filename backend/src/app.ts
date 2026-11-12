@@ -192,7 +192,7 @@ app.post(ACCOUNT_API.logout.path, async (context) => {
   return context.body(null, 204);
 });
 
-for (const type of ['buy', 'buyFertilizer', 'sell', 'plant', 'harvest', 'clear', 'water', 'fertilize', 'theme', 'claimMission', 'checkIn'] as const) {
+for (const type of ['buy', 'buyFertilizer', 'sell', 'plant', 'harvest', 'clear', 'water', 'fertilize', 'theme', 'claimMission', 'checkIn', 'selectPet'] as const) {
   app.post(FARM_API[type].path, async (context) => {
     const session = await farmSession(context);
     if (!session) return context.json({ error: 'Phiên chơi đã hết. Hãy tải lại trang.' }, 401);

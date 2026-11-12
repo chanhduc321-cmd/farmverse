@@ -14,6 +14,7 @@ export const FARM_API = {
   theme: { path: '/farm/actions' },
   claimMission: { path: '/farm/missions/claim' },
   checkIn: { path: '/farm/check-in' },
+  selectPet: { path: '/farm/pet' },
 } as const;
 
 export const ACCOUNT_API = {
@@ -84,6 +85,7 @@ export type FarmAction =
   | { type: 'harvest' | 'clear' | 'water' | 'fertilize'; plot: number }
   | { type: 'theme' }
   | { type: 'checkIn' }
+  | { type: 'selectPet'; pet: PetSpecies }
   | ({ type: 'claimMission' } & MissionClaim);
 
 export type FarmMutation = FarmAction & { expectedRevision: number };

@@ -13,15 +13,15 @@ pnpm dev
 
 Dùng `PORT=8092` trong `.env` để khớp proxy mặc định của web. Nếu cổng PostgreSQL 5432 đang được dùng, chọn cổng khác qua `POSTGRES_PORT` và dùng cùng cổng trong `DATABASE_URL`. Nếu dùng database có sẵn, đặt `DATABASE_URL` theo thông tin kết nối của database đó.
 
-`DATABASE_URL` chọn chế độ PostgreSQL. Migrations `003` đến `008` chạy trong một transaction với khóa để hai lượt không chạy xen nhau. Có thể chạy lại trên tiến độ đã lưu. Phiên Guest và phiên tài khoản dùng cookie HttpOnly 30 ngày. Khi backend khởi động lại, cùng cookie mở đúng Gold, XP, Túi hạt, Kho, thời điểm gieo và trạng thái NPC đã lưu. `/health` trả 503 nếu schema hoặc kết nối chưa sẵn sàng.
+`DATABASE_URL` bắt buộc cho gameplay; thiếu cấu hình hoặc mất kết nối trả 503, không chuyển sang RAM. Migrations `003` đến `009` chạy trong một transaction với khóa để hai lượt không chạy xen nhau. Có thể chạy lại trên tiến độ đã lưu. Phiên Guest và phiên tài khoản dùng cookie HttpOnly 30 ngày. Khi backend khởi động lại, cùng cookie mở đúng Gold, XP, Túi hạt, Kho, thời điểm gieo, Pet và trạng thái NPC đã lưu. `/health` trả 503 nếu schema hoặc kết nối chưa sẵn sàng.
 
 `pnpm seed:friends` tạo 10 cư dân `farm_ban_01`–`farm_ban_10`, mỗi ruộng sáu cây chín. Tổng cộng bao phủ 15 giống, có Pet ngẫu nhiên giữa chó, mèo và ngỗng. Chạy lại giữ ruộng và Pet đã tạo. Tài khoản seed dùng hash ngẫu nhiên và không có mật khẩu đăng nhập được bàn giao.
 
 Mọi tài khoản đăng nhập thấy cư dân seed cùng người chơi thật. Bạn bè đã xác nhận được ẩn khỏi Cư dân. Với dữ liệu test, `pnpm seed:friends ten_tai_khoan` nối 10 cư dân thành bạn đã xác nhận của tài khoản đó.
 
-API tạo tài khoản gắn đúng ruộng của phiên Guest hiện tại. Đăng nhập từ trình duyệt khác mở lại ruộng đã gắn. Chế độ RAM hỗ trợ chơi Guest để thử nhanh. [API tài khoản](../docs/API.md#accounts-t-24)
+API tạo tài khoản gắn đúng ruộng của phiên Guest hiện tại. Đăng nhập từ trình duyệt khác mở lại ruộng đã gắn. [API tài khoản](../docs/API.md#accounts-t-24)
 
-Tiến độ đang nằm trong RAM sẽ đặt lại khi chuyển sang PostgreSQL. Lần đầu vào chế độ PostgreSQL tạo một phiên Guest mới.
+Chế độ offline và lưu RAM đã bỏ. Guest cũng lưu tiến độ vào PostgreSQL.
 
 Mỗi yêu cầu thay đổi gameplay mang `expectedRevision`. Nếu hai yêu cầu dùng cùng revision đến đồng thời, PostgreSQL chỉ nhận một lần ghi. Khi nhận 409, web đọc trạng thái mới trước khi người chơi thử lại. [API](../docs/API.md)
 

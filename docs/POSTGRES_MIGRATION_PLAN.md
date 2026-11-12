@@ -1,6 +1,6 @@
 # PostgreSQL và Vercel
 
-Cập nhật ngày 12/11/2026. Chủ dự án đã tạo Supabase. Source gồm web Vite, API Hono, migrations 003–008 và seed 10 cư dân. Backend local tự nạp `backend/.env`. Pet của cư dân seed lưu trong JSON tiến độ và xuất hiện khi thăm ruộng. T-41 tiếp tục xử lý lưu lựa chọn Pet của người chơi và năng lượng giữ nhà.
+Cập nhật ngày 12/11/2026. Chủ dự án đã tạo Supabase. Source gồm web Vite, API Hono, migrations 003–009 và seed 10 cư dân. Backend local tự nạp `backend/.env`. Pet của cư dân seed lưu trong JSON tiến độ và xuất hiện khi thăm ruộng. Lựa chọn Pet lưu cùng ruộng. Pet chặn miễn phí và ghi nhật ký theo quyết định T-41 ngày 12/11. Backend không còn fallback RAM; thiếu DB trả 503.
 
 ## Chuẩn bị database
 
@@ -30,6 +30,7 @@ Kết quả kiểm tra kết nối chỉ ghi host, tên DB, TLS và trạng thá
 | 006 | Lời mời, bạn bè và lượt Steal |
 | 007 | Nhật ký và mốc đã đọc |
 | 008 | Bật RLS và thu hồi quyền Data API cho sáu bảng Farm cùng sequence nhật ký |
+| 009 | Cho phép sự kiện pet_block và chống trùng nhật ký Pet chặn |
 
 Migrations chạy lại an toàn trong một transaction. Lỗi giữa chừng rollback cả lượt. Khóa PostgreSQL giữ thứ tự khi hai tiến trình cùng chạy migration.
 
@@ -37,7 +38,7 @@ Seed chạy riêng sau migration. Tạo `farm_ban_01`–`farm_ban_10`, mỗi ru�
 
 Sau đăng nhập, mọi người thấy cư dân seed cùng tài khoản thật qua API có phân trang và tìm kiếm. Bạn bè đã xác nhận được ẩn khỏi Cư dân. Lời mời chờ xác nhận vẫn có thể xuất hiện ở Cư dân. Để dựng test có sẵn bạn bè, truyền tên tài khoản sau script seed. Luồng kết bạn thông thường vẫn yêu cầu xác nhận.
 
-Ruộng đang chơi trên PostgreSQL tiếp tục dùng JSON hiện có. Phân bón, tiến trình nhiệm vụ và Pet là trường JSON, nên không cần schema mới cho lượt chuẩn bị này. Ruộng cũ thiếu trường vẫn đọc được. Dữ liệu chỉ nằm trong RAM ở các phiên cũ cần kế hoạch xuất riêng nếu muốn mang sang DB.
+Ruộng đang chơi trên PostgreSQL tiếp tục dùng JSON hiện có. Phân bón, tiến trình nhiệm vụ và loài Pet là trường JSON. Nhật ký Pet chặn cần migration 009 trước khi deploy API mới. Ruộng cũ thiếu trường vẫn đọc được. Dữ liệu chỉ nằm trong RAM ở các phiên cũ cần kế hoạch xuất riêng nếu muốn mang sang DB.
 
 ## Setup project Vercel
 
@@ -60,7 +61,7 @@ Giữ giá trị ruộng của vài tài khoản trước và sau để đối c
 
 ## Tình trạng Vercel hiện tại
 
-Ngày 12/11/2026 đã chạy migrations 003–008 và seed lên Supabase. Kiểm tra được 6/6 bảng RLS bật, Data API không có quyền đọc/ghi các bảng Farm, 10 cư dân, 60 ô cây, 15 giống và ba loại Pet. Chạy lại seed tạo thêm 0 tài khoản. Đường Session pooler 5432 và Transaction pooler 6543 đều kết nối được bằng TLS.
+Ngày 12/11/2026 đã chạy migrations 003–009 và seed lên Supabase. Kiểm tra được 6/6 bảng RLS bật, Data API không có quyền đọc/ghi các bảng Farm, 10 cư dân, 60 ô cây, 15 giống và ba loại Pet. Chạy lại seed tạo thêm 0 tài khoản. Đường Session pooler 5432 và Transaction pooler 6543 đều kết nối được bằng TLS.
 
 Adapter `api/farmverse.ts` đã được kiểm tra local với Supabase Transaction pooler, gồm health, 15 giống, cookie, mua hạt và đọc lại tiến độ trong DB. Bản public tại `https://farmverse-ml2a.vercel.app/api/health` và `/api/farm` còn trả 404 ở lượt kiểm tra trước deploy. Vercel cần source đã cập nhật và `DATABASE_URL`.
 

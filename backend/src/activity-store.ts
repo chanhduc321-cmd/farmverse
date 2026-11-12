@@ -39,10 +39,10 @@ export async function recordActivity(
     } else {
       const sql = `
         INSERT INTO farm_activities (host_id, visitor_id, type, plot_index, crop_id, planted_at, amount)
-        VALUES ($1, $2, 'steal', $3, $4, $5, $6)
+        VALUES ($1, $2, $7, $3, $4, $5, $6)
         ON CONFLICT DO NOTHING
       `;
-      const values = [hostId, visitorId, plotIndex ?? null, cropId ?? null, plantedAt ?? null, amount];
+      const values = [hostId, visitorId, plotIndex ?? null, cropId ?? null, plantedAt ?? null, amount, type];
       await client.query(sql, values);
     }
   }
@@ -59,6 +59,7 @@ export async function getActivityPage(
   const { rows: [summaryRow] } = await queryFarmDatabase<{
     unread_count: string;
     recent_stolen_fruit: string;
+    recent_blocked_steals: string;
     recent_visitors: string[];
   }>(`
     WITH host_info AS (
@@ -74,6 +75,7 @@ export async function getActivityPage(
     SELECT
       COUNT(*)::text AS unread_count,
       COALESCE(SUM(CASE WHEN type = 'steal' THEN amount ELSE 0 END), 0)::text AS recent_stolen_fruit,
+      COUNT(*) FILTER (WHERE type = 'pet_block')::text AS recent_blocked_steals,
       ARRAY(SELECT DISTINCT visitor_name FROM unread_activities WHERE type = 'visit' ORDER BY visitor_name LIMIT 5) AS recent_visitors
     FROM unread_activities
   `, [hostId]);
@@ -133,6 +135,7 @@ export async function getActivityPage(
     summary: {
       unreadCount,
       recentStolenFruit,
+      recentBlockedSteals: Number(summaryRow?.recent_blocked_steals ?? 0),
       recentVisitors,
     },
     events,

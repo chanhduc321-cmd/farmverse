@@ -15,14 +15,12 @@ const pool = connectionString ? new pg.Pool({
 }) : undefined;
 pool?.on('error', () => console.warn('Kết nối PostgreSQL đang rảnh bị ngắt.'));
 
-export const farmStorageMode = pool ? 'PostgreSQL' : 'RAM';
-const farms = new Map<string, Farm>();
-const merchants = new Map<string, MerchantState>();
+export const farmStorageMode = 'PostgreSQL';
 
 export class FarmStorageError extends Error {}
 
 export async function transactFarm<T>(operation: (client: PoolClient) => Promise<T>): Promise<T> {
-  if (!pool) throw new FarmStorageError('Chế độ tài khoản cần PostgreSQL.');
+  if (!pool) throw new FarmStorageError('Chưa cấu hình kết nối PostgreSQL.');
   let client: PoolClient | undefined;
   let discard = false;
   try {
@@ -43,7 +41,7 @@ export async function transactFarm<T>(operation: (client: PoolClient) => Promise
 }
 
 export async function queryFarmDatabase<Row extends QueryResultRow>(sql: string, values: unknown[] = []) {
-  if (!pool) throw new FarmStorageError('Chế độ tài khoản cần PostgreSQL.');
+  if (!pool) throw new FarmStorageError('Chưa cấu hình kết nối PostgreSQL.');
   try {
     return await pool.query<Row>(sql, values);
   } catch (error) {
@@ -53,7 +51,7 @@ export async function queryFarmDatabase<Row extends QueryResultRow>(sql: string,
 }
 
 export async function checkFarmStorage(): Promise<void> {
-  if (pool) await queryFarmDatabase(`
+  await queryFarmDatabase(`
     SELECT
       (SELECT claimed FROM farm_guest_progress LIMIT 1),
       (SELECT merchant_state IS NOT NULL FROM farm_guest_progress LIMIT 1),
@@ -67,7 +65,6 @@ export async function checkFarmStorage(): Promise<void> {
 }
 
 export async function readFarm(id: string, claimed = false): Promise<Farm | undefined> {
-  if (!pool) return farms.get(id);
   const result = await queryFarmDatabase<{ state: Farm }>(
     'SELECT state FROM farm_guest_progress WHERE session_id = $1 AND claimed = $2', [id, claimed],
   );
@@ -77,14 +74,9 @@ export async function readFarm(id: string, claimed = false): Promise<Farm | unde
 export async function registerFarm(id: string): Promise<Farm> {
   const farm = createFarm();
   const merchant = createMerchant(Date.now());
-  if (pool) {
-    await queryFarmDatabase(
-      'INSERT INTO farm_guest_progress (session_id, state, merchant_state) VALUES ($1, $2, $3)', [id, farm, merchant],
-    );
-  } else {
-    farms.set(id, farm);
-    merchants.set(id, merchant);
-  }
+  await queryFarmDatabase(
+    'INSERT INTO farm_guest_progress (session_id, state, merchant_state) VALUES ($1, $2, $3)', [id, farm, merchant],
+  );
   return farm;
 }
 
@@ -94,7 +86,7 @@ export async function mutateFarm(id: string, action: FarmMutation, tokenHash?: s
   const revision = farm.revision;
   const now = Date.now();
   const message = applyAction(farm, action, now);
-  if (pool && farm.revision !== revision) {
+  if (farm.revision !== revision) {
     // Compare revisions at the write so concurrent requests cannot both commit.
     const result = await queryFarmDatabase(`
       UPDATE farm_guest_progress
@@ -112,13 +104,6 @@ export async function mutateFarm(id: string, action: FarmMutation, tokenHash?: s
 }
 
 export async function requestMerchant(id: string, tokenHash?: string, action?: MerchantAction): Promise<MerchantResult> {
-  if (!pool) {
-    const farm = farms.get(id);
-    const merchant = merchants.get(id);
-    if (!farm || !merchant) return { error: 'SESSION_REQUIRED' };
-    return resolveMerchant(farm, merchant, Date.now(), action);
-  }
-
   for (let attempt = 0; attempt < 3; attempt++) {
     const { rows: [record] } = await queryFarmDatabase<{ state: Farm; merchant_state: MerchantState | null }>(`
       SELECT state, merchant_state FROM farm_guest_progress

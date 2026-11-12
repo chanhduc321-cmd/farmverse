@@ -70,7 +70,7 @@ Both actions use this body, with values taken from the latest merchant response.
 
 ### State and accounting
 
-The merchant state belongs to the Farm profile. Account registration adopts it with the Guest farm. Both RAM and PostgreSQL support merchant play. PostgreSQL saves both sides of a trade in a single write and requires migration `005`. Initial budget, inventory, demand, pricing, recovery rules, and transfer checks follow [C02 Lite](FARMVERSE_MVP_CONTRACT.md#3-c02-lite--one-deterministic-merchant-npc-locked). Display the actual `goldBudget` even above 300. `referenceBudget` is the normalization constant.
+The merchant state belongs to the Farm profile. Account registration adopts it with the Guest farm. PostgreSQL saves both sides of a trade in a single write and requires migration `005`. No RAM/offline gameplay fallback remains. Initial budget, inventory, demand, pricing, recovery rules, and transfer checks follow [C02 Lite](FARMVERSE_MVP_CONTRACT.md#3-c02-lite--one-deterministic-merchant-npc-locked). Display the actual `goldBudget` even above 300. `referenceBudget` is the normalization constant.
 
 `recoveryEvents` records simulated liquidation with the crop consumed, the one-time operating grant, and out-of-business events. The merchant snapshots expose `grantUsed`, `isSelfSustaining`, and `sellFailStreak` so the Store can explain those changes. Crop counts remain separate for Normal and Golden.
 
@@ -90,17 +90,19 @@ Community routes require a signed-in PostgreSQL account and migration `006`. Use
 | `POST /api/community/friends/:username/invite` | `{}` | 204. Sends an invitation. |
 | `POST /api/community/friends/:username/confirm` | `{}` | 204. The recipient confirms the named sender. Both players appear in each other's friends lists. |
 | `GET /api/community/farms/:username` | Target username | `FarmVisit` with plot snapshots, remaining ripe fruit and `canSteal` for the current visitor. |
-| `POST /api/community/farms/:username/steal` | `{ plot, plantedAt }` | `StealResponse` with the visitor's updated `farm`, updated `visit` and `serverTime`. |
+| `POST /api/community/farms/:username/steal` | `{ plot, plantedAt }` | `StealResponse` with `farm`, updated `visit`, `serverTime` and `blocked`. |
 
-Search filters the current list by username substring. Residents lists the other accounts. Use the zero-based plot index and `plantedAt` from the visit response to identify the crop. A successful steal moves exactly one fruit into the visitor's warehouse. Each visitor can steal once per crop and the host keeps at least one fruit. After HTTP 409, display `{ error }` and refresh the visit. [Gameplay rules](FARMVERSE_GAMEPLAY_AMENDMENT_01.md#thăm-ruộng-và-steal-t-36)
+Search filters the current list by username substring. Residents lists the other accounts except confirmed friends. Use the zero-based plot index and `plantedAt` from the visit response to identify the crop. Owner-approved T-41 rule (12/11/2026): every farm has a Pet that guards for free, without energy deductions. Valid attempts return HTTP 200 with `blocked: true`; fruit and both inventories remain unchanged. Each visitor has one attempt per plot/crop, including a blocked attempt. Replays return 409 without another event. Invalid/unripe attempts do not generate block events. After HTTP 409, display `{ error }` and refresh the visit. [Pet rules](FARMVERSE_GAMEPLAY.md#pet-giữ-nhà-t-41)
+
+`POST /api/farm/pet` accepts `{ pet: 'dog' | 'cat' | 'goose', expectedRevision }` for Guest and account sessions, and returns `FarmResponse`. A new or legacy farm defaults to dog. Selection persists in Farm JSON and uses the same revision protection as other mutations.
 
 ## Farm activity (T-42)
 
-Activity routes require the signed-in account and migration `007`. The server identifies the owner from the session cookie. [Shared response types](../shared/activity.mts)
+Activity routes require the signed-in account and migrations through `009`. The server identifies the owner from the session cookie. [Shared response types](../shared/activity.mts)
 
 | Browser request | Input | Result |
 |---|---|---|
 | `GET /api/activity` | Optional `offset`, `limit` from 1 to 50 and `through` | Newest events first, unread summary and next offset. For subsequent pages, set `through` to the first event ID from the initial page to keep the list stable. |
 | `POST /api/activity/read` | JSON `{ "through": "event-id" }` | Mark events up to the displayed event for the current owner. Returns the remaining unread count. |
 
-After displaying the first page, acknowledge its newest event ID. An event that arrives during the read remains unread. The summary lists up to five distinct visitors and totals the fruit taken in unread events. Visits from the same player to the same Farm are grouped within ten minutes. Successful steals and their journal events commit in the same transaction.
+After displaying the first page, acknowledge its newest event ID. An event that arrives during the read remains unread. The summary lists up to five distinct visitors, totals stolen fruit and counts `recentBlockedSteals`. `pet_block` events use `amount: 0` and include the visitor, crop, plot and timestamp. Visits from the same player to the same Farm are grouped within ten minutes. Blocked attempts and their journal events commit in the same transaction.

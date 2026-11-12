@@ -411,7 +411,7 @@ function setSnapshot(next: FarmResponse | FarmSessionResponse): void {
     if (menuAccountLabel) menuAccountLabel.textContent = session.account.username;
   } else {
     hudName.textContent = 'Khách';
-    hudAccountBadge.textContent = session?.accountsAvailable ? 'Đăng nhập' : 'RAM';
+    hudAccountBadge.textContent = 'Đăng nhập';
     hudAccountBtn.classList.remove('is-authenticated');
     if (session?.accountsAvailable) hudAccountBtn.classList.remove('is-offline');
     else hudAccountBtn.classList.add('is-offline');
@@ -537,14 +537,14 @@ function renderAccountView(): void {
     profileUsername.textContent = session.account.username;
   } else if (session && !session.accountsAvailable) {
     viewSyncError.hidden = true;
-    accountTitle.textContent = 'Chế độ Khách (RAM)';
+    accountTitle.textContent = 'Tài khoản tạm gián đoạn';
     accountDescription.textContent = 'Tính năng tài khoản chưa khả dụng';
     accountNav.hidden = true;
     viewRegister.hidden = true;
     viewLogin.hidden = true;
     viewProfile.hidden = true;
     viewUnavailable.hidden = false;
-    unavailableText.textContent = 'Hệ thống tài khoản cần PostgreSQL để lưu trữ. Hiện backend đang chạy ở chế độ RAM.';
+    unavailableText.textContent = 'Chưa kết nối được tài khoản. Hãy thử lại sau.';
   } else {
     viewSyncError.hidden = true;
     accountTitle.textContent = 'Tài khoản Nông Trại Mộng Mơ';
@@ -1280,6 +1280,7 @@ async function checkActivitySummary(notifyToast: boolean = true): Promise<void> 
       const notices: string[] = [];
       if (summary.recentVisitors.length) notices.push(`${summary.recentVisitors.join(', ')} đã ghé thăm.`);
       if (summary.recentStolenFruit > 0) notices.push(`Bạn bị lấy ${summary.recentStolenFruit} quả.`);
+      if (summary.recentBlockedSteals > 0) notices.push(`Pet đã chặn ${summary.recentBlockedSteals} lượt lấy quả.`);
       showGameToast(notices.join(' ') || `Bạn có ${summary.unreadCount} hoạt động mới.`,
         summary.recentStolenFruit > 0 ? 'warning' : 'info', 4500);
     }
@@ -1358,6 +1359,10 @@ async function loadActivities(offset: number, resetList: boolean = false): Promi
               textContent: `Ô ${event.plot ?? '?'}`,
             })
           );
+          title.append(actionText);
+        } else if (event.type === 'pet_block') {
+          const actionText = document.createElement('span');
+          actionText.textContent = `bị Pet chặn khi định hái ${event.cropName ?? 'nông sản'} tại Ô ${event.plot ?? '?'}. Quả vẫn còn nguyên.`;
           title.append(actionText);
         } else {
           const actionText = document.createElement('span');
@@ -1676,8 +1681,13 @@ function attachControls(scene: FarmScene): void {
             const result = await request<StealResponse>(playerPath(COMMUNITY_API.steal, currentVisit.username), action);
             setSnapshot(result);
             setVisit(result.visit);
-            setFeedback(`Đã lấy 1 quả ${crops[crop.cropId - 1].name}. Xem trong Kho của bạn.`, 'success');
-            scene.playPlotFeedback(plot, 'harvest', 1);
+            if (result.blocked) {
+              setFeedback('Pet giữ nhà đã chặn! Bạn chưa lấy được quả.', 'warning');
+              scene.playPetGuard();
+            } else {
+              setFeedback(`Đã lấy 1 quả ${crops[crop.cropId - 1].name}. Xem trong Kho của bạn.`, 'success');
+              scene.playPlotFeedback(plot, 'harvest', 1);
+            }
           } catch (error) {
             if (error instanceof Error && error.cause === 409) {
               await refreshVisit(currentVisit.username).catch(() => undefined);
@@ -1799,6 +1809,10 @@ class FarmScene extends Phaser.Scene {
 
   constructor() { super('Farm'); }
 
+  playPetGuard(): void {
+    this.pet.guard();
+  }
+
   preload(): void {
     const textures: [key: string, path: string][] = [
       ...themes.map(({ file }, index): [string, string] => [`theme-${index + 1}`, `background/${file}`]),
@@ -1891,7 +1905,7 @@ class FarmScene extends Phaser.Scene {
     });
     this.ground.add(this.visuals.map(({ plant }) => plant));
     this.ground.add(this.visuals.map(({ label }) => label));
-    this.pet = createFarmPet(this, field, reduceMotion);
+    this.pet = createFarmPet(this, field, reduceMotion, pet => send({ type: 'selectPet', pet }));
     attachControls(this);
     this.layout();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
@@ -2346,7 +2360,7 @@ class FarmScene extends Phaser.Scene {
       lastGuideCheck = elapsed;
       updateToolHint();
     }
-    this.pet.update(time, delta, !visit, !visit && !guideActive, visit?.pet);
+    this.pet.update(time, delta, !visit, !visit && !guideActive, visit?.pet, snapshot.farm.pet);
   }
 
   private renderPlot(
