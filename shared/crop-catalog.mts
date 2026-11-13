@@ -1,6 +1,6 @@
 import type { Crop } from './farm.mts';
 
-export const CROP_COUNT = 15;
+export const CROP_COUNT = 16;
 
 export function parseCrop(id: number, source: string): Crop {
   const fields = Object.fromEntries(source.trim().split(/\r?\n/).map((line) => line.split('=')));
