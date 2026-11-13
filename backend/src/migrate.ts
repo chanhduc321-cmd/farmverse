@@ -12,7 +12,7 @@ if (!connectionString) {
     client = await pool.connect();
     await client.query('BEGIN');
     await client.query('SELECT pg_advisory_xact_lock(9810626)');
-    for (const name of ['003_crop_farm_guest.sql', '004_farm_accounts.sql', '005_farm_merchant.sql', '006_farm_community.sql', '007_farm_activity.sql', '008_farm_server_access.sql', '009_farm_pet_guard.sql']) {
+    for (const name of ['003_crop_farm_guest.sql', '004_farm_accounts.sql', '005_farm_merchant.sql', '006_farm_community.sql', '007_farm_activity.sql', '008_farm_server_access.sql', '009_farm_pet_guard.sql', '010_farm_social_identities.sql', '011_blockchain_transactions.sql', '012_near_usdc_payments.sql']) {
       const migration = new URL(`../migrations/${name}`, import.meta.url);
       await client.query(await readFile(migration, 'utf8'));
     }

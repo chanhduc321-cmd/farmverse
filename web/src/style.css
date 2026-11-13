@@ -1352,6 +1352,24 @@ button:disabled { cursor: default; opacity: .6; }
   transform: translateY(2px);
   box-shadow: 0 1px 0 #15803d;
 }
+.account-btn-social {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding-block: 6px;
+  color: #1f1f1f;
+  background: #fff;
+  border: 1px solid #747775;
+}
+.account-btn-social:hover:not(:disabled) {
+  filter: brightness(0.97);
+}
+.account-btn-social:focus-visible {
+  outline: 2px solid #21753b;
+  outline-offset: 2px;
+}
 .account-btn-logout {
   background: linear-gradient(180deg, #f87171 0%, #dc2626 100%);
   border: 1.5px solid #fca5a5;

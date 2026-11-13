@@ -2,12 +2,14 @@ import Phaser from 'phaser';
 import { ACCOUNT_API, FARM_API, FERTILIZER_COST, ripeAt, stageAt } from '../../shared/farm.mts';
 import type { Crop, FarmAction, FarmMutation, FarmResponse, FarmSessionResponse, Plot } from '../../shared/farm.mts';
 import { createActivity } from './activity.ts';
+import { beginNearAuth, consumeNearAuthResult } from './auth/near.ts';
 import { COMMUNITY_API } from '../../shared/community.mts';
 import type { FarmVisit, PlayerPage, StealResponse } from '../../shared/community.mts';
 import { createCommunity, createPlayerAvatar, playerPath } from './community.ts';
 import { createMissions } from './missions.ts';
 import { farmLoading } from './loading.ts';
 import { createFarmPet, loadPetSprites } from './pets.ts';
+import { mountTransactionHistory } from './transactions/history.ts';
 import './style.css';
 
 const width = 800;
@@ -166,6 +168,7 @@ visitExit.hidden = true;
 field.append(visitExit);
 
 const accountDialog = document.querySelector<HTMLDialogElement>('#account')!;
+const nearAuthButtons = accountDialog.querySelectorAll<HTMLButtonElement>('[data-near-auth]');
 const hudAccountBtn = document.querySelector<HTMLButtonElement>('#hud-account-btn')!;
 const hudName = document.querySelector<HTMLElement>('#hud-name')!;
 const hudAccountBadge = document.querySelector<HTMLElement>('#hud-account-badge')!;
@@ -354,6 +357,7 @@ function setSnapshot(next: FarmResponse | FarmSessionResponse): void {
   snapshot = next;
   if ('accountsAvailable' in next) {
     if (!sessionSynchronized || session?.account?.username !== next.account?.username) {
+      transactionHistory.reset();
       selectedCropId = undefined;
       activeCareTool = undefined;
     }
@@ -420,7 +424,10 @@ function setSnapshot(next: FarmResponse | FarmSessionResponse): void {
 function updateCommunityAccess(): void {
   const available = sessionSynchronized && Boolean(session?.account);
   community.updateAccess(available, busy || accountSubmitting);
-  if (!available) activity.setSession(undefined);
+  if (!available) {
+    activity.setSession(undefined);
+    transactionHistory.reset();
+  }
   activity.setBlocked(busy || accountSubmitting);
   if (!available && visit) setVisit(undefined);
 }
@@ -489,12 +496,21 @@ visitExit.onclick = () => setVisit(undefined);
 
 function updateAccountButtons(): void {
   const pending = busy || accountSubmitting;
+  nearAuthButtons.forEach(button => { button.disabled = pending; });
   btnSubmitRegister.disabled = pending;
   btnSubmitLogin.disabled = pending;
   btnAccountLogout.disabled = pending;
   btnRetrySync.disabled = pending;
   updateCommunityAccess();
 }
+
+nearAuthButtons.forEach(button => {
+  button.addEventListener('click', () => {
+    if (busy || accountSubmitting) return;
+    nearAuthButtons.forEach(control => { control.disabled = true; });
+    beginNearAuth();
+  });
+});
 
 function renderAccountView(): void {
   setAccountFeedback('');
@@ -2225,6 +2241,19 @@ async function start(): Promise<void> {
   }
   setSnapshot(initial);
   if (farmLoading.failed) return;
+  const nearAuthResult = consumeNearAuthResult();
+  if (nearAuthResult) {
+    if (nearAuthResult === 'success' && initial.account) {
+      setFeedback('Đã đăng nhập với Google.', 'success');
+    } else {
+      activeAccountTab = 'login';
+      openAccountDialog();
+      const message = nearAuthResult === 'unavailable'
+        ? 'Đăng nhập Google chưa được cấu hình cho địa chỉ này.'
+        : 'Chưa đăng nhập được với Google. Hãy thử lại.';
+      showAccountToast(message, 'error', undefined, 0);
+    }
+  }
   new Phaser.Game({
     type: Phaser.CANVAS,
     parent: 'game',
@@ -2262,6 +2291,10 @@ const community = createCommunity({
   },
   notify: (msg, type) => setFeedback(msg, type),
 });
+
+const transactionHistoryContainer = document.createElement('div');
+viewProfile.insertBefore(transactionHistoryContainer, btnAccountLogout);
+const transactionHistory = mountTransactionHistory(transactionHistoryContainer);
 
 const missions = createMissions(field, farmTime,
   async claim => Boolean(await send({ type: 'claimMission', ...claim })),

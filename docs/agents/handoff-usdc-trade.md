@@ -1,0 +1,49 @@
+# T-18/T-62 · Hai lời mời, Mâm quả và PnL
+
+T-16 chốt schema ngày 14/11/2026. Antigravity nhận UI lời mời/badge/PnL. Codex giữ backend, dữ liệu gameplay, provider, schema và điểm nối vào Farm.
+
+## Workspace và quyền ghi
+
+- Dùng `D:/Project/pet-project/farmverse-near-auth-ui`, nhánh `feat/near-auth-ui`, base `86bfc94`.
+- Đọc `AGENTS.md`, `docs/agents/collaborator.md`, `docs/agents/workflow.md`, brief này và `docs/TRADE_DEMO_API.md`.
+- T-18/T-62 ghi trong `web/src/trade-demo/`. T-64 tiếp tục giữ `web/src/transactions/` theo brief riêng.
+- Codex giữ backend/migrations/shared/dashboard, `web/src/main.ts`, `web/index.html`, CSS dùng chung và Vite config.
+- Schema/fixture do Codex chép sang worktree để import. Chỉ commit UI được giao, bàn giao theo từng task.
+
+## Hợp đồng và fixture
+
+Import path/type từ `shared/trade-demo.mts` và `shared/payments.mts`. API ở `docs/TRADE_DEMO_API.md`. Route gameplay triển khai ở T-57/T-58, thanh toán nối ở T-17. Dùng `getTradeDemoFixture(name)` từ `shared/fixtures/trade-demo.mts` để lấy bản copy của từng snapshot.
+
+Fixture có địa chỉ/số liệu giả và URL `.invalid`. Transport fixture tự chuyển giữa snapshot để thử UI trong harness local.
+
+## Module bàn giao
+
+Xuất `mountTradeDemo(container, options)` từ `web/src/trade-demo/index.ts`. Options nhận `client?: TradeDemoClient` từ schema, cùng `onSnapshot?: (snapshot: TradeDemoSnapshot) => void` để đồng bộ PnL. Client có `read()`, `accept(request)`, `skip(request)`, `readOrder(orderId)` trả đúng kiểu schema. Default client dùng fetch tới route cùng origin.
+
+Handle có `refresh(): Promise<void>`, `reset(): void`. Codex tích hợp mount vào Farm. Reset xóa dữ liệu, hủy fetch/polling và ngăn phản hồi cũ cập nhật phiên mới. Module import CSS riêng.
+
+Xuất `mountTradeDemoPnl(container)` trong cùng thư mục. Handle có `render(pnl: TradeDemoPnl): void`, `reset(): void`. Feed fixture.pnl khi thử riêng T-62. Codex render lời mời/PnL từ cùng snapshot.
+
+## T-18
+
+- A thấy “Đổi 1 Dâu tây lấy 1 USDC?” cùng **Đổi**, **Bỏ qua**.
+- B trước lượt A thấy Mâm quả 2/3 và đang chờ NPC có quả.
+- Khi có hàng, B thấy “Mâm quả thiếu 1 Dâu tây. Dùng 1,5 USDC để hoàn thiện và nhận badge?” cùng **Mua**, **Bỏ qua**.
+- Hiển thị USDC testnet. Giá/số dư đọc từ PaymentAmount, định dạng theo asset.decimals bằng BigInt hoặc chuỗi.
+- Khóa Accept khi canAccept=false và giải thích unavailableReason. Khi có lệnh đang xử lý, theo dõi cùng ID.
+- Tạo requestId một lần, retry cùng body. Giá/ví/badge lấy từ server. Render response rồi xử lý redirect đã trả về nếu cần.
+- Chỉ hiện hoàn thành khi order.status=succeeded. Thanh toán confirmed mà order còn processing tiếp tục chờ.
+- Badge lấy từ basket.filled=3 và basket.badge. Dùng icon hiện có. Bỏ qua hiển thị trạng thái đã bỏ qua.
+
+## T-62
+
+Hiện giá vốn, doanh thu, lãi gộp. grossProfit=null hiển thị dấu gạch ngang. Sau bán thành công hiện +0,5 USDC từ API. Chi phí sponsor định dạng theo sponsorGas.asset, đơn vị NEAR.
+
+## Nghiệm thu
+
+- Desktop 1280×800 và mobile 390×844 dễ đọc, không tràn ngang, dùng được bằng bàn phím.
+- Thử fixture A/B, ví đang chuẩn bị, thiếu USDC, hủy/hết hạn/lỗi, pending, confirmed chờ áp dụng và thành công.
+- Hai lần bấm nhanh dùng một request. Retry cùng ID. Reset giữa fetch/poll loại bỏ dữ liệu phiên cũ.
+- Poll khi tab hiện và màn demo hoạt động. Dừng khi ẩn/reset hoặc lệnh kết thúc. Trở lại tab đọc trạng thái server.
+- Badge/PnL cập nhật theo snapshot. `pnpm --dir web build` đạt.
+- Bàn giao commit/diff, ảnh hai kích thước và các kiểm tra đã chạy. Codex nghiệm thu với backend thật.

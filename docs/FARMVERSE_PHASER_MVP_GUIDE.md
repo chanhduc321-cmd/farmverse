@@ -6,6 +6,8 @@
 
 This guide records the approved stack and technical amendments. The [MVP contract](FARMVERSE_MVP_CONTRACT.md) defines C01, C02 Lite, and C03 Micro.
 
+The USDC testnet scenario uses the approved [FV-NEAR-01 amendment](FARMVERSE_MVP_CONTRACT.md#fv-near-01--usdc-testnet-trade-demo) and its [build plan](FARMVERSE_NEAR_TRADE_PLAN.md). Payment providers are implemented as modules behind shared HTTP/JSON interfaces. NEAR SDK, contract and signing details belong to the NEAR adapter.
+
 ## 1. Goal & product pitch
 
 Build a **browser-playable** casual farming game: **Farm → Harvest → Town Square/Store → NPC Trade → Upgrade**, with a **real, independently verifiable NEAR testnet transfer** accessible from the Store. Judges should be able to open a URL and play immediately—no installation, registration, or wallet connection.
@@ -127,7 +129,7 @@ farmverse/
 
 ### Run the integrated P0 build locally
 
-Use a `develop` checkout with Docker Desktop running, Node.js 20.12 or newer, and pnpm. In the first PowerShell window, start from the repository root and run the database and API.
+Use a `develop` checkout with Docker Desktop running, Node.js 22.22.2 or newer (required by the NEAR adapter), and pnpm. In the first PowerShell window, start from the repository root and run the database and API.
 
 ```powershell
 cd backend

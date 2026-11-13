@@ -1,5 +1,9 @@
 # FarmVerse API
 
+The USDC testnet trade scenario has a shared contract and fixtures in the [T-16 API handoff](TRADE_DEMO_API.md). Gameplay routes follow that contract during T-57/T-58 implementation.
+
+The [USDC adapter](NEAR_USDC_ADAPTER.md) now handles sponsored testnet transfers and Google payment approval callbacks. Its transaction history metadata is available on `/api/account/transactions`.
+
 The Node.js service owns state. In development, the browser calls `/api/...` through the Vite proxy to the matching Hono route without the `/api` prefix. Send JSON POST bodies with `Content-Type: application/json` and include cookies. Responses carrying game state use `Cache-Control: no-store`.
 
 ## Session and Farm

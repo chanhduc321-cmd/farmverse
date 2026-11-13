@@ -54,6 +54,10 @@ Codex ghi lỗi đã tái hiện, kết quả kiểm tra và người xử lý d
 
 | BUG-40 | P1 | Guest có thể hết Gold trước khi mua hạt đầu tiên | Codex | HIGH | OPEN | Develop `4cc9212` · T-34/T-47 | Vào Guest mới và mua 40 bịch phân với giá 5 Gold/bịch. Thử mua một hạt Dâu tây. | Đã tái hiện qua API với PostgreSQL riêng. Số dư về 0, túi hạt và kho trống, mua Dâu tây trả 409. Điểm danh ngày đầu chỉ tăng lên 5 Gold, thấp hơn giá hạt rẻ nhất là 10 Gold. | Chốt cách phục hồi cùng chủ dự án. Kiểm tra người chơi có thể gieo lại trong cùng phiên với 0 Gold, không có hạt, nông sản hoặc cây. Kiểm tra thao tác lặp và gửi đồng thời. |
 
+| BUG-41 | P4 | Lịch sử hiện số nguyên tử USDC và cắt phí NEAR nhỏ thành 0 | Codex | MEDIUM | FIXED | T-64 · Bản bàn giao `c7ad18e` · `web/src/transactions/history.ts` | Render response có `amountAtomic=1500000`, `asset=USDC`, `assetDecimals=6`. Render thêm một yoctoNEAR. | Chromium tái hiện bản bàn giao hiển thị 1500000 USDC và 0 NEAR. Đã định dạng chuỗi theo metadata và giữ đầy đủ phần thập phân. API/PostgreSQL thật xác nhận 1,5 USDC và phí 0,0001 NEAR. | Kiểm tra USDC 6 chữ số, NEAR cũ thiếu metadata dùng 24 chữ số, lượng/phí nguyên tử nhỏ nhất và phí null ở desktop/mobile. |
+
+| BUG-42 | P4 | Nút Google hiện lại tên NEAR Auth sau tích hợp | Codex | LOW | FIXED | T-61 · Rà diff trước commit ngày 14/11 | Kiểm tra hai nút social trong tab Đăng ký/Đăng nhập và câu báo kết quả trong `web/src/main.ts`. | Hai nhãn nút và thông báo còn dùng NEAR Auth, khác nội dung Google đã duyệt. Đã đổi cả hai nút thành Tiếp tục với Google và thống nhất thông báo kết quả. | Kiểm tra đúng hai nhãn Google, không còn câu hiển thị NEAR Auth cũ; build web đạt. |
+
 ## Trạng thái
 
 - **OPEN** — Đã tái hiện, chờ xử lý.

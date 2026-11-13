@@ -20,7 +20,7 @@ Chọn **Tưới nước** hoặc **Bón phân** trên thanh công cụ rồi b�
 
 Chủ dự án chốt ngày 11/11/2026. Hoàn tất các task Farm, tài khoản, thăm ruộng/Steal, nhật ký/thông báo, hướng dẫn, phản hồi thao tác, art và Pet đang có trên dashboard. Bổ sung T-44 onboarding, streak và mission với ưu tiên cao để thu hút và giữ chân người chơi. Luật mission, streak và phần thưởng sẽ được duyệt trước khi triển khai. T-45 chia sẻ social là task cuối của MVP.
 
-NEAR T-16–T-19 chỉ xử lý sau khi hoàn tất các task MVP đã chốt. T-25 NPC và phần Store của T-27 vẫn tạm giữ theo quyết định trước, chờ mở lại. [Thứ tự công việc](../TASKS.md#thứ-tự-xử-lý-hiện-tại)
+Ngày 13/11/2026, chủ dự án đưa NEAR testnet gasless lên ưu tiên cao nhất, trước T-40 và T-45. T-25 NPC và phần Store của T-27 chờ quyết định mở lại. [Thứ tự công việc](../TASKS.md#thứ-tự-xử-lý-hiện-tại)
 
 ## Nhiệm vụ và chuỗi ngày (T-44)
 
