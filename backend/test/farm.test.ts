@@ -33,7 +33,7 @@ test('all 15 varieties reach every frame and ripen at the approved time', () => 
   }
   assert.equal(crops[2].readyFrame, 5);
   assert.equal(crops[3].readyFrame, 5);
-  assert.equal(crops[4].name, 'Khoai lang');
+  assert.equal(crops[4].name, 'Khoai tây');
 });
 
 test('buy, plant, harvest, sell, and clear preserve GOLD, inventory, XP, and revision', () => {
