@@ -271,10 +271,10 @@
     "title": "[task] Tải nhật ký nền theo thay đổi",
     "owner": "Codex",
     "scope": "API Activity, module đồng bộ và điểm nối main.ts.",
-    "branch": "codex/farm-activity-sync",
-    "status": "DOING",
-    "dependsOn": "T-42, T-48.",
-    "acceptance": "Tải trang đầu khi vào Farm với tài khoản. Tối đa một lượt kiểm tra nền mỗi 30 giây ở tab hiển thị ruộng mình, trả 304 khi mốc sự kiện và mốc đọc giữ nguyên. Dừng nền khi Guest, tab ẩn hoặc thăm ruộng. Thao tác gameplay cập nhật trực tiếp theo response."
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "T-42, T-48. Commit dddece6. BUG-37 FIXED.",
+    "acceptance": "Chromium 1280×800, 390×844 và 844×390 xác nhận tải trang đầu một lần, 304 khi giữ nguyên, có sự kiện mới báo cập nhật. Mở lại từ cache, tab ẩn và Guest không GET nền. Khi thăm ruộng dừng nền. Đổi cookie giữa tab trả 401 và xóa cache cũ. Phân trang và mốc chưa đọc đã kiểm tra với PostgreSQL."
   },
   {
     "id": "T-50",
@@ -295,10 +295,10 @@
     "title": "[task] Cấp quà theo vòng 7 ngày",
     "owner": "Codex",
     "scope": "shared/, backend/, tài liệu luật.",
-    "branch": "codex/farm-check-in-rewards",
-    "status": "TODO",
-    "dependsOn": "Chủ dự án duyệt bảng quà và cách áp dụng cho save cũ.",
-    "acceptance": "Ngày 8 mở vòng mới, đổi ngày theo giờ Việt Nam, đứt chuỗi quay về ngày 1. Điểm danh và cấp quà cùng lần ghi, gửi lặp hoặc đồng thời chỉ nhận một lần."
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Chủ dự án duyệt lịch quà và cách áp dụng save cũ ngày 13/11. Commit 3579577.",
+    "acceptance": "Test qua đủ 7 quà, ngày 8, mốc 00:00 giờ Việt Nam và đứt chuỗi. Hai POST đồng thời trên PostgreSQL trả 200/409 và chỉ cộng 5 Gold một lần. Save cũ ba ngày nhận đúng một bịch phân ngày 4, giữ tiến độ nhiệm vụ khi đọc lại."
   },
   {
     "id": "T-52",
@@ -309,7 +309,7 @@
     "scope": "web/src/missions.ts, web/src/missions.css.",
     "branch": "feat/farm-engagement-polish",
     "status": "TODO",
-    "dependsOn": "Giao diện dữ liệu T-51.",
+    "dependsOn": "T-51 đã sẵn sàng, dùng missionStatus(farm, now).attendanceDays.",
     "acceptance": "Bảy ô ghi rõ quà và trạng thái, phân biệt hôm nay và ngày 7. HUD và ô quà cập nhật sau response. Kiểm tra desktop và mobile."
   },
   {

@@ -11,7 +11,11 @@
 | T-50 · Nhật ký | Chỉ khối `<dialog id="activity">` trong `web/index.html` và CSS của Nhật ký trong `web/src/style.css` | Codex nối bộ nhớ đệm, phân trang và đánh dấu đã đọc. Giữ `#activity`, `#activity-list`, `#activity-empty`, `#activity-feedback`, `#activity-more`. Thêm nút `type="button"` có ID `activity-new`, mặc định `hidden`, nhãn **Có hoạt động mới**. Chuẩn bị giao diện cho trạng thái đang tải, trống, lỗi và danh sách có sự kiện ghé thăm hoặc Pet chặn. |
 | T-52 · Điểm danh | `web/src/missions.ts`, `web/src/missions.css` | Sau khi chủ dự án duyệt bảng quà, dùng giao diện dữ liệu T-51 do Codex chốt. Mỗi ngày hiện icon, tên/số lượng quà, trạng thái đã nhận, có thể nhận hoặc sắp tới. Ngày 7 có nhấn mạnh. Quà và HUD cập nhật sau response của nút điểm danh. |
 
-Codex giữ `main.ts`, module đồng bộ nhật ký, `backend/`, `shared/`, dashboard và cấu hình root. Có thể làm T-53 với callback mẫu và T-50 với HTML mẫu. Mở T-52 khi Codex bàn giao hợp đồng T-51. T-54 là nhánh việc độc lập với API. Giữ commit riêng theo từng task để review độc lập.
+Codex giữ `main.ts`, `web/src/activity.ts`, `backend/`, `shared/`, dashboard và cấu hình root. T-49 đã nối nút `#activity-new`, trạng thái chờ ở `#activity-feedback`, badge và phân trang. T-54 là nhánh việc độc lập với API. Giữ commit riêng theo từng task để review độc lập.
+
+### Giao diện T-51 đã sẵn sàng cho T-52
+
+Dùng `missionStatus(farm, now).attendanceDays` từ [shared/progression.mts](../../shared/progression.mts). Mỗi ô có `day` (1–7), `reward` và `status`. Quà có `type` là `gold`, `seed` hoặc `fertilizer`, kèm `amount`. Quà hạt có thêm `cropId`, hiện là dâu tây. Trạng thái `claimed` hiện **Đã nhận**, `checked-in` hiện **Đã điểm danh** cho save cũ, `available` hiện **Hôm nay**, `upcoming` hiện **Sắp tới**. Dùng `streak` cho độ dài chuỗi và `checkedIn` để khóa nút khi đã điểm danh hôm nay. Response điểm danh đã cập nhật Gold, Túi hạt hoặc phân, kèm thông báo thành công. [Luật thưởng đã duyệt](../FARMVERSE_GAMEPLAY.md#nhiệm-vụ-và-chuỗi-ngày-t-44)
 
 ## Bàn giao để Codex nghiệm thu
 
