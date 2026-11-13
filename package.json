@@ -3,8 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:api": "esbuild api/farmverse.ts --bundle --platform=node --format=esm --target=node22 --packages=bundle --outfile=build-api/farmverse.mjs",
-    "build": "pnpm build:api && pnpm --dir web build"
+    "build": "pnpm --dir web build && node tools/build-vercel.mjs"
   },
   "packageManager": "pnpm@10.0.0",
   "devDependencies": {

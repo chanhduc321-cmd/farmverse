@@ -1,4 +1,4 @@
-import app from '../backend/src/app.ts';
+import app from './app.ts';
 
 export default {
   fetch(request: Request) {

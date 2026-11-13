@@ -258,11 +258,11 @@
     "target": "Chuẩn bị Supabase",
     "title": "[task] Bỏ offline, seed cư dân và chuẩn bị migration, API Vercel",
     "owner": "Codex",
-    "scope": "web/, shared/, backend/, api/, cấu hình deploy và hướng dẫn DB.",
+    "scope": "web/, shared/, backend/, cấu hình và script deploy, hướng dẫn DB.",
     "branch": "develop",
     "status": "REVIEW",
-    "dependsOn": "Supabase đã chạy migrations 003–009 và seed. Vercel chờ cấu hình DATABASE_URL và deploy source đã cập nhật.",
-    "acceptance": "Đã gỡ cả fallback RAM backend; thiếu DB trả 503. Source qua build và typecheck, 20 test backend trên DB riêng. Supabase có 6 bảng bật RLS, 10 cư dân, 60 ô cây, đủ 15 giống và ba loài Pet. Seed chạy lại tạo thêm 0 tài khoản. Cư dân gồm seed và tài khoản thật, ẩn bạn bè đã xác nhận. Adapter Vercel qua kiểm tra local với Supabase. Vercel công khai còn 404 API trước deploy."
+    "dependsOn": "Supabase đã chạy migrations 003–009 và seed. BUG-36 sửa đóng gói API Vercel. Gói function chạy riêng đã trả health 200 với Supabase. Chủ dự án review trước khi merge main.",
+    "acceptance": "Thiếu DB trả 503. Source qua build và typecheck, 20 test backend trên DB riêng ở lượt trước. Supabase có 6 bảng bật RLS, 10 cư dân, 60 ô cây, đủ 15 giống và ba loài Pet. Seed chạy lại tạo thêm 0 tài khoản. Kiểm tra Preview khởi động function và nghiệm thu production health, danh mục, phiên Guest sau khi merge."
   },
   {
     "id": "T-45",

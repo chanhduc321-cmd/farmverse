@@ -47,6 +47,8 @@ Codex ghi lỗi đã tái hiện, kết quả kiểm tra và người xử lý d
 
 | BUG-35 | P1 | Pet không chặn Steal và không có nhật ký chặn | Codex | HIGH | FIXED | T-41/T-42 · backend/community-store và web/pets | Khách bấm cây chín, Pet chỉ đi lại, quả vẫn vào Kho khách và chủ không có log chặn. | Pet chặn miễn phí theo duyệt 12/11, giữ nguyên cây và kho; ghi pet_block trong cùng transaction giữ lượt. Lưu loài qua API và phát clip/bong bóng. 20 test backend và ba viewport Chromium đạt; migration 009 local/Supabase. | Chặn cả ba loài và ruộng cũ; gửi lặp không thêm log; đồng thời không mất quả; chủ có thông báo, badge, nhật ký và mốc đã đọc. |
 
+| BUG-36 | P3 | Vercel Function lỗi 500 khi tải Hono app | Codex | HIGH | REVIEW | T-48 · Vercel Production `eca2944` | Gọi `GET /api/health`. Runtime log báo `ERR_MODULE_NOT_FOUND` cho `/var/task/backend/src/app.ts`. | Build Output API đóng gói Hono, dependencies và 15 file danh mục vào function. Gói chạy riêng xác nhận Supabase health 200, đủ 15 giống, route lạ 404 và thiếu DB trả 503. | Kiểm tra function khởi động trên Preview. Sau khi chủ dự án duyệt merge, kiểm tra production health 200, 15 giống và phiên Guest. |
+
 ## Trạng thái
 
 - **OPEN** — Đã tái hiện, chờ xử lý.

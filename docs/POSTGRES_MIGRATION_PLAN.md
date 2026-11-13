@@ -43,15 +43,15 @@ Ruộng đang chơi trên PostgreSQL tiếp tục dùng JSON hiện có. Phân b
 ## Setup project Vercel
 
 1. Mở project đang phục vụ `farmverse-ml2a.vercel.app`, hoặc import repo `chanhduc321-cmd/farmverse` nếu cần project mới.
-2. Đặt Root Directory về gốc repo. Source có `vercel.json` ở root, frontend trong `web/` và function trong `api/`.
-3. Đặt framework Vite. Cấu hình trong source cài dependencies của cả `backend/` và `web/`, build web và xuất `web/dist`.
+2. Đặt Root Directory về gốc repo. Source có `vercel.json` ở root, frontend trong `web/` và entrypoint function trong `backend/src/vercel.ts`.
+3. Đặt framework Vite. Cấu hình trong source cài dependencies của root, `backend/` và `web/`. `pnpm build` build web và tạo `.vercel/output` theo Build Output API, gồm web tĩnh, function đã bundle và route `/api/*`.
 4. Trong Settings → Environment Variables, tạo `DATABASE_URL` cho Preview và Production bằng URI Supabase Transaction pooler của từng DB tương ứng. Máy local đã có URI cho project hiện tại trong `backend/.env.vercel.local`, giữ ngoài Git. Dùng DB preview riêng để thử migration trước.
 5. Chạy migration và seed vào DB preview, tạo Preview Deployment từ source đã cập nhật.
 6. Kiểm tra `/api/health` trả JSON 200, `/api/crops` có 15 giống và `/api/farm` tạo Guest với cookie. API guard trả 503 nếu thiếu `DATABASE_URL`.
 7. Chạy trọn vòng mua, gieo, hái, bán, dọn, F5. Tạo tài khoản giữ tiến độ Guest, đăng nhập từ phiên khác, xem cư dân và thăm ruộng có Pet.
 8. Sau khi Preview đạt, sao lưu DB production, chạy migration và seed production rồi redeploy source đã duyệt. Đối chiếu lại health, đăng nhập, tiến độ và số lượng cư dân.
 
-Browser và API dùng chung domain. `/api/*` đi qua function `api/farmverse.ts`, bỏ prefix rồi gọi cùng Hono app với backend local. Danh mục 15 giống được đóng gói vào function. Node server local nằm ở `backend/src/index.ts`. Vercel nhận request qua export `fetch` trong function.
+Browser và API dùng chung domain. `/api/*` đi qua function `/api/farmverse`, bỏ prefix rồi gọi cùng Hono app với backend local. `tools/build-vercel.mjs` đóng gói entrypoint và danh mục 15 giống vào function. Node server local nằm ở `backend/src/index.ts`. Vercel nhận request qua export `fetch` trong function.
 
 ## Khôi phục và nghiệm thu
 
@@ -63,7 +63,7 @@ Giữ giá trị ruộng của vài tài khoản trước và sau để đối c
 
 Ngày 12/11/2026 đã chạy migrations 003–009 và seed lên Supabase. Kiểm tra được 6/6 bảng RLS bật, Data API không có quyền đọc/ghi các bảng Farm, 10 cư dân, 60 ô cây, 15 giống và ba loại Pet. Chạy lại seed tạo thêm 0 tài khoản. Đường Session pooler 5432 và Transaction pooler 6543 đều kết nối được bằng TLS.
 
-Adapter `api/farmverse.ts` đã được kiểm tra local với Supabase Transaction pooler, gồm health, 15 giống, cookie, mua hạt và đọc lại tiến độ trong DB. Bản public tại `https://farmverse-ml2a.vercel.app/api/health` và `/api/farm` còn trả 404 ở lượt kiểm tra trước deploy. Vercel cần source đã cập nhật và `DATABASE_URL`.
+Production `eca2944` trả 500 ở `/api/health` vì function thiếu `backend/src/app.ts` khi khởi động (BUG-36). Bản sửa đóng gói Hono và catalog vào cùng function. Gói chạy riêng với Supabase Transaction pooler trả health 200 và đủ 15 giống. Vercel hiện cấu hình `DATABASE_URL` cho Production. Preview thiếu biến này sẽ trả JSON 503.
 
 `backend/.env` vẫn trỏ PostgreSQL local. `backend/.env.migration.local` dùng Supabase Session pooler cho migration. `backend/.env.vercel.local` chứa biến runtime cần điền vào Vercel. Lượt migration này tạo schema và cư dân seed trên Supabase. Dữ liệu tài khoản và ruộng từ DB local nằm trong DB local cùng bản backup đã kiểm tra restore.
 

@@ -3,6 +3,7 @@ node_modules/
 vendor/
 
 # Build outputs
+/.vercel/
 /web/dist/
 /backend/dist/
 /backend/bin/
