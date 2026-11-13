@@ -10,7 +10,11 @@ import { createCommunity, createPlayerAvatar, playerPath } from './community.ts'
 import { createMissions } from './missions.ts';
 import { farmLoading } from './loading.ts';
 import { createFarmPet, loadPetSprites } from './pets.ts';
+import { inject } from '@vercel/analytics';
 import './style.css';
+
+// Initialize Vercel Web Analytics
+inject();
 
 const width = 800;
 const height = 600;
