@@ -1,5 +1,7 @@
 # FarmVerse — Gameplay
 
+**Tên tiếng Anh:** FarmVerse · **Tên tiếng Việt:** Nông Trại Mộng Mơ
+
 Vòng chơi hiện tại theo [FV-GAME-01](FARMVERSE_GAMEPLAY_AMENDMENT_01.md). Người chơi vào bằng Guest với 200 GOLD, 6 ô trống, cấp 1 và túi, kho trống.
 
 1. Mở Tiệm hạt, chọn một trong 15 giống và mua 1–99 hạt. Số GOLD cần trả bằng số lượng nhân giá mỗi hạt.
