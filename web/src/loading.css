@@ -14,6 +14,47 @@
 #farm-loading[hidden], #farm-loading [hidden] { display: none; }
 #farm-loading:not([hidden]) ~ main { visibility: hidden; }
 
+.farm-loading-field {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  width: min(90%, 62svh, 520px);
+  aspect-ratio: 2 / 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+.farm-loading-plot {
+  position: absolute;
+  left: var(--plot-x);
+  top: var(--plot-y);
+  width: 44%;
+  aspect-ratio: 560 / 313;
+  transform: translate(-50%, -50%);
+  background: url('/soil/web-raised-bed.png') center / contain no-repeat;
+}
+.farm-loading-plot:nth-child(1) { --plot-x: 40%; --plot-y: 24%; }
+.farm-loading-plot:nth-child(2) { --plot-x: 20%; --plot-y: 43%; }
+.farm-loading-plot:nth-child(3) { --plot-x: 60%; --plot-y: 43%; }
+.farm-loading-plot:nth-child(4) { --plot-x: 40%; --plot-y: 62%; }
+.farm-loading-plot:nth-child(5) { --plot-x: 80%; --plot-y: 62%; }
+.farm-loading-plot:nth-child(6) { --plot-x: 60%; --plot-y: 81%; }
+.farm-loading-plot img {
+  position: absolute;
+  bottom: 38%;
+  left: 50%;
+  width: 58%;
+  translate: -50% 0;
+  transform-origin: 50% 87%;
+  animation: farm-loading-breeze 3.8s ease-in-out infinite alternate;
+}
+.farm-loading-plot:nth-child(n+4) img { width: 90%; }
+.farm-loading-plot:nth-child(even) img { animation-delay: -1.5s; }
+.farm-loading-plot:nth-child(3n) img { animation-delay: -2.5s; }
+@keyframes farm-loading-breeze {
+  from { transform: rotate(-2deg); }
+  to { transform: rotate(2deg); }
+}
+
 .farm-loading-welcome {
   position: relative;
   box-sizing: border-box;
@@ -45,7 +86,9 @@
 #farm-loading-title {
   margin: 0;
   color: #254c32;
-  font: 700 clamp(1.55rem, 6vw, 2.25rem) / 1.14 Georgia, serif;
+  font: 950 clamp(1.45rem, 6vw, 2.2rem) / 1.14 'Arial Rounded MT Bold', 'Segoe UI', system-ui, sans-serif;
+  letter-spacing: -.025em;
+  text-shadow: 0 2px #e2ba77;
   text-wrap: balance;
 }
 #farm-loading-message {
@@ -101,11 +144,13 @@
 }
 @media (max-height: 440px) and (orientation: landscape) {
   #farm-loading { padding-bottom: max(18px, env(safe-area-inset-bottom)); }
+  .farm-loading-field { top: 56%; left: 33%; width: min(40%, 76svh); }
+  .farm-loading-welcome { justify-self: end; width: min(47%, 440px); }
   .farm-loading-welcome { margin-top: 52px; padding: 18px 22px 15px; }
   .farm-loading-dog { width: 86px; bottom: calc(100% - 17px); }
   #farm-loading-title { font-size: 1.6rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  #farm-loading-progress:indeterminate, .farm-loading-dog { animation: none; }
+  #farm-loading-progress:indeterminate, .farm-loading-dog, .farm-loading-plot img { animation: none; }
   #farm-loading-progress::-webkit-progress-value { transition: none; }
 }
