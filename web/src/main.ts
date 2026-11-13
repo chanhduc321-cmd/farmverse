@@ -30,14 +30,17 @@ const themes = [
 ];
 const asset = (path: string) => `/${path}`;
 
+const cropsWithProduce = new Set([1, 2, 3, 4, 5, 7, 8, 10, 11, 13, 14, 15, 16]);
+
 function cropArt(crop: Crop) {
   const dir = `crops/crop${crop.id}`;
   const frame = (number: number) => `${dir}/stage-${number}.png`;
   return {
     seed: `${dir}/seed.png`,
-    planted: `${dir}/planted.png`,
+    seedBag: `${dir}/seed_bag.png`,
+    planted: `${dir}/seed.png`,
     harvested: `${dir}/cron_end.png`,
-    produce: crop.id <= 4 ? `${dir}/produce.png` : frame(crop.readyFrame),
+    produce: cropsWithProduce.has(crop.id) ? `${dir}/produce.png` : frame(crop.readyFrame),
     frame,
   };
 }
@@ -1107,7 +1110,7 @@ function renderPanel(): void {
     const summary = activePanel === 'shop' ? `${crop.buyPrice} Gold/hạt · Cấp tham khảo ${crop.level}`
       : activePanel === 'bag' ? `Còn ${seeds} hạt` : `${produce} quả · ${crop.sellPrice} Gold/quả`;
     const { item, controls } = createInventoryCard(crop.name,
-      activePanel === 'warehouse' ? artPaths.produce : artPaths.seed, summary);
+      activePanel === 'warehouse' ? artPaths.produce : artPaths.seedBag, summary);
     if (activePanel === 'bag') {
       const action = document.createElement('button');
       action.type = 'button';
@@ -1596,10 +1599,10 @@ class FarmScene extends Phaser.Scene {
       .map(image => [image.src, image]));
     for (const crop of crops) {
       const art = cropArt(crop);
-      const seed = new Image();
-      seed.src = asset(art.seed);
-      interfaceImages.set(seed.src, seed);
-      if (crop.id <= 4) {
+      const seedBag = new Image();
+      seedBag.src = asset(art.seedBag);
+      interfaceImages.set(seedBag.src, seedBag);
+      if (cropsWithProduce.has(crop.id)) {
         const produce = new Image();
         produce.src = asset(art.produce);
         interfaceImages.set(produce.src, produce);

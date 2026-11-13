@@ -1,5 +1,5 @@
 cropId=5
-name=Khoai lang
+name=Khoai tây
 pic=seed.png
 stageCount=5
 unitTime=18
