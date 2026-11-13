@@ -106,7 +106,7 @@
     --loading-art: url('/background/loading-mobile.webp');
   }
   #farm-loading::after {
-    mask-image: linear-gradient(#000 0 calc(min(177.68vw, 100%) - 34px), transparent min(177.68vw, 100%));
+    mask-image: linear-gradient(#000 0 calc(min(180.3vw, 100%) - 34px), transparent min(180.3vw, 100%));
   }
 }
 @media (max-height: 440px) and (orientation: landscape) {
