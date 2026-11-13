@@ -1,5 +1,5 @@
 import { FERTILIZER_COST, ripeAt } from './farm.mts';
-import type { Crop, Farm, FarmMutation, Plot } from './farm.mts';
+import type { Crop, Farm, FarmBatchMutation, FarmMutation, Plot } from './farm.mts';
 import { claimMissionReward, recordCheckIn, recordMissionAction } from './progression.mts';
 
 export function createFarm(): Farm {
@@ -37,6 +37,24 @@ export function applyFarmAction(farm: Farm, action: FarmMutation, now: number, c
   recordMissionAction(farm, action, now);
   farm.revision++;
   return message;
+}
+
+export function applyFarmBatch(
+  farm: Farm,
+  batch: FarmBatchMutation,
+  now: number,
+  crops: readonly Crop[],
+  random = Math.random
+): string[] {
+  if (batch.expectedRevision !== farm.revision) throw new FarmError('Nông trại vừa thay đổi. Hãy thử lại.');
+  const draft = structuredClone(farm);
+  const messages: string[] = [];
+  for (const action of batch.actions) {
+    const mutation: FarmMutation = { ...action, expectedRevision: draft.revision };
+    messages.push(applyFarmAction(draft, mutation, now, crops, random));
+  }
+  Object.assign(farm, draft);
+  return messages;
 }
 
 function applyMutation(farm: Farm, action: FarmMutation, now: number, crops: readonly Crop[], random: () => number): string {

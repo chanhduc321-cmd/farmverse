@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
@@ -11,8 +11,8 @@ import { accountLifetimeSeconds, findAccountSession, hashToken, loginAccount, lo
 import { activityRoutes } from './activity-routes.ts';
 import { crops } from './catalog.ts';
 import { communityRoutes } from './community-routes.ts';
-import { FarmError, parseAction } from './farm.ts';
-import { checkFarmStorage, farmStorageMode, FarmStorageError, mutateFarm, readFarm, registerFarm, requestMerchant } from './farm-store.ts';
+import { FarmError, parseAction, parseBatch } from './farm.ts';
+import { checkFarmStorage, farmStorageMode, FarmStorageError, mutateFarm, mutateFarmBatch, readFarm, registerFarm, requestMerchant } from './farm-store.ts';
 import type { MerchantAction } from './merchant.ts';
 
 const app = new Hono();
@@ -55,8 +55,12 @@ function setSessionCookie(context: Context, name: string, value: string, maxAge?
   });
 }
 
-function sessionResponse(farm: Farm, username?: string): FarmSessionResponse {
-  return { farm, serverTime: Date.now(), accountsAvailable, account: username ? { username } : null };
+function farmSessionKey(kind: 'account' | 'guest', identity: string): string {
+  return createHash('sha256').update(`${kind}:${identity}`).digest('hex');
+}
+
+function sessionResponse(farm: Farm, sessionKey: string, username?: string): FarmSessionResponse {
+  return { farm, serverTime: Date.now(), accountsAvailable, account: username ? { username } : null, sessionKey };
 }
 
 function isJson(context: Context): boolean {
@@ -119,18 +123,19 @@ app.get(FARM_API.read.path, async (context) => {
   if (tokenHash) {
     const account = await findAccountSession(tokenHash);
     const farm = account ? await readFarm(account.farm_id, true) : undefined;
-    if (farm && account) return context.json(sessionResponse(farm, account.username));
+    if (farm && account) return context.json(sessionResponse(farm, farmSessionKey('account', tokenHash), account.username));
   }
   if (accountsAvailable && token !== undefined) setSessionCookie(context, accountCookie, '', 0);
 
   const cookie = guestId(context);
-  let farm = cookie ? await readFarm(cookie) : undefined;
-  if (!farm) {
-    const id = randomUUID();
-    farm = await registerFarm(id);
-    setSessionCookie(context, guestCookie, id, accountsAvailable ? accountLifetimeSeconds : undefined);
+  if (cookie) {
+    const farm = await readFarm(cookie);
+    if (farm) return context.json(sessionResponse(farm, farmSessionKey('guest', cookie)));
   }
-  return context.json(sessionResponse(farm));
+  const id = randomUUID();
+  const farm = await registerFarm(id);
+  setSessionCookie(context, guestCookie, id, accountsAvailable ? accountLifetimeSeconds : undefined);
+  return context.json(sessionResponse(farm, farmSessionKey('guest', id)));
 });
 
 app.use('/account/*', bodyLimit({
@@ -178,7 +183,8 @@ for (const type of ['register', 'login'] as const) {
       }
       setSessionCookie(context, accountCookie, result.token, accountLifetimeSeconds);
       if (guest) setSessionCookie(context, guestCookie, '', 0);
-      return context.json(sessionResponse(result.farm, result.username), type === 'register' ? 201 : 200);
+      const sessionKey = farmSessionKey('account', hashToken(result.token));
+      return context.json(sessionResponse(result.farm, sessionKey, result.username), type === 'register' ? 201 : 200);
     } finally {
       activeCredentialRequests -= 1;
     }
@@ -190,6 +196,27 @@ app.post(ACCOUNT_API.logout.path, async (context) => {
   if (tokenHash) await logoutAccount(tokenHash);
   setSessionCookie(context, accountCookie, '', 0);
   return context.body(null, 204);
+});
+
+app.post(FARM_API.batch.path, bodyLimit({
+  maxSize: 4_096,
+  onError: (context) => context.json({ error: 'Yêu cầu đồng bộ quá dài.' }, 413),
+}), async (context) => {
+  if (!isJson(context)) return context.json({ error: 'Thao tác không hợp lệ.' }, 400);
+  const body = await context.req.json().catch(() => null) as { sessionKey?: unknown } | null;
+  const batch = parseBatch(body);
+  if (!batch || typeof body?.sessionKey !== 'string' || !tokenPattern.test(body.sessionKey)) {
+    return context.json({ error: 'Thao tác không hợp lệ.' }, 400);
+  }
+  const session = await farmSession(context);
+  if (!session) return context.json({ error: 'Phiên chơi đã hết. Hãy tải lại trang.' }, 401);
+  const sessionKey = session.tokenHash ? farmSessionKey('account', session.tokenHash) : farmSessionKey('guest', session.id);
+  if (body.sessionKey !== sessionKey) {
+    return context.json({ error: 'Phiên chơi đã thay đổi. Hãy thử lại.' }, 401);
+  }
+  const result = await mutateFarmBatch(session.id, batch, session.tokenHash);
+  if (!result) return context.json({ error: 'Phiên chơi đã hết. Hãy tải lại trang.' }, 401);
+  return context.json(result);
 });
 
 for (const type of ['buy', 'buyFertilizer', 'sell', 'plant', 'harvest', 'clear', 'water', 'fertilize', 'theme', 'claimMission', 'checkIn', 'selectPet'] as const) {

@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { ripeAt, stageAt } from '../../shared/farm.mts';
 import { ripeYield } from '../../shared/farm-rules.mts';
 import { crops } from '../src/catalog.ts';
-import { applyAction, createFarm, parseAction } from '../src/farm.ts';
+import { applyAction, applyBatch, createFarm, parseAction, parseBatch } from '../src/farm.ts';
 
 test('Pet selection validates species and uses the Farm revision', () => {
   const farm = createFarm();
@@ -170,4 +170,74 @@ test('fertilizer orders validate quantity and change stock and Gold once', () =>
   assert.equal(farm.fertilizer, 2);
   assert.equal(farm.gold, 190);
   assert.equal(farm.revision, 1);
+});
+
+test('batch actions validate batch schema and execute sequentially in one atomic flow', () => {
+  const farm = createFarm();
+  assert.equal(parseBatch({ expectedRevision: -1, actions: [] }), undefined);
+  assert.equal(parseBatch({ expectedRevision: 0, actions: [] }), undefined);
+  assert.equal(parseBatch({ expectedRevision: 0, actions: [{ type: 'invalid' }] }), undefined);
+  assert.equal(parseBatch({ expectedRevision: 0, actions: [{ type: 'invalid', plot: 0 }] }), undefined);
+  assert.equal(parseBatch({ expectedRevision: 0, actions: Array.from({ length: 21 }, () => ({ type: 'theme' })) }), undefined);
+
+  // Valid batch: buy seeds, plant plot 0, plant plot 1
+  const rawBatch = {
+    expectedRevision: 0,
+    actions: [
+      { type: 'buy', cropId: 1, quantity: 2 },
+      { type: 'plant', plot: 0, cropId: 1 },
+      { type: 'plant', plot: 1, cropId: 1 },
+    ],
+  };
+  const batch = parseBatch(rawBatch)!;
+  assert.ok(batch);
+  assert.equal(batch.actions.length, 3);
+
+  const messages = applyBatch(farm, batch, 0);
+  assert.equal(messages.length, 3);
+  assert.equal(farm.revision, 3);
+  assert.equal(farm.gold, 180);
+  assert.equal(farm.seeds[1], 0);
+  assert.ok(farm.plots[0]);
+  assert.ok(farm.plots[1]);
+
+  // Re-applying with old revision fails
+  assert.throws(() => applyBatch(farm, batch, 0), /vừa thay đổi/);
+
+  const before = structuredClone(farm);
+  const invalidBatch = parseBatch({
+    expectedRevision: farm.revision,
+    actions: [
+      { type: 'buy', cropId: 1, quantity: 1 },
+      { type: 'plant', plot: 2, cropId: 2 },
+    ],
+  })!;
+  assert.throws(() => applyBatch(farm, invalidBatch, 0), /hết hạt/);
+  assert.deepEqual(farm, before);
+});
+
+test('batch uses server planting time and enforces the same harvest and care rules', () => {
+  const farm = createFarm();
+  const now = 60_000;
+  const plant = { type: 'plant', plot: 0, cropId: 1, plantedAt: 1 } as const;
+  const buy = { type: 'buy', cropId: 1, quantity: 1 } as const;
+  assert.deepEqual(parseAction('plant', { ...plant, expectedRevision: 0 }),
+    { type: 'plant', plot: 0, cropId: 1, expectedRevision: 0 });
+  assert.throws(() => applyBatch(farm, parseBatch({
+    expectedRevision: 0, actions: [buy, plant, { type: 'harvest', plot: 0 }],
+  })!, now), /chưa chín/);
+  assert.deepEqual(farm, createFarm());
+
+  applyBatch(farm, parseBatch({ expectedRevision: 0, actions: [buy, plant] })!, now);
+  assert.equal(farm.plots[0]?.plantedAt, now);
+  assert.throws(() => applyBatch(farm, {
+    expectedRevision: 2, actions: [{ type: 'harvest', plot: 0 }],
+  }, now + 29_000), /chưa chín/);
+  assert.throws(() => applyBatch(farm, {
+    expectedRevision: 2, actions: [{ type: 'water', plot: 0 }],
+  }, now + 30_000), /đã chín/);
+
+  applyBatch(farm, { expectedRevision: 2, actions: [{ type: 'harvest', plot: 0 }] }, now + 30_000);
+  assert.equal(farm.plots[0]?.harvested, true);
+  assert.equal(farm.revision, 3);
 });

@@ -8,6 +8,7 @@ Lượt sửa T-41 ngày 12/11: Codex giữ backend/community, activity, migrati
 
 ## Mốc làm việc
 
+- Batch Action Sync — Đã nghiệm thu bản tích hợp dựa trên `develop` tại `86bfc94`. Gom gieo, mua hạt, mua phân và bán nông sản, tối đa 20 thao tác mỗi request và gửi tuần tự. Chromium kiểm tra 200 lượt mua bán gửi 10 request, lưu đúng Gold và Kho sau tải lại, thử lại sau 429 và đóng Tiệm hạt trong hướng dẫn sau khi lưu. Build, typecheck và 33 test backend với PostgreSQL riêng đạt. BUG-43–BUG-48 FIXED.
 - Đợt T-49–T-54 ngày 13/11 bắt đầu từ `origin/develop` tại `0885198`. Codex giữ phần API, điểm nối `main.ts` và dashboard. Antigravity nhận UI và Pet theo [brief bàn giao](docs/agents/handoff-farm-engagement.md).
 - Bản ưu tiên đã được tích hợp vào `develop` ở `9adb2e3`. Lead và owner chốt mốc Git trước khi sửa song song. Các nhánh dưới đây là tên dự kiến.
 - Web mở ruộng qua API và báo lỗi cùng nút Thử lại khi kết nối thất bại. Chế độ demo offline đã gỡ theo T-48.

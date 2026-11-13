@@ -1,7 +1,7 @@
 import pg from 'pg';
 import type { PoolClient, QueryResultRow } from 'pg';
-import type { Farm, FarmMutation, FarmResponse } from '../../shared/farm.mts';
-import { applyAction, createFarm, FarmError } from './farm.ts';
+import type { Farm, FarmBatchMutation, FarmMutation, FarmResponse } from '../../shared/farm.mts';
+import { applyAction, applyBatch, createFarm, FarmError } from './farm.ts';
 import { createMerchant, resolveMerchant } from './merchant.ts';
 import type { MerchantAction, MerchantResult, MerchantState } from './merchant.ts';
 
@@ -80,14 +80,26 @@ export async function registerFarm(id: string): Promise<Farm> {
   return farm;
 }
 
-export async function mutateFarm(id: string, action: FarmMutation, tokenHash?: string): Promise<FarmResponse | undefined> {
+export function mutateFarm(id: string, action: FarmMutation, tokenHash?: string): Promise<FarmResponse | undefined> {
+  return updateFarm(id, tokenHash, (farm, now) => applyAction(farm, action, now));
+}
+
+export function mutateFarmBatch(id: string, batch: FarmBatchMutation, tokenHash?: string): Promise<FarmResponse | undefined> {
+  return updateFarm(id, tokenHash, (farm, now) => applyBatch(farm, batch, now).at(-1));
+}
+
+async function updateFarm(
+  id: string,
+  tokenHash: string | undefined,
+  apply: (farm: Farm, now: number) => string | undefined,
+): Promise<FarmResponse | undefined> {
   const farm = await readFarm(id, tokenHash !== undefined);
   if (!farm) return;
   const revision = farm.revision;
   const now = Date.now();
-  const message = applyAction(farm, action, now);
+  const message = apply(farm, now);
   if (farm.revision !== revision) {
-    // Compare revisions at the write so concurrent requests cannot both commit.
+    // A single revision-checked write commits the complete batch across API instances.
     const result = await queryFarmDatabase(`
       UPDATE farm_guest_progress
       SET state = $2
