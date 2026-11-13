@@ -39,19 +39,6 @@
   text-align: center;
   box-sizing: border-box;
 }
-.farm-loading-dog {
-  width: 86px;
-  margin: 0 auto 2px;
-  aspect-ratio: 1;
-  background: url('/pets/dog/dog-idle.png') 0 0 / 700% 100% no-repeat;
-  filter: drop-shadow(0 3px 2px #27321550);
-  animation: farm-loading-blink 4s steps(6, end) infinite;
-}
-@keyframes farm-loading-blink {
-  0%, 80% { background-position-x: 0%; }
-  96%, 100% { background-position-x: 100%; }
-}
-
 #farm-loading-title {
   margin: 0;
   color: #fff5da;
@@ -130,10 +117,9 @@
     mask-image: linear-gradient(to right, #000 76%, transparent 86%);
   }
   .farm-loading-welcome { justify-self: end; width: min(32%, 270px); }
-  .farm-loading-dog { width: 70px; }
   #farm-loading-title { font-size: clamp(.95rem, 2.35vw, 1.3rem); }
 }
 @media (prefers-reduced-motion: reduce) {
-  #farm-loading-progress:indeterminate, .farm-loading-dog { animation: none; }
+  #farm-loading-progress:indeterminate { animation: none; }
   #farm-loading-progress::-webkit-progress-value { transition: none; }
 }
