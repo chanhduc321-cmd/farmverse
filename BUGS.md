@@ -52,6 +52,8 @@ Codex ghi lỗi đã tái hiện, kết quả kiểm tra và người xử lý d
 | BUG-38 | P3 | Bấm bước nhiệm vụ không mở nơi thực hiện | Codex | MEDIUM | FIXED | T-53 · `4a01279` ghép thử trên develop · `web/src/main.ts` | Mở Nhiệm vụ, Tab tới Mua hạt ở Tiệm hạt rồi nhấn Enter. | Đã nối điều hướng trong `main.ts`. Chromium desktop và mobile với PostgreSQL chạy đủ mua, gieo, hái và bán qua checklist, gồm Enter và Space. | Chuột và bàn phím đóng bảng rồi mở đúng Tiệm hạt, Túi, ô đất hoặc Kho theo bước khả dụng. |
 | BUG-39 | P3 | Kiểm thử Farm còn dùng giới hạn 15 giống | Codex | MEDIUM | FIXED | Develop `4cc9212` · `backend/test/farm.test.ts` | Chạy `node --import tsx --test test/farm.test.ts` trong backend. | Cập nhật mốc chín Hoa mai và kiểm tra chấp nhận ID 16, từ chối ID 17. Toàn bộ 22 test backend đạt. | Đồng bộ kỳ vọng và ca ngoài biên theo danh mục đã duyệt, kiểm tra đủ mốc tăng trưởng và chạy lại bộ test. |
 
+| BUG-40 | P1 | Guest có thể hết Gold trước khi mua hạt đầu tiên | Codex | HIGH | OPEN | Develop `4cc9212` · T-34/T-47 | Vào Guest mới và mua 40 bịch phân với giá 5 Gold/bịch. Thử mua một hạt Dâu tây. | Đã tái hiện qua API với PostgreSQL riêng. Số dư về 0, túi hạt và kho trống, mua Dâu tây trả 409. Điểm danh ngày đầu chỉ tăng lên 5 Gold, thấp hơn giá hạt rẻ nhất là 10 Gold. | Chốt cách phục hồi cùng chủ dự án. Kiểm tra người chơi có thể gieo lại trong cùng phiên với 0 Gold, không có hạt, nông sản hoặc cây. Kiểm tra thao tác lặp và gửi đồng thời. |
+
 ## Trạng thái
 
 - **OPEN** — Đã tái hiện, chờ xử lý.

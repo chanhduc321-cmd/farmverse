@@ -551,6 +551,18 @@
     "repro": "Chạy node --import tsx --test test/farm.test.ts trong backend.",
     "actual": "Cập nhật mốc chín Hoa mai và kiểm tra chấp nhận ID 16, từ chối ID 17. Toàn bộ 22 test backend đạt.",
     "expected": "Đồng bộ kỳ vọng và ca ngoài biên theo danh mục đã duyệt, kiểm tra đủ mốc tăng trưởng và chạy lại bộ test."
+  },
+  {
+    "id": "BUG-40",
+    "phase": "P1",
+    "title": "Guest có thể hết Gold trước khi mua hạt đầu tiên",
+    "owner": "Codex",
+    "severity": "HIGH",
+    "status": "OPEN",
+    "foundIn": "Develop 4cc9212 · T-34/T-47",
+    "repro": "Vào Guest mới và mua 40 bịch phân với giá 5 Gold/bịch. Thử mua một hạt Dâu tây.",
+    "actual": "Đã tái hiện qua API với PostgreSQL riêng. Số dư về 0, túi hạt và kho trống, mua Dâu tây trả 409. Điểm danh ngày đầu chỉ tăng lên 5 Gold, thấp hơn giá hạt rẻ nhất là 10 Gold.",
+    "expected": "Chốt cách phục hồi cùng chủ dự án. Kiểm tra người chơi có thể gieo lại trong cùng phiên với 0 Gold, không có hạt, nông sản hoặc cây. Kiểm tra thao tác lặp và gửi đồng thời."
   }
 ]
 </script>
