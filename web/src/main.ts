@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import { ACCOUNT_API, FARM_API, FERTILIZER_COST, ripeAt, stageAt } from '../../shared/farm.mts';
 import type { Crop, FarmAction, FarmMutation, FarmResponse, FarmSessionResponse, Plot } from '../../shared/farm.mts';
 import { createActivity } from './activity.ts';
+import { initAnalytics, trackEvent } from './analytics.ts';
+import { farmActionEvent } from './analytics-events.ts';
 import { COMMUNITY_API } from '../../shared/community.mts';
 import type { FarmVisit, PlayerPage, StealResponse } from '../../shared/community.mts';
 import { createCommunity, createPlayerAvatar, playerPath } from './community.ts';
@@ -660,6 +662,7 @@ function updateGuidedTour(): void {
   const produce = Object.values(snapshot.farm.produce).reduce((sum, count) => sum + count, 0);
   if (produce > 0) guideHadProduce = true;
   if (guideHadProduce && produce === 0) {
+    trackEvent('tutorial_complete');
     finishGuidedTour();
     return;
   }
@@ -729,7 +732,10 @@ function updateGuidedTour(): void {
   positionGuide(spotlight);
 }
 
-guideSkip.onclick = finishGuidedTour;
+guideSkip.onclick = () => {
+  trackEvent('tutorial_skip');
+  finishGuidedTour();
+};
 dialog.addEventListener('close', () => {
   if (guideActive && guidedPanel && !guidePanelCompleted) finishGuidedTour();
   guidedPanel = undefined;
@@ -1007,6 +1013,8 @@ async function send(action: FarmAction): Promise<FarmResponse | undefined> {
     const mutation: FarmMutation = { ...action, expectedRevision: snapshot.farm.revision };
     const result = await request<FarmResponse>(FARM_API[action.type].path, mutation);
     setSnapshot(result);
+    const event = farmActionEvent(action);
+    trackEvent(event.name, event.params);
     if (result.message) {
       setFeedback(result.message, 'success');
       if (dialog.open) {
@@ -1311,6 +1319,7 @@ function attachControls(scene: FarmScene): void {
     try {
       const res = await request<FarmSessionResponse>(ACCOUNT_API.register.path, { username, password });
       setSnapshot(res);
+      trackEvent('sign_up', { method: 'password' });
       formRegister.reset();
       setFeedback(`Tài khoản ${res.account?.username ?? username} đã được tạo và lưu trữ nông trại!`, 'success');
       accountDialog.close();
@@ -1344,6 +1353,7 @@ function attachControls(scene: FarmScene): void {
     try {
       const res = await request<FarmSessionResponse>(ACCOUNT_API.login.path, { username, password });
       setSnapshot(res);
+      trackEvent('login', { method: 'password' });
       formLogin.reset();
       setFeedback(`Chào mừng ${res.account?.username ?? username} trở lại nông trại!`, 'success');
       accountDialog.close();
@@ -1360,6 +1370,7 @@ function attachControls(scene: FarmScene): void {
     setAccountBusy(true, 'Đang đăng xuất...');
     try {
       await request<void>(ACCOUNT_API.logout.path, {});
+      trackEvent('logout');
       session = undefined;
       sessionSynchronized = false;
       updateCommunityAccess();
@@ -1453,6 +1464,7 @@ function attachControls(scene: FarmScene): void {
             const result = await request<StealResponse>(playerPath(COMMUNITY_API.steal, currentVisit.username), action);
             setSnapshot(result);
             setVisit(result.visit);
+            trackEvent('farm_steal', { blocked: Boolean(result.blocked) });
             if (result.blocked) {
               setFeedback('Pet giữ nhà đã chặn! Bạn chưa lấy được quả.', 'warning');
               scene.playPetGuard();
@@ -1634,7 +1646,9 @@ class FarmScene extends Phaser.Scene {
       this.ready = true;
       this.game.events.once(Phaser.Core.Events.POST_RENDER, () => {
         farmLoading.finish();
-        if (!farmLoading.failed) activity.start();
+        if (farmLoading.failed) return;
+        trackEvent('game_boot', { load_ms: Math.round(performance.now()) });
+        activity.start();
       });
     }).catch(error => {
       console.error('Không mở được cảnh nông trại:', error);
@@ -2253,7 +2267,11 @@ const community = createCommunity({
     const params = new URLSearchParams({ list, q: query, offset: String(offset) });
     return request<PlayerPage>(`${COMMUNITY_API.players}?${params}`);
   },
-  visitFarm: readVisit,
+  visitFarm: async username => {
+    const farmVisit = await readVisit(username);
+    trackEvent('farm_visit');
+    return farmVisit;
+  },
   openVisit: setVisit,
   refreshSession: refreshCommunitySession,
   signIn: () => {
@@ -2300,6 +2318,7 @@ const activity = createActivity({
       summary.recentStolenFruit > 0 ? 'warning' : 'info', 4500);
   },
 });
+initAnalytics();
 farmLoading.start();
 void start().catch(error => {
   console.error('Không khởi động được nông trại:', error);

@@ -1,3 +1,5 @@
+import { trackEvent } from './analytics.ts';
+
 const screen = document.querySelector<HTMLElement>('#farm-loading')!;
 const main = document.querySelector<HTMLElement>('main')!;
 const message = document.querySelector<HTMLElement>('#farm-loading-message')!;
@@ -14,6 +16,7 @@ retry.onclick = () => location.reload();
 function fail(reason: string): void {
   if (failed || screen.hidden) return;
   failed = true;
+  trackEvent('game_boot_failed');
   clearTimeout(deadline);
   message.textContent = reason;
   progress.hidden = true;
