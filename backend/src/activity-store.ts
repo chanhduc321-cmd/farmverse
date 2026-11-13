@@ -106,7 +106,10 @@ export async function getActivityPage(
     FROM farm_activities a
     JOIN farm_accounts v ON v.farm_id = a.visitor_id
     JOIN farm_accounts h ON h.farm_id = a.host_id
-    WHERE a.host_id = $1 AND ($4::bigint IS NULL OR a.id <= $4)
+    WHERE a.host_id = $1 AND ($4::bigint IS NULL OR (a.created_at, a.id) <= (
+      SELECT anchor.created_at, anchor.id FROM farm_activities AS anchor
+      WHERE anchor.id = $4 AND anchor.host_id = $1
+    ))
     ORDER BY a.created_at DESC, a.id DESC
     LIMIT $2 OFFSET $3
   `, [hostId, limit + 1, offset, through ?? null]);
@@ -143,6 +146,20 @@ export async function getActivityPage(
   };
 }
 
+export async function getActivityVersion(hostId: string): Promise<{ last_read_at: string; newest_id: string | null } | undefined> {
+  const { rows: [version] } = await queryFarmDatabase<{ last_read_at: string; newest_id: string | null }>(`
+    SELECT last_activity_read_at::text AS last_read_at, (
+      SELECT id::text FROM farm_activities
+      WHERE host_id = host.farm_id
+      ORDER BY created_at DESC, id DESC
+      LIMIT 1
+    ) AS newest_id
+    FROM farm_accounts AS host
+    WHERE farm_id = $1
+  `, [hostId]);
+  return version;
+}
+
 export async function markActivitiesRead(hostId: string, through: string): Promise<void> {
   await queryFarmDatabase(`
     UPDATE farm_accounts AS host
@@ -150,4 +167,15 @@ export async function markActivitiesRead(hostId: string, through: string): Promi
     FROM farm_activities AS event
     WHERE host.farm_id = $1 AND event.host_id = host.farm_id AND event.id = $2
   `, [hostId, through]);
+}
+
+export async function countUnreadActivities(hostId: string): Promise<number> {
+  const { rows: [result] } = await queryFarmDatabase<{ count: string }>(`
+    SELECT COUNT(*)::text AS count
+    FROM farm_accounts AS host
+    JOIN farm_activities AS event ON event.host_id = host.farm_id
+      AND event.created_at > host.last_activity_read_at
+    WHERE host.farm_id = $1
+  `, [hostId]);
+  return Number(result.count);
 }

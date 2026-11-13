@@ -1,9 +1,10 @@
+import { createHash } from 'node:crypto';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { ACTIVITY_API } from '../../shared/activity.mts';
-import { getActivityPage, markActivitiesRead } from './activity-store.ts';
+import { countUnreadActivities, getActivityPage, getActivityVersion, markActivitiesRead } from './activity-store.ts';
 
-interface AccountSession { id: string; tokenHash: string }
+interface AccountSession { id: string; username: string }
 
 function isActivityId(value: unknown): value is string {
   return typeof value === 'string' && /^[1-9][0-9]{0,18}$/.test(value) && BigInt(value) <= 9_223_372_036_854_775_807n;
@@ -13,8 +14,13 @@ export function activityRoutes(sessionFor: (context: Context) => Promise<Account
   const routes = new Hono<{ Variables: { session: AccountSession } }>();
 
   routes.use('/activity*', async (context, next) => {
+    context.header('Cache-Control', 'private, no-store');
     const session = await sessionFor(context);
     if (!session) return context.json({ error: 'Hãy đăng nhập để xem nhật ký.' }, 401);
+    const expectedAccount = context.req.header('X-Farm-Account');
+    if (expectedAccount !== undefined && expectedAccount !== session.username) {
+      return context.json({ error: 'Phiên nông trại đã thay đổi. Hãy tải lại trang.' }, 401);
+    }
     context.set('session', session);
     await next();
   });
@@ -28,6 +34,19 @@ export function activityRoutes(sessionFor: (context: Context) => Promise<Account
       return context.json({ error: 'Trang nhật ký không hợp lệ.' }, 400);
     }
     const hostId = context.get('session').id;
+    if (offset === 0 && through === undefined) {
+      const version = await getActivityVersion(hostId);
+      if (!version) return context.json({ error: 'Hãy đăng nhập để xem nhật ký.' }, 401);
+      const hash = createHash('sha256')
+        .update(JSON.stringify([hostId, limit, version.newest_id, version.last_read_at]))
+        .digest('base64url');
+      const etag = `"${hash}"`;
+      context.header('ETag', etag);
+      const validators = context.req.header('If-None-Match')?.split(',') ?? [];
+      if (validators.some(value => ['*', etag, `W/${etag}`].includes(value.trim()))) {
+        return context.body(null, 304);
+      }
+    }
     const page = await getActivityPage(hostId, offset, limit, through);
     return context.json(page);
   });
@@ -41,7 +60,7 @@ export function activityRoutes(sessionFor: (context: Context) => Promise<Account
     if (!isActivityId(body?.through)) return context.json({ error: 'Thiếu mốc đã đọc.' }, 400);
     const hostId = context.get('session').id;
     await markActivitiesRead(hostId, body.through);
-    const { unreadCount } = await getActivityPage(hostId, 0, 1);
+    const unreadCount = await countUnreadActivities(hostId);
     return context.json({ ok: true, unreadCount });
   });
 
