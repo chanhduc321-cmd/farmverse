@@ -1798,7 +1798,8 @@ class FarmScene extends Phaser.Scene {
     if (reduceMotion.matches) return;
     const [x, y] = positions[index];
     const plot = visit?.plots[index] ?? snapshot?.farm.plots[index];
-    const targetScale = plot ? getCropScale(plot.cropId) : cropScale;
+    const stage = plot ? stageAt(crops[plot.cropId - 1], plot, farmTime()) : 1;
+    const targetScale = plot ? (stage === 0 ? .85 : getCropScale(plot.cropId)) : cropScale;
 
     if (type === 'water') {
       this.spawnRing(x, y, 0x7bdcf5, 1.5, 400);
@@ -2151,7 +2152,7 @@ class FarmScene extends Phaser.Scene {
       const crop = crops[plot.cropId - 1];
       const stage = stageAt(crop, plot, now);
       const frame = `crop-${crop.id}-${plot.harvested ? 'end' : stage}`;
-      const targetScale = getCropScale(crop.id);
+      const targetScale = stage === 0 ? .85 : getCropScale(crop.id);
       if (visual.plant.texture.key !== frame) {
         visual.plant.setTexture(frame);
         if (animateStage && wasVisible && !reduceMotion.matches) {
