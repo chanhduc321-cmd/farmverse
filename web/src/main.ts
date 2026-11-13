@@ -153,7 +153,7 @@ const visitHud = document.createElement('header');
 visitHud.id = 'visit-hud';
 visitHud.hidden = true;
 visitHud.innerHTML = `
-  <img class="visit-avatar" src="/face/1-1.GIF" alt="">
+  <img class="visit-avatar" src="/face/face_1.png" alt="">
   <h2></h2>
   <button type="button" data-visit-refresh aria-label="Làm mới ruộng" title="Làm mới ruộng">↻</button>
   <button type="button" data-visit-exit aria-label="Về ruộng mình" title="Về ruộng mình"><img src="/icon/topbutton%20(8).png" alt=""><span>Về nhà</span></button>
