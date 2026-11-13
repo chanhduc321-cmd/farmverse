@@ -35,7 +35,7 @@ function cropArt(crop: Crop) {
   const dir = `crops/crop${crop.id}`;
   const frame = (number: number) => `${dir}/stage-${number}.png`;
   return {
-    seed: `${dir}/seed_bag.png`,
+    seed: `${dir}/seed.png`,
     seedBag: `${dir}/seed_bag.png`,
     planted: `${dir}/planted.png`,
     harvested: `${dir}/cron_end.png`,
