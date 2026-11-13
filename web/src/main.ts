@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { inject } from '@vercel/analytics';
 import { ACCOUNT_API, FARM_API, FERTILIZER_COST, ripeAt, stageAt } from '../../shared/farm.mts';
 import type { Crop, FarmAction, FarmMutation, FarmResponse, FarmSessionResponse, Plot } from '../../shared/farm.mts';
 import { createActivity } from './activity.ts';
@@ -11,6 +12,9 @@ import { createMissions } from './missions.ts';
 import { farmLoading } from './loading.ts';
 import { createFarmPet, loadPetSprites } from './pets.ts';
 import './style.css';
+
+// Initialize Vercel Web Analytics
+inject();
 
 const width = 800;
 const height = 600;
