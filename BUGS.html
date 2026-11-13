@@ -527,6 +527,30 @@
     "repro": "Sắp nhật ký theo thời gian, thêm một sự kiện có ID lớn hơn nhưng giờ cũ hơn rồi bấm Xem thêm. Bộ lọc ID cũ bỏ qua bản ghi hợp lệ.",
     "actual": "dddece6 dùng cùng cặp thời gian và ID cho lọc và sắp xếp.",
     "expected": "Test PostgreSQL đọc đúng sự kiện lùi ngày. Chromium tải 20/22 sự kiện, thêm lượt mới rồi mở trang sau vẫn thấy đủ 22 và lượt mới còn chưa đọc."
+  },
+  {
+    "id": "BUG-38",
+    "phase": "P3",
+    "title": "Bấm bước nhiệm vụ không mở nơi thực hiện",
+    "owner": "Codex",
+    "severity": "MEDIUM",
+    "status": "FIXED",
+    "foundIn": "T-53 · 4a01279 ghép thử trên develop · web/src/main.ts",
+    "repro": "Mở Nhiệm vụ, Tab tới Mua hạt ở Tiệm hạt rồi nhấn Enter.",
+    "actual": "Đã nối điều hướng trong main.ts. Chromium desktop và mobile với PostgreSQL chạy đủ mua, gieo, hái và bán qua checklist, gồm Enter và Space.",
+    "expected": "Chuột và bàn phím đóng bảng rồi mở đúng Tiệm hạt, Túi, ô đất hoặc Kho theo bước khả dụng."
+  },
+  {
+    "id": "BUG-39",
+    "phase": "P3",
+    "title": "Kiểm thử Farm còn dùng giới hạn 15 giống",
+    "owner": "Codex",
+    "severity": "MEDIUM",
+    "status": "FIXED",
+    "foundIn": "Develop 4cc9212 · backend/test/farm.test.ts",
+    "repro": "Chạy node --import tsx --test test/farm.test.ts trong backend.",
+    "actual": "Cập nhật mốc chín Hoa mai và kiểm tra chấp nhận ID 16, từ chối ID 17. Toàn bộ 22 test backend đạt.",
+    "expected": "Đồng bộ kỳ vọng và ca ngoài biên theo danh mục đã duyệt, kiểm tra đủ mốc tăng trưởng và chạy lại bộ test."
   }
 ]
 </script>

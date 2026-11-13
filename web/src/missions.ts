@@ -195,7 +195,7 @@ export function createMissions(
         iconSrc = '/icon/fertilizer-sack.png';
         rewardText = `+${item.reward.amount} Phân`;
       } else if (item.reward.type === 'seed') {
-        iconSrc = `/crops/crop${item.reward.cropId}/seed.png`;
+        iconSrc = `/crops/crop${item.reward.cropId}/seed_bag.png`;
         rewardText = `+${item.reward.amount} Hạt dâu`;
       }
 

@@ -283,9 +283,9 @@
     "title": "[task] Mở nhật ký từ trang đã tải",
     "owner": "Antigravity",
     "scope": "Antigravity giữ markup và CSS của nhật ký. Codex giữ tải dữ liệu, đánh dấu đã đọc và phân trang.",
-    "branch": "feat/farm-engagement-polish",
-    "status": "TODO",
-    "dependsOn": "T-49 cho tích hợp.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Tích hợp từ 38b9de5. Chromium ba kích thước với PostgreSQL xác nhận mở từ cache, phân trang 20/21 sự kiện, hiện nút cập nhật khi có hoạt động Pet chặn và chỉ đánh dấu sau khi danh sách mới hiện.",
     "acceptance": "Mở lại không gọi GET trang đầu. Có sự kiện mới thì báo ở HUD, báo một lần cho cùng mốc sự kiện. Khi đang đọc, có nút cập nhật danh sách. Chỉ đánh dấu đến sự kiện đã hiển thị, giữ phân trang."
   },
   {
@@ -307,9 +307,9 @@
     "title": "[task] Hiển thị lịch quà",
     "owner": "Antigravity",
     "scope": "web/src/missions.ts, web/src/missions.css.",
-    "branch": "feat/farm-engagement-polish",
-    "status": "TODO",
-    "dependsOn": "T-51 đã sẵn sàng, dùng missionStatus(farm, now).attendanceDays.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Tích hợp từ 4a01279. Đã dùng ảnh túi hạt cho quà hạt dâu. Chromium ba kích thước với PostgreSQL xác nhận lịch đủ 7 ngày, quà ngày 7 và nhận quà ngày 1 cập nhật HUD, khóa nút.",
     "acceptance": "Bảy ô ghi rõ quà và trạng thái, phân biệt hôm nay và ngày 7. HUD và ô quà cập nhật sau response. Kiểm tra desktop và mobile."
   },
   {
@@ -319,9 +319,9 @@
     "title": "[task] Checklist, điều hướng và chấm đỏ",
     "owner": "Antigravity",
     "scope": "web/src/missions.ts, web/src/missions.css. Codex giữ điểm nối main.ts.",
-    "branch": "feat/farm-engagement-polish",
-    "status": "TODO",
-    "dependsOn": "T-44. Điều phối cùng T-52 trên một nhánh.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Tích hợp từ 4a01279. BUG-38 FIXED. Chromium ba kích thước với PostgreSQL kiểm tra chuột và bàn phím mở Tiệm hạt, Túi, ô chín và Kho. Checklist cập nhật theo thao tác thật và chấm đỏ hiện khi thu gọn HUD mobile.",
     "acceptance": "Hàng nhiệm vụ mở đúng chỗ thao tác và tự tick theo tiến độ server. Badge đỏ hiện khi còn việc hoặc quà, kể cả lúc thu gọn HUD mobile."
   },
   {

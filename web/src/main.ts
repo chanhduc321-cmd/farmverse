@@ -2265,7 +2265,25 @@ const community = createCommunity({
 
 const missions = createMissions(field, farmTime,
   async claim => Boolean(await send({ type: 'claimMission', ...claim })),
-  async () => Boolean(await send({ type: 'checkIn' })));
+  async () => Boolean(await send({ type: 'checkIn' })),
+  step => {
+    if (step === 'buy' || step === 'plant' || step === 'sell') {
+      showPanel(step === 'buy' ? 'shop' : step === 'plant' ? 'bag' : 'warehouse');
+      return;
+    }
+
+    activeCareTool = undefined;
+    updateToolHint();
+    const now = farmTime();
+    const ripePlot = snapshot.farm.plots.findIndex(plot => plot && !plot.harvested
+      && now >= ripeAt(crops[plot.cropId - 1], plot));
+    if (ripePlot < 0) {
+      setFeedback('Chưa có cây chín để thu hoạch.', 'info');
+      return;
+    }
+    plotButtons[ripePlot].focus();
+    showPlotTooltip(ripePlot);
+  });
 
 const activity = createActivity({
   openAccount() {
