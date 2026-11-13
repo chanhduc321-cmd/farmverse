@@ -1,27 +1,53 @@
-#missions-open.reward-ready::after {
+#missions-open.reward-ready::after,
+#missions-open.has-pending::after,
+#streak-open.has-pending::after {
   content: '';
   position: absolute;
   top: 3px;
   right: 3px;
   width: 9px;
   height: 9px;
-  border: 1px solid #fff5d8;
+  border: 1.5px solid #fff5d8;
   border-radius: 50%;
-  background: #b64026;
+  background: #ef4444;
 }
+
+#farm-hud-toggle[aria-expanded="false"].has-attention::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid #ffffff;
+  border-radius: 50%;
+  background: #ef4444;
+}
+
 #missions {
-  width: min(420px, calc(100% - 24px));
+  width: min(440px, calc(100% - 24px));
   max-height: calc(100dvh - 24px);
   padding: 0;
   border: 2px solid #eac88b;
   border-radius: 20px;
   background: #fbf2dc;
   color: #304629;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45), 0 4px 0 #73542e;
+  overflow: hidden;
 }
+
 #missions[open] {
+  display: flex;
+  flex-direction: column;
   animation: popIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
 }
-#missions::backdrop { background: #132c2066; }
+
+#missions::backdrop {
+  background: rgba(19, 44, 32, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
 #missions header {
   display: flex;
   align-items: center;
@@ -29,64 +55,327 @@
   padding: 10px 14px;
   background: #254631;
   color: #fff4d4;
+  border-bottom: 2px solid #bd9b60;
+  flex: none;
 }
+
 #missions h2, #missions h3, #missions p { margin: 0; }
-#missions h2 { font-size: 1.15rem; }
-#missions h3 { display: flex; justify-content: space-between; gap: 8px; font-size: 1rem; }
-#missions h3 span { color: #805525; font-size: .88rem; white-space: nowrap; }
-.missions-body { display: grid; gap: 10px; padding: 12px; }
-.missions-body section { padding: 12px; border: 1px solid #ddc9a0; border-radius: 12px; background: #fff9e9; }
-.missions-body ol, .missions-body ul { margin: 8px 0; padding-left: 22px; font-size: .9rem; }
-.missions-body .mission-done { color: #52784a; text-decoration: line-through; }
-.streak-summary { display: grid; justify-items: center; gap: 10px; text-align: center; }
-#missions [data-streak] { font-size: 1.4rem; }
-#missions .streak-days {
+#missions h2 { font-size: 1.15rem; font-weight: 850; color: #fff9e6; }
+#missions h3 { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 750; }
+.mission-reward-tag { color: #805525; font-size: 0.85rem; font-weight: 750; white-space: nowrap; }
+
+.missions-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  overflow-y: auto;
+}
+
+.mission-section {
+  padding: 12px;
+  border: 1.5px solid #ddc9a0;
+  border-radius: 14px;
+  background: #fff9e9;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Checklist styles */
+.mission-checklist {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mission-step-item {
+  margin: 0;
+  padding: 0;
+}
+
+.mission-step-action {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1.5px solid #ddc9a0;
+  border-radius: 10px;
+  background: #fff;
+  color: #3b3224;
+  font: inherit;
+  font-size: 0.88rem;
+  text-align: left;
+  cursor: default;
+  transition: all 0.15s ease;
+}
+
+.mission-step-action.is-active {
+  background: #fffdf5;
+  border-color: #cbb47c;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.mission-step-action.is-active:hover {
+  background: #fbf2dc;
+  border-color: #b59857;
+  transform: translateX(2px);
+}
+
+.mission-step-action.is-active:focus-visible {
+  outline: 2px solid #b59857;
+  outline-offset: 1px;
+}
+
+.mission-step-action.is-done {
+  background: #f4faee;
+  border-color: #c7e3b5;
+  color: #55794d;
+}
+
+.mission-step-action.is-locked {
+  background: #f5f3ed;
+  border-color: #e3dfd5;
+  color: #9c9384;
+  opacity: 0.75;
+}
+
+.step-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.mission-step-action.is-done .step-check {
+  background: #22c55e;
+  color: #fff;
+}
+
+.mission-step-action.is-active .step-check {
+  border: 2px solid #ca8a04;
+  color: #ca8a04;
+  background: #fef9c3;
+}
+
+.mission-step-action.is-locked .step-check {
+  border: 1.5px solid #d1d5db;
+  color: #9ca3af;
+}
+
+.step-label {
+  flex: 1;
+  font-weight: 600;
+}
+
+.mission-step-action.is-done .step-label {
+  text-decoration: line-through;
+  opacity: 0.85;
+}
+
+.step-arrow {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #ca8a04;
+  margin-left: auto;
+}
+
+.mission-claimed-msg {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #2e7d32;
+  text-align: center;
+  padding: 4px 0;
+}
+
+/* Streak / Attendance Table */
+.streak-summary {
+  display: grid;
+  gap: 12px;
+  text-align: center;
+  padding: 12px;
+  border: 1.5px solid #ddc9a0;
+  border-radius: 14px;
+  background: #fff9e9;
+}
+
+.streak-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+#missions [data-streak] {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #27381e;
+}
+
+.streak-subtitle {
+  font-size: 0.78rem;
+  color: #6d5b3d;
+}
+
+.streak-days {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 3px;
+  gap: 4px;
   width: 100%;
   padding: 0;
+  margin: 0;
   list-style: none;
 }
-.streak-days li {
-  display: grid;
-  justify-items: center;
-  padding: 4px 0;
+
+.streak-day-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 2px;
+  border: 1.5px solid #ddc9a0;
+  border-radius: 10px;
+  background: #fbf6ea;
+  gap: 4px;
+  min-height: 86px;
+  transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28), background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.streak-day-cell.checked {
+  background: #eef7e6;
+  border-color: #a7d38e;
+}
+
+.streak-day-cell.is-today {
+  background: #fefce8;
+  border-color: #eab308;
+  box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.35);
+  transform: translateY(-2px);
+}
+
+.streak-day-cell.is-day-7 {
+  border-color: #f59e0b;
+  background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.25);
+}
+
+.streak-day-num {
+  font-size: 0.68rem;
+  font-weight: 750;
+  color: #6d5b3d;
+}
+
+.streak-reward-icon-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.streak-reward-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+}
+
+.streak-reward-amount {
+  font-size: 0.65rem;
+  font-weight: 750;
+  color: #3b3224;
+  white-space: nowrap;
+}
+
+.streak-status-badge {
+  font-size: 0.62rem;
+  font-weight: 750;
+  padding: 1px 4px;
   border-radius: 6px;
-  background: #eee1c4;
-  transition: transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28), background-color 0.2s ease;
+  white-space: nowrap;
 }
-.streak-days li.checked {
-  background: #d8ebbe;
-  color: #315c29;
-  transform: scale(1.03);
+
+.streak-status-badge.claimed,
+.streak-status-badge.checked-in {
+  background: #22c55e;
+  color: #fff;
 }
-.streak-days [data-day-mark] { display: grid; place-items: center; height: 24px; font-weight: 850; }
-.streak-days small { font-size: .65rem; white-space: nowrap; }
-.streak-days img { width: 24px; height: 24px; object-fit: contain; }
+
+.streak-status-badge.available {
+  background: #eab308;
+  color: #713f12;
+  font-weight: 800;
+}
+
+.streak-status-badge.upcoming {
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
 #missions :is([data-claim], [data-attend]) {
   min-height: 42px;
-  padding: 6px 10px;
-  border: 1px solid #a78540;
-  border-radius: 10px;
+  padding: 8px 14px;
+  border: 1.5px solid #a78540;
+  border-radius: 12px;
   background: #ffe3a1;
   color: #493419;
   font: inherit;
+  font-size: 0.9rem;
   font-weight: 750;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
   transition: transform 0.12s ease, filter 0.15s ease, box-shadow 0.2s ease;
 }
+
 #missions :is([data-claim], [data-attend]):hover:not(:disabled) {
   transform: translateY(-1px);
   filter: brightness(1.04);
 }
+
 #missions :is([data-claim], [data-attend]):active:not(:disabled) {
   transform: translateY(1px) scale(0.98);
 }
+
 #missions [data-claim]:not(:disabled) {
   box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35);
 }
+
+#missions :is([data-mission-feedback], [data-streak-feedback]) {
+  font-size: 0.82rem;
+  text-align: center;
+  color: #786445;
+  padding: 4px;
+}
+
+#missions [hidden], #missions :is([data-mission-feedback], [data-streak-feedback]):empty {
+  display: none;
+}
+
+@media (max-width: 520px) {
+  .streak-days {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+  }
+  .streak-day-cell.is-day-7 {
+    grid-column: span 2;
+    flex-direction: row;
+    padding: 6px 10px;
+    justify-content: space-around;
+  }
+  .streak-day-cell.is-day-7 .streak-reward-icon-wrap {
+    flex-direction: row;
+    gap: 6px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   #missions[open] { animation: none; }
-  .streak-days li, #missions :is([data-claim], [data-attend]) { transition: none; }
+  .streak-day-cell, #missions :is([data-claim], [data-attend]), .mission-step-action { transition: none; }
 }
-#missions [hidden], #missions :is([data-mission-feedback], [data-streak-feedback]):empty { display: none; }
