@@ -76,7 +76,7 @@ Mỗi người chơi có một Pet cá nhân trong Farm để chăm sóc. Pet c�
 
 Chủ dự án chốt ngày 12/11/2026: Pet chặn miễn phí, chưa trừ năng lượng. Mỗi lượt Steal hợp lệ hiện đều bị Pet chặn, quả trên cây và Kho của hai bên giữ nguyên. Mỗi khách chỉ thử một lần trên mỗi ô/vụ, kể cả bị chặn. Gửi lặp không tạo thêm nhật ký. Backend ghi sự kiện Pet chặn cùng giao dịch giữ lượt; nhật ký của chủ ruộng ghi người khách, giống cây, ô đất và thời gian. Khi vào Farm, thông báo và badge tính cả lượt Pet chặn.
 
-Luật đủ năng lượng thì chặn, thiếu thì đứng nhìn là hướng phát triển sau. Cho ăn, hồi và chi phí năng lượng chờ chốt tiếp T-41. Hiện không trừ năng lượng hay tự gán chi phí.
+Cho ăn, hồi năng lượng và luật chặn dựa trên năng lượng thuộc hướng phát triển sau. T-54 tiếp tục làm mượt bước đi và điều chỉnh vị trí mặc định của Pet.
 
 ### Sprite chó
 
