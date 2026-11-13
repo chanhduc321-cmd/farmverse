@@ -8,21 +8,12 @@
   </head>
   <body>
     <section id="farm-loading" aria-labelledby="farm-loading-title">
-      <div class="farm-loading-card">
-        <div class="farm-loading-art" aria-hidden="true">
-          <div class="farm-loading-sun"></div>
-          <div class="farm-loading-cloud"></div>
-          <div class="farm-loading-dog"></div>
-        </div>
-        <div class="farm-loading-content">
-          <h1 id="farm-loading-title">Nông Trại Mộng Mơ</h1>
-          <div class="farm-loading-status">
-            <p id="farm-loading-message" role="status">Đang chuẩn bị ruộng cho bạn…</p>
-            <span id="farm-loading-percent" aria-hidden="true" hidden>0%</span>
-          </div>
-          <progress id="farm-loading-progress" aria-label="Tiến độ tải tài nguyên" max="100"></progress>
-          <button id="farm-loading-retry" type="button" hidden>Thử lại</button>
-        </div>
+      <div class="farm-loading-welcome">
+        <div class="farm-loading-dog" aria-hidden="true"></div>
+        <h1 id="farm-loading-title">Nông Trại Mộng Mơ</h1>
+        <p id="farm-loading-message" role="status">Đợi mình một chút nhé, ruộng sắp sẵn sàng rồi!</p>
+        <progress id="farm-loading-progress" aria-label="Tiến độ mở nông trại" max="100"></progress>
+        <button id="farm-loading-retry" type="button" hidden>Thử lại</button>
       </div>
     </section>
     <main inert>
