@@ -31,8 +31,6 @@ const themes = [
 ];
 const asset = (path: string) => `/${path}`;
 
-const cropsWithProduce = new Set([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13, 14, 15, 16]);
-
 function cropArt(crop: Crop) {
   const dir = `crops/crop${crop.id}`;
   const frame = (number: number) => `${dir}/stage-${number}.png`;
@@ -41,7 +39,7 @@ function cropArt(crop: Crop) {
     seedBag: `${dir}/seed_bag.png`,
     planted: `${dir}/planted.png`,
     harvested: `${dir}/cron_end.png`,
-    produce: cropsWithProduce.has(crop.id) ? `${dir}/produce.png` : frame(crop.readyFrame),
+    produce: `${dir}/produce.png`,
     frame,
   };
 }
@@ -1831,11 +1829,9 @@ class FarmScene extends Phaser.Scene {
       const seedBag = new Image();
       seedBag.src = asset(art.seedBag);
       interfaceImages.set(seedBag.src, seedBag);
-      if (cropsWithProduce.has(crop.id)) {
-        const produce = new Image();
-        produce.src = asset(art.produce);
-        interfaceImages.set(produce.src, produce);
-      }
+      const produce = new Image();
+      produce.src = asset(art.produce);
+      interfaceImages.set(produce.src, produce);
       textures.push([`crop-${crop.id}-0`, art.planted], [`crop-${crop.id}-end`, art.harvested]);
       for (let stage = 1; stage <= crop.stages; stage++) {
         const frame = stage === crop.stages ? crop.readyFrame : stage;
