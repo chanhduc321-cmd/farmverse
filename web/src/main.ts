@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
 import { ACCOUNT_API, FARM_API, FERTILIZER_COST, ripeAt, stageAt } from '../../shared/farm.mts';
 import type { Crop, FarmAction, FarmMutation, FarmResponse, FarmSessionResponse, Plot } from '../../shared/farm.mts';
-import { ACTIVITY_API } from '../../shared/activity.mts';
-import type { ActivityPage } from '../../shared/activity.mts';
+import { createActivity } from './activity.ts';
 import { COMMUNITY_API } from '../../shared/community.mts';
 import type { FarmVisit, PlayerPage, StealResponse } from '../../shared/community.mts';
 import { createCommunity, createPlayerAvatar, playerPath } from './community.ts';
@@ -36,9 +35,10 @@ function cropArt(crop: Crop) {
   const frame = (number: number) => `${dir}/stage-${number}.png`;
   return {
     seed: `${dir}/seed.png`,
+    seedBag: `${dir}/seed_bag.png`,
     planted: `${dir}/planted.png`,
     harvested: `${dir}/cron_end.png`,
-    produce: crop.id <= 4 ? `${dir}/produce.png` : frame(crop.readyFrame),
+    produce: `${dir}/produce.png`,
     frame,
   };
 }
@@ -59,18 +59,6 @@ const gameToast = document.querySelector<HTMLElement>('#game-toast');
 const gameToastMsg = document.querySelector<HTMLElement>('#game-toast-msg');
 const inventoryToast = document.querySelector<HTMLElement>('#inventory-toast');
 const inventoryToastMsg = document.querySelector<HTMLElement>('#inventory-toast-msg');
-const activityDialog = document.querySelector<HTMLDialogElement>('#activity')!;
-const activityOpenBtn = document.querySelector<HTMLButtonElement>('#activity-open');
-const menuActivityBtn = document.querySelector<HTMLButtonElement>('#menu-activity-btn');
-const activityUnreadBadge = document.querySelector<HTMLElement>('#activity-unread-badge');
-const menuActivityBadge = document.querySelector<HTMLElement>('#menu-activity-badge');
-const activityList = document.querySelector<HTMLUListElement>('#activity-list')!;
-const activityEmpty = document.querySelector<HTMLElement>('#activity-empty')!;
-const activityMoreBtn = document.querySelector<HTMLButtonElement>('#activity-more')!;
-let activityNextOffset: number | null = null;
-let activityThrough: string | undefined;
-let activityLoadVersion = 0;
-let activityLoading = false;
 let gameToastTimer: number | null = null;
 let inventoryToastTimer: number | null = null;
 
@@ -165,7 +153,7 @@ const visitHud = document.createElement('header');
 visitHud.id = 'visit-hud';
 visitHud.hidden = true;
 visitHud.innerHTML = `
-  <img class="visit-avatar" src="/face/1-1.GIF" alt="">
+  <img class="visit-avatar" src="/face/face_1.png" alt="">
   <h2></h2>
   <button type="button" data-visit-refresh aria-label="Làm mới ruộng" title="Làm mới ruộng">↻</button>
   <button type="button" data-visit-exit aria-label="Về ruộng mình" title="Về ruộng mình"><img src="/icon/topbutton%20(8).png" alt=""><span>Về nhà</span></button>
@@ -371,6 +359,7 @@ function setSnapshot(next: FarmResponse | FarmSessionResponse): void {
     }
     session = next;
     sessionSynchronized = true;
+    activity.setSession(next.account?.username);
     updateToolHint();
   }
   receivedAt = performance.now();
@@ -431,14 +420,8 @@ function setSnapshot(next: FarmResponse | FarmSessionResponse): void {
 function updateCommunityAccess(): void {
   const available = sessionSynchronized && Boolean(session?.account);
   community.updateAccess(available, busy || accountSubmitting);
-  if (activityOpenBtn) {
-    activityOpenBtn.disabled = busy || accountSubmitting;
-    activityOpenBtn.title = available ? 'Nhật ký hoạt động' : 'Đăng nhập để xem nhật ký hoạt động';
-  }
-  if (!available) {
-    updateActivityBadges(0);
-    if (activityDialog?.open) activityDialog.close();
-  }
+  if (!available) activity.setSession(undefined);
+  activity.setBlocked(busy || accountSubmitting);
   if (!available && visit) setVisit(undefined);
 }
 
@@ -448,6 +431,7 @@ function setVisit(next: FarmVisit | undefined): void {
   visit = next;
   if (next) activeCareTool = undefined;
   visitReceivedAt = performance.now();
+  activity.setAtHome(!next);
   field.classList.toggle('is-visiting', Boolean(next));
   visitHud.hidden = !next;
   visitExit.hidden = !next;
@@ -467,7 +451,6 @@ function setVisit(next: FarmVisit | undefined): void {
     if (wasVisiting) {
       setFeedback('');
       community.focus();
-      void checkActivitySummary(true);
     }
   }
 }
@@ -1125,7 +1108,7 @@ function renderPanel(): void {
     const summary = activePanel === 'shop' ? `${crop.buyPrice} Gold/hạt · Cấp tham khảo ${crop.level}`
       : activePanel === 'bag' ? `Còn ${seeds} hạt` : `${produce} quả · ${crop.sellPrice} Gold/quả`;
     const { item, controls } = createInventoryCard(crop.name,
-      activePanel === 'warehouse' ? artPaths.produce : artPaths.seed, summary);
+      activePanel === 'warehouse' ? artPaths.produce : artPaths.seedBag, summary);
     if (activePanel === 'bag') {
       const action = document.createElement('button');
       action.type = 'button';
@@ -1224,197 +1207,6 @@ function openFertilizerShop(): void {
   showInventoryToast(noFertilizer, 'info');
 }
 
-function formatRelativeTime(timestampMs: number, nowMs: number = Date.now()): string {
-  const diffSec = Math.max(0, Math.floor((nowMs - timestampMs) / 1000));
-  if (diffSec < 45) return 'Vừa xong';
-  if (diffSec < 3600) {
-    const mins = Math.max(1, Math.floor(diffSec / 60));
-    return `${mins} phút trước`;
-  }
-  if (diffSec < 86400) {
-    const hours = Math.floor(diffSec / 3600);
-    return `${hours} giờ trước`;
-  }
-  const days = Math.floor(diffSec / 86400);
-  if (days === 1) {
-    const date = new Date(timestampMs);
-    const hh = String(date.getHours()).padStart(2, '0');
-    const mm = String(date.getMinutes()).padStart(2, '0');
-    return `Hôm qua ${hh}:${mm}`;
-  }
-  if (days < 7) return `${days} ngày trước`;
-  const date = new Date(timestampMs);
-  const dd = String(date.getDate()).padStart(2, '0');
-  const MM = String(date.getMonth() + 1).padStart(2, '0');
-  const hh = String(date.getHours()).padStart(2, '0');
-  const mm = String(date.getMinutes()).padStart(2, '0');
-  return `${dd}/${MM} ${hh}:${mm}`;
-}
-
-function updateActivityBadges(unreadCount: number): void {
-  const badgeText = unreadCount > 99 ? '99+' : String(unreadCount);
-  if (activityUnreadBadge) {
-    activityUnreadBadge.textContent = badgeText;
-    activityUnreadBadge.hidden = unreadCount <= 0;
-  }
-  if (menuActivityBadge) {
-    menuActivityBadge.textContent = badgeText;
-    menuActivityBadge.hidden = unreadCount <= 0;
-  }
-}
-
-async function checkActivitySummary(notifyToast: boolean = true): Promise<void> {
-  if (!session?.account) {
-    updateActivityBadges(0);
-    return;
-  }
-  const requestedSession = session;
-  const loadVersion = activityLoadVersion;
-  try {
-    const page = await request<ActivityPage>(`${ACTIVITY_API.read}?limit=1`);
-    if (session !== requestedSession || activityLoadVersion !== loadVersion || activityDialog.open) return;
-    const { summary } = page;
-    updateActivityBadges(summary.unreadCount);
-
-    if (notifyToast && summary.unreadCount > 0) {
-      const notices: string[] = [];
-      if (summary.recentVisitors.length) notices.push(`${summary.recentVisitors.join(', ')} đã ghé thăm.`);
-      if (summary.recentStolenFruit > 0) notices.push(`Bạn bị lấy ${summary.recentStolenFruit} quả.`);
-      if (summary.recentBlockedSteals > 0) notices.push(`Pet đã chặn ${summary.recentBlockedSteals} lượt lấy quả.`);
-      showGameToast(notices.join(' ') || `Bạn có ${summary.unreadCount} hoạt động mới.`,
-        summary.recentStolenFruit > 0 ? 'warning' : 'info', 4500);
-    }
-  } catch (err) {
-    console.warn('Không tải được tóm tắt nhật ký:', err);
-  }
-}
-
-function openActivityDialog(): void {
-  if (!session?.account) {
-    showGameToast('Đăng nhập để xem nhật ký hoạt động.', 'warning');
-    activeAccountTab = 'login';
-    openAccountDialog();
-    return;
-  }
-  activityDialog.showModal();
-  activityNextOffset = null;
-  activityThrough = undefined;
-  activityList.replaceChildren();
-  activityEmpty.hidden = true;
-  activityMoreBtn.hidden = true;
-  void loadActivities(0, true);
-}
-
-async function loadActivities(offset: number, resetList: boolean = false): Promise<void> {
-  if (activityLoading && !resetList) return;
-  const loadVersion = ++activityLoadVersion;
-  const requestedSession = session;
-  const feedback = activityDialog.querySelector<HTMLElement>('#activity-feedback')!;
-  feedback.textContent = '';
-  activityLoading = true;
-  if (activityMoreBtn) activityMoreBtn.disabled = true;
-
-  try {
-    const through = activityThrough ? `&through=${activityThrough}` : '';
-    const page = await request<ActivityPage>(`${ACTIVITY_API.read}?offset=${offset}&limit=20${through}`);
-    if (session !== requestedSession || activityLoadVersion !== loadVersion || !activityDialog.open) return;
-    if (resetList) {
-      activityList.replaceChildren();
-      activityThrough = page.events[0]?.id;
-    }
-
-    if (offset === 0 && !page.events.length) {
-      activityEmpty.hidden = false;
-      activityList.hidden = true;
-    } else {
-      activityEmpty.hidden = true;
-      activityList.hidden = false;
-      for (const event of page.events) {
-        const li = document.createElement('li');
-        li.className = 'activity-item';
-        li.classList.toggle('is-unread', event.isUnread);
-
-        const content = document.createElement('div');
-        content.className = 'activity-item-content';
-
-        const title = document.createElement('div');
-        title.className = 'activity-item-title';
-
-        const name = document.createElement('strong');
-        name.className = 'visitor-name';
-        name.textContent = event.visitorName;
-        title.append(name, ' ');
-
-        if (event.type === 'steal') {
-          const actionText = document.createElement('span');
-          actionText.append(
-            document.createTextNode('đã hái '),
-            Object.assign(document.createElement('strong'), {
-              className: 'stolen-amount',
-              textContent: `${event.amount ?? 1} quả ${event.cropName ?? 'nông sản'}`,
-            }),
-            document.createTextNode(' tại '),
-            Object.assign(document.createElement('span'), {
-              className: 'plot-tag',
-              textContent: `Ô ${event.plot ?? '?'}`,
-            })
-          );
-          title.append(actionText);
-        } else if (event.type === 'pet_block') {
-          const actionText = document.createElement('span');
-          actionText.textContent = `bị Pet chặn khi định hái ${event.cropName ?? 'nông sản'} tại Ô ${event.plot ?? '?'}. Quả vẫn còn nguyên.`;
-          title.append(actionText);
-        } else {
-          const actionText = document.createElement('span');
-          actionText.textContent = 'đã ghé thăm nông trại';
-          title.append(actionText);
-        }
-
-        const meta = document.createElement('div');
-        meta.className = 'activity-item-meta';
-
-        const time = document.createElement('time');
-        time.className = 'activity-time';
-        time.dateTime = new Date(event.createdAt).toISOString();
-        time.textContent = formatRelativeTime(event.createdAt);
-        meta.append(time);
-
-        if (event.isUnread) {
-          const unreadPill = document.createElement('span');
-          unreadPill.className = 'unread-pill';
-          unreadPill.textContent = 'Mới';
-          meta.append(unreadPill);
-        }
-
-        content.append(title, meta);
-        li.append(content);
-        activityList.append(li);
-      }
-    }
-
-    activityNextOffset = page.nextOffset;
-    if (activityMoreBtn) {
-      activityMoreBtn.hidden = activityNextOffset === null;
-    }
-    if (resetList) {
-      updateActivityBadges(page.unreadCount);
-      if (activityThrough && page.unreadCount > 0) {
-        const result = await request<{ unreadCount: number }>(ACTIVITY_API.markRead, { through: activityThrough });
-        if (session === requestedSession && activityLoadVersion === loadVersion) updateActivityBadges(result.unreadCount);
-      }
-    }
-  } catch (error) {
-    if (session === requestedSession && activityLoadVersion === loadVersion) {
-      feedback.textContent = error instanceof Error ? error.message : 'Chưa tải được nhật ký.';
-    }
-  } finally {
-    if (activityLoadVersion === loadVersion) {
-      activityLoading = false;
-      if (activityMoreBtn) activityMoreBtn.disabled = false;
-    }
-  }
-}
-
 function initDrawers(): void {
   const hudToggle = document.querySelector<HTMLButtonElement>('#farm-hud-toggle')!;
   hudToggle.onclick = () => {
@@ -1457,23 +1249,6 @@ function initDrawers(): void {
       rightDrawer.classList.remove('is-open');
       toggleRight?.setAttribute('aria-expanded', 'false');
     }
-  });
-}
-
-function initActivityControls(): void {
-  activityOpenBtn?.addEventListener('click', openActivityDialog);
-  menuActivityBtn?.addEventListener('click', () => {
-    const leftDrawer = document.querySelector<HTMLElement>('#drawer-left');
-    const toggleLeft = document.querySelector<HTMLButtonElement>('#toggle-left');
-    leftDrawer?.classList.remove('is-open');
-    toggleLeft?.setAttribute('aria-expanded', 'false');
-    openActivityDialog();
-  });
-  activityMoreBtn?.addEventListener('click', () => {
-    if (activityNextOffset !== null) void loadActivities(activityNextOffset);
-  });
-  activityDialog?.addEventListener('click', (event) => {
-    if (event.target === activityDialog) activityDialog.close();
   });
 }
 
@@ -1539,7 +1314,6 @@ function attachControls(scene: FarmScene): void {
       formRegister.reset();
       setFeedback(`Tài khoản ${res.account?.username ?? username} đã được tạo và lưu trữ nông trại!`, 'success');
       accountDialog.close();
-      void checkActivitySummary(false);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Tạo tài khoản thất bại.';
       const targetInput = msg.toLowerCase().includes('tên đăng nhập') ? usernameInput : passwordInput;
@@ -1573,7 +1347,6 @@ function attachControls(scene: FarmScene): void {
       formLogin.reset();
       setFeedback(`Chào mừng ${res.account?.username ?? username} trở lại nông trại!`, 'success');
       accountDialog.close();
-      void checkActivitySummary(true);
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Đăng nhập thất bại.';
       setAccountFeedback(msg, 'error', passwordInput);
@@ -1600,7 +1373,6 @@ function attachControls(scene: FarmScene): void {
       setSnapshot(guestSession);
       setFeedback('Đã đăng xuất. Bạn đang ở phiên Khách mới.', 'info');
       accountDialog.close();
-      updateActivityBadges(0);
     } catch (error) {
       setAccountFeedback(error instanceof Error ? error.message : 'Đăng xuất thất bại.', 'error');
       if (!sessionSynchronized) {
@@ -1825,14 +1597,12 @@ class FarmScene extends Phaser.Scene {
       .map(image => [image.src, image]));
     for (const crop of crops) {
       const art = cropArt(crop);
-      const seed = new Image();
-      seed.src = asset(art.seed);
-      interfaceImages.set(seed.src, seed);
-      if (crop.id <= 4) {
-        const produce = new Image();
-        produce.src = asset(art.produce);
-        interfaceImages.set(produce.src, produce);
-      }
+      const seedBag = new Image();
+      seedBag.src = asset(art.seedBag);
+      interfaceImages.set(seedBag.src, seedBag);
+      const produce = new Image();
+      produce.src = asset(art.produce);
+      interfaceImages.set(produce.src, produce);
       textures.push([`crop-${crop.id}-0`, art.planted], [`crop-${crop.id}-end`, art.harvested]);
       for (let stage = 1; stage <= crop.stages; stage++) {
         const frame = stage === crop.stages ? crop.readyFrame : stage;
@@ -1864,7 +1634,7 @@ class FarmScene extends Phaser.Scene {
       this.ready = true;
       this.game.events.once(Phaser.Core.Events.POST_RENDER, () => {
         farmLoading.finish();
-        if (!farmLoading.failed && session?.account) void checkActivitySummary(true);
+        if (!farmLoading.failed) activity.start();
       });
     }).catch(error => {
       console.error('Không mở được cảnh nông trại:', error);
@@ -2028,7 +1798,8 @@ class FarmScene extends Phaser.Scene {
     if (reduceMotion.matches) return;
     const [x, y] = positions[index];
     const plot = visit?.plots[index] ?? snapshot?.farm.plots[index];
-    const targetScale = plot ? getCropScale(plot.cropId) : cropScale;
+    const stage = plot ? stageAt(crops[plot.cropId - 1], plot, farmTime()) : 1;
+    const targetScale = plot ? (stage === 0 ? .85 : getCropScale(plot.cropId)) : cropScale;
 
     if (type === 'water') {
       this.spawnRing(x, y, 0x7bdcf5, 1.5, 400);
@@ -2381,7 +2152,7 @@ class FarmScene extends Phaser.Scene {
       const crop = crops[plot.cropId - 1];
       const stage = stageAt(crop, plot, now);
       const frame = `crop-${crop.id}-${plot.harvested ? 'end' : stage}`;
-      const targetScale = getCropScale(crop.id);
+      const targetScale = stage === 0 ? .85 : getCropScale(crop.id);
       if (visual.plant.texture.key !== frame) {
         visual.plant.setTexture(frame);
         if (animateStage && wasVisible && !reduceMotion.matches) {
@@ -2494,9 +2265,41 @@ const community = createCommunity({
 
 const missions = createMissions(field, farmTime,
   async claim => Boolean(await send({ type: 'claimMission', ...claim })),
-  async () => Boolean(await send({ type: 'checkIn' })));
+  async () => Boolean(await send({ type: 'checkIn' })),
+  step => {
+    if (step === 'buy' || step === 'plant' || step === 'sell') {
+      showPanel(step === 'buy' ? 'shop' : step === 'plant' ? 'bag' : 'warehouse');
+      return;
+    }
 
-initActivityControls();
+    activeCareTool = undefined;
+    updateToolHint();
+    const now = farmTime();
+    const ripePlot = snapshot.farm.plots.findIndex(plot => plot && !plot.harvested
+      && now >= ripeAt(crops[plot.cropId - 1], plot));
+    if (ripePlot < 0) {
+      setFeedback('Chưa có cây chín để thu hoạch.', 'info');
+      return;
+    }
+    plotButtons[ripePlot].focus();
+    showPlotTooltip(ripePlot);
+  });
+
+const activity = createActivity({
+  openAccount() {
+    showGameToast('Đăng nhập để xem nhật ký hoạt động.', 'warning');
+    activeAccountTab = 'login';
+    openAccountDialog();
+  },
+  notify(summary) {
+    const notices: string[] = [];
+    if (summary.recentVisitors.length) notices.push(`${summary.recentVisitors.join(', ')} đã ghé thăm.`);
+    if (summary.recentStolenFruit > 0) notices.push(`Bạn bị lấy ${summary.recentStolenFruit} quả.`);
+    if (summary.recentBlockedSteals > 0) notices.push(`Pet đã chặn ${summary.recentBlockedSteals} lượt lấy quả.`);
+    showGameToast(notices.join(' ') || `Bạn có ${summary.unreadCount} hoạt động mới.`,
+      summary.recentStolenFruit > 0 ? 'warning' : 'info', 4500);
+  },
+});
 farmLoading.start();
 void start().catch(error => {
   console.error('Không khởi động được nông trại:', error);

@@ -3,6 +3,7 @@ process.env.DATABASE_URL = process.env.DATABASE_URL ?? 'postgresql://farmverse:f
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
+import { activityRoutes } from '../src/activity-routes.ts';
 import { getActivityPage, markActivitiesRead, recordActivity } from '../src/activity-store.ts';
 import { hashToken } from '../src/account-store.ts';
 import { stealFruit, visitFarm } from '../src/community-store.ts';
@@ -56,6 +57,43 @@ test('recordActivity: ignores self-visit and debounces repeated visits within 10
   await recordActivity(undefined, { hostId: host.farmId, visitorId: visitor.farmId, type: 'visit' });
   page = await getActivityPage(host.farmId);
   assert.equal(page.events.length, 1, 'Repeated visit within 10 minutes should be debounced');
+});
+
+test('activity first-page validation follows new events, read markers and account changes', async () => {
+  const host = await createTestAccount('sync_host');
+  const visitor = await createTestAccount('sync_vis');
+  const routes = activityRoutes(async () => ({ id: host.farmId, username: host.username }));
+  const path = '/activity?limit=20';
+  const first = await routes.request(path);
+  assert.equal(first.status, 200);
+  assert.equal(first.headers.get('Cache-Control'), 'private, no-store');
+  const emptyTag = first.headers.get('ETag')!;
+  assert.ok(emptyTag);
+  const unchanged = await routes.request(path, { headers: { 'If-None-Match': emptyTag } });
+  assert.equal(unchanged.status, 304);
+  assert.equal(await unchanged.text(), '');
+
+  await recordActivity(undefined, { hostId: host.farmId, visitorId: visitor.farmId, type: 'visit' });
+  const changed = await routes.request(path, { headers: { 'If-None-Match': emptyTag } });
+  assert.equal(changed.status, 200);
+  const eventTag = changed.headers.get('ETag')!;
+  assert.notEqual(eventTag, emptyTag);
+  const page = await changed.json();
+  assert.equal(page.unreadCount, 1);
+  const read = await routes.request('/activity/read', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Farm-Account': host.username },
+    body: JSON.stringify({ through: page.events[0].id }),
+  });
+  assert.deepEqual(await read.json(), { ok: true, unreadCount: 0 });
+
+  const readChanged = await routes.request(path, { headers: { 'If-None-Match': eventTag } });
+  assert.equal(readChanged.status, 200);
+  assert.equal((await readChanged.json()).events[0].isUnread, false);
+  const mismatched = await routes.request(path, { headers: {
+    'X-Farm-Account': visitor.username, 'If-None-Match': readChanged.headers.get('ETag')!,
+  } });
+  assert.equal(mismatched.status, 401);
 });
 
 test('recordActivity: records steal and ignores duplicate steal attempts', async () => {
@@ -119,12 +157,21 @@ test('markActivitiesRead: marks unread activities as read', async () => {
   assert.equal(page.events[0].isUnread, true);
   assert.equal(page.events[1].isUnread, true);
 
+  const oldest = page.events[1];
+  const backdated = await queryFarmDatabase<{ id: string }>(`
+    INSERT INTO farm_activities (host_id, visitor_id, type, created_at)
+    SELECT host_id, visitor_id, 'visit', created_at - interval '1 second'
+    FROM farm_activities WHERE id = $1
+    RETURNING id::text
+  `, [oldest.id]);
   const through = page.events[0].id;
   await recordActivity(undefined, { hostId: host.farmId, visitorId: visitor2.farmId, type: 'visit' });
   await markActivitiesRead(host.farmId, through);
 
   const nextPage = await getActivityPage(host.farmId, 1, 1, through);
   assert.equal(nextPage.events[0].visitorName, visitor1.username);
+  const olderPage = await getActivityPage(host.farmId, 2, 1, through);
+  assert.equal(olderPage.events[0].id, backdated.rows[0].id);
   page = await getActivityPage(host.farmId);
   assert.equal(page.unreadCount, 1, 'A visit after the rendered page remains unread');
   assert.equal(page.events[0].isUnread, true);

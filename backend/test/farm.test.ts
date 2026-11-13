@@ -19,8 +19,8 @@ test('Pet selection validates species and uses the Farm revision', () => {
   }
 });
 
-test('all 15 varieties reach every frame and ripen at the approved time', () => {
-  const expected = [30, 180, 150, 160, 270, 285, 300, 330, 360, 390, 588, 450, 672, 510, 756];
+test('all varieties reach every frame and ripen at the catalog time', () => {
+  const expected = [30, 180, 150, 160, 270, 285, 300, 330, 360, 390, 588, 450, 672, 510, 756, 510];
   assert.equal(crops.length, expected.length);
   for (const crop of crops) {
     const plot = { cropId: crop.id, plantedAt: 100, harvested: false };
@@ -33,7 +33,7 @@ test('all 15 varieties reach every frame and ripen at the approved time', () => 
   }
   assert.equal(crops[2].readyFrame, 5);
   assert.equal(crops[3].readyFrame, 5);
-  assert.equal(crops[4].name, 'Khoai lang');
+  assert.equal(crops[4].name, 'Khoai tây');
 });
 
 test('buy, plant, harvest, sell, and clear preserve GOLD, inventory, XP, and revision', () => {
@@ -103,7 +103,8 @@ test('shop level is advisory, XP carries over, and mutation inputs enforce limit
   assert.equal(parseAction('buy', { ...order, quantity: 100 }), undefined);
   assert.equal(parseAction('sell', { ...order, quantity: 1_000 }), undefined);
   assert.equal(parseAction('sell', { ...order, quantity: 0 })?.type, 'sell');
-  assert.equal(parseAction('buy', { ...order, cropId: 16 }), undefined);
+  assert.ok(parseAction('buy', { ...order, cropId: 16 }));
+  assert.equal(parseAction('buy', { ...order, cropId: 17 }), undefined);
   assert.equal(parseAction('plant', { ...order, plot: 6 }), undefined);
   assert.equal(parseAction('clear', { plot: 0 }), undefined);
 });

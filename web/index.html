@@ -8,21 +8,11 @@
   </head>
   <body>
     <section id="farm-loading" aria-labelledby="farm-loading-title">
-      <div class="farm-loading-card">
-        <div class="farm-loading-art" aria-hidden="true">
-          <div class="farm-loading-sun"></div>
-          <div class="farm-loading-cloud"></div>
-          <div class="farm-loading-dog"></div>
-        </div>
-        <div class="farm-loading-content">
-          <h1 id="farm-loading-title">Nông Trại Mộng Mơ</h1>
-          <div class="farm-loading-status">
-            <p id="farm-loading-message" role="status">Đang chuẩn bị ruộng cho bạn…</p>
-            <span id="farm-loading-percent" aria-hidden="true" hidden>0%</span>
-          </div>
-          <progress id="farm-loading-progress" aria-label="Tiến độ tải tài nguyên" max="100"></progress>
-          <button id="farm-loading-retry" type="button" hidden>Thử lại</button>
-        </div>
+      <div class="farm-loading-welcome">
+        <h1 id="farm-loading-title">Nông Trại Mộng Mơ</h1>
+        <p id="farm-loading-message" role="status"></p>
+        <progress id="farm-loading-progress" aria-label="Tiến độ mở nông trại" max="100"></progress>
+        <button id="farm-loading-retry" type="button" hidden>Thử lại</button>
       </div>
     </section>
     <main inert>
@@ -35,7 +25,7 @@
           <header class="meters" aria-label="Thông tin nông trại">
             <!-- Avatar with Lv badge -->
             <div class="hud-avatar-box">
-              <img src="/face/1-1.GIF" alt="" class="hud-avatar-img">
+              <img src="/face/face_1.png" alt="" class="hud-avatar-img">
               <span class="hud-level-pill">Lv.<strong id="level">1</strong></span>
             </div>
 
@@ -115,7 +105,7 @@
           </button>
           <div class="dropdown-menu-list" id="drawer-left-content">
             <button type="button" class="menu-btn" data-tool="account" title="Quản lý tài khoản">
-              <img src="/face/1-1.GIF" alt="">
+              <img src="/face/face_1.png" alt="">
               <span id="menu-account-label">Tài khoản</span>
             </button>
             <button type="button" class="menu-btn" id="menu-activity-btn" title="Nhật ký hoạt động">
@@ -243,7 +233,7 @@
 
         <header class="account-header">
           <div class="account-heading">
-            <img class="account-avatar-img" src="/face/1-1.GIF" alt="">
+            <img class="account-avatar-img" src="/face/face_1.png" alt="">
             <div>
               <h2 id="account-title">Tài khoản Nông Trại Mộng Mơ</h2>
               <p id="account-description">Tạo tài khoản để lưu nông trại đang chơi</p>
@@ -294,7 +284,7 @@
           <div class="account-view" id="view-profile" hidden>
             <div class="profile-card">
               <div class="profile-avatar-wrap">
-                <img src="/face/1-1.GIF" alt="" class="profile-avatar-img">
+                <img src="/face/face_1.png" alt="" class="profile-avatar-img">
               </div>
               <div class="profile-info">
                 <span class="profile-badge">Đang đăng nhập</span>
@@ -345,6 +335,7 @@
           </div>
 
           <div class="activity-footer">
+            <button type="button" id="activity-new" class="activity-more-btn activity-new-btn" hidden>Có hoạt động mới</button>
             <button type="button" id="activity-more" class="activity-more-btn" hidden>Xem thêm</button>
           </div>
         </div>

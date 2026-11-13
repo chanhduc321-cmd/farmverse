@@ -1,0 +1,8 @@
+cropId=16
+name=Hoa mai
+pic=seed.png
+stageCount=5
+unitTime=34
+sellMoney=65
+seedMoney=40
+buyLevel=6

@@ -1517,7 +1517,11 @@ button:disabled { cursor: default; opacity: .6; }
   border: 1.5px solid #ecd8ab;
   border-radius: 14px;
   background: #fffdf5;
-  transition: transform 0.15s ease, background-color 0.15s ease;
+  transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+.activity-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.06);
 }
 .activity-item.is-unread {
   background: #fef8e7;
@@ -1568,6 +1572,19 @@ button:disabled { cursor: default; opacity: .6; }
   font-weight: 800;
   line-height: 1.2;
 }
+#activity-feedback {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  text-align: center;
+  color: #786445;
+  background: rgba(236, 216, 171, 0.45);
+  border: 1px dashed #d4c297;
+  border-radius: 10px;
+}
+#activity-feedback:empty {
+  display: none;
+}
 .activity-empty {
   display: flex;
   flex-direction: column;
@@ -1576,6 +1593,9 @@ button:disabled { cursor: default; opacity: .6; }
   padding: 36px 16px;
   text-align: center;
   color: #796e5d;
+  background: rgba(255, 253, 245, 0.6);
+  border: 1.5px dashed #ecd8ab;
+  border-radius: 14px;
 }
 .activity-empty p {
   margin: 0;
@@ -1591,6 +1611,8 @@ button:disabled { cursor: default; opacity: .6; }
 .activity-footer {
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 8px;
   padding-top: 4px;
 }
 .activity-more-btn {
@@ -1606,13 +1628,23 @@ button:disabled { cursor: default; opacity: .6; }
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
   transition: all 0.15s ease;
 }
-.activity-more-btn:hover {
+.activity-more-btn:hover:not(:disabled) {
   background: #fcf4df;
   border-color: #bd9b60;
 }
 .activity-more-btn:disabled {
   opacity: 0.6;
   cursor: default;
+}
+.activity-new-btn {
+  background: #fef9c3;
+  border-color: #eab308;
+  color: #854d0e;
+  box-shadow: 0 2px 6px rgba(234, 179, 8, 0.25);
+}
+.activity-new-btn:hover:not(:disabled) {
+  background: #fef08a;
+  border-color: #ca8a04;
 }
 
 /* ─── FLOATING TOASTS (GLOBAL GAME & MODALS) ─── */

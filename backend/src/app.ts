@@ -228,8 +228,9 @@ app.route('/', communityRoutes(async (context) => {
 }));
 
 app.route('/', activityRoutes(async (context) => {
-  const session = await farmSession(context);
-  if (session?.tokenHash) return { id: session.id, tokenHash: session.tokenHash };
+  const tokenHash = accountTokenHash(getCookie(context, accountCookie));
+  const account = tokenHash ? await findAccountSession(tokenHash) : undefined;
+  if (account) return { id: account.farm_id, username: account.username };
 }));
 
 export default app;

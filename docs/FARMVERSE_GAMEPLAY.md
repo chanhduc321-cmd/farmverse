@@ -28,7 +28,21 @@ Chủ dự án duyệt ngày 11/11/2026. Mục tiêu vụ đầu hướng dẫn 
 
 Mỗi ngày, hái ít nhất một ô và bán tổng cộng **3 quả** trong Kho để hoàn thành nhiệm vụ ngày và nhận **10 Gold**. Phần thưởng đã kiếm được vẫn chờ nhận khi sang ngày mới.
 
-Người chơi bấm **Điểm danh hôm nay** để ghi một lượt mỗi ngày. Chuỗi điểm danh độc lập với nhiệm vụ ngày, hiển thị theo từng nhóm 7 ô với hình coin ở ô cuối. Ngày đổi lúc **00:00 giờ Việt Nam**. Bỏ qua một ngày làm đứt chuỗi, lần điểm danh kế tiếp bắt đầu lại từ một ngày. Chuỗi điểm danh bắt đầu từ lượt bấm đầu tiên.
+Người chơi bấm **Điểm danh hôm nay** để ghi một lượt và nhận quà tương ứng trong cùng lần lưu Farm. Chuỗi điểm danh độc lập với nhiệm vụ ngày. Ngày đổi lúc **00:00 giờ Việt Nam**. Điểm danh ngày thứ 8 mở vòng quà mới và tiếp tục cộng độ dài chuỗi. Bỏ một ngày làm đứt chuỗi, lần điểm danh kế tiếp bắt đầu lại ở ngày 1.
+
+Chủ dự án duyệt lịch quà T-51 ngày 13/11/2026.
+
+| Ngày | Quà |
+|---|---|
+| 1 | 5 Gold |
+| 2 | 1 hạt dâu tây |
+| 3 | 5 Gold |
+| 4 | 1 bịch phân |
+| 5 | 10 Gold |
+| 6 | 2 hạt dâu tây |
+| 7 | 20 Gold |
+
+Ruộng đã có chuỗi tiếp tục nhận ở ô tương ứng vào lần điểm danh hợp lệ tiếp theo. Những ô trước khi áp dụng bảng quà hiện **Đã điểm danh**. Ô đã được cấp quà hiện **Đã nhận**.
 
 Tiến độ ghi cùng ruộng và chuyển sang tài khoản khi đăng ký từ Guest. Dữ liệu ruộng cũ bắt đầu ghi nhiệm vụ từ thao tác tiếp theo. Backend dùng giờ máy chủ và chỉ chấp nhận thao tác thành công, mỗi phần thưởng nhận đúng một lần.
 
@@ -62,7 +76,7 @@ Mỗi người chơi có một Pet cá nhân trong Farm để chăm sóc. Pet c�
 
 Chủ dự án chốt ngày 12/11/2026: Pet chặn miễn phí, chưa trừ năng lượng. Mỗi lượt Steal hợp lệ hiện đều bị Pet chặn, quả trên cây và Kho của hai bên giữ nguyên. Mỗi khách chỉ thử một lần trên mỗi ô/vụ, kể cả bị chặn. Gửi lặp không tạo thêm nhật ký. Backend ghi sự kiện Pet chặn cùng giao dịch giữ lượt; nhật ký của chủ ruộng ghi người khách, giống cây, ô đất và thời gian. Khi vào Farm, thông báo và badge tính cả lượt Pet chặn.
 
-Luật đủ năng lượng thì chặn, thiếu thì đứng nhìn là hướng phát triển sau. Cho ăn, hồi và chi phí năng lượng chờ chốt tiếp T-41. Hiện không trừ năng lượng hay tự gán chi phí.
+Cho ăn, hồi năng lượng và luật chặn dựa trên năng lượng thuộc hướng phát triển sau. T-54 tiếp tục làm mượt bước đi và điều chỉnh vị trí mặc định của Pet.
 
 ### Sprite chó
 

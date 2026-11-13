@@ -4,6 +4,20 @@ export const firstMissionSteps = ['buy', 'plant', 'harvest', 'sell'] as const;
 export const dailySaleTarget = 3;
 export const missionGold = { first: 20, daily: 10 } as const;
 
+type AttendanceReward =
+  | { type: 'gold' | 'fertilizer'; amount: number }
+  | { type: 'seed'; cropId: number; amount: number };
+
+export const attendanceRewards: readonly AttendanceReward[] = [
+  { type: 'gold', amount: 5 },
+  { type: 'seed', cropId: 1, amount: 1 },
+  { type: 'gold', amount: 5 },
+  { type: 'fertilizer', amount: 1 },
+  { type: 'gold', amount: 10 },
+  { type: 'seed', cropId: 1, amount: 2 },
+  { type: 'gold', amount: 20 },
+];
+
 export type MissionClaim = { mission: 'first' } | { mission: 'daily'; day: number };
 
 interface DailyProgress {
@@ -17,7 +31,7 @@ export interface FarmProgression {
   firstStep: number;
   firstClaimed: boolean;
   daily: DailyProgress;
-  attendance?: { day: number; streak: number };
+  attendance?: { day: number; streak: number; rewardedSince?: number };
   pendingDays: number[];
 }
 
@@ -33,6 +47,21 @@ function complete(daily: DailyProgress): boolean {
   return daily.harvested && daily.sold >= dailySaleTarget;
 }
 
+function attendanceStatus(attendance: FarmProgression['attendance'], day: number) {
+  const checkedIn = attendance?.day === day;
+  const streak = attendance && attendance.day >= day - 1 ? attendance.streak : 0;
+  const nextStreak = checkedIn ? streak : streak + 1;
+  const todayIndex = (nextStreak - 1) % attendanceRewards.length;
+  const attendanceDays = attendanceRewards.map((reward, index) => {
+    const slotDay = day - todayIndex + index;
+    let status: 'upcoming' | 'available' | 'claimed' | 'checked-in' = 'upcoming';
+    if (slotDay === day && !checkedIn) status = 'available';
+    else if (slotDay <= day) status = slotDay >= (attendance?.rewardedSince ?? Infinity) ? 'claimed' : 'checked-in';
+    return { day: index + 1, reward, status };
+  });
+  return { streak, checkedIn, attendanceDays };
+}
+
 export function missionStatus(farm: Farm, now: number) {
   const day = missionDay(now);
   const progress = farm.progression;
@@ -44,8 +73,7 @@ export function missionStatus(farm: Farm, now: number) {
     firstClaimed: progress?.firstClaimed ?? false,
     daily,
     rewardDay,
-    streak: progress?.attendance && progress.attendance.day >= day - 1 ? progress.attendance.streak : 0,
-    checkedIn: progress?.attendance?.day === day,
+    ...attendanceStatus(progress?.attendance, day),
   };
 }
 
@@ -53,13 +81,16 @@ function ensureProgress(farm: Farm, day: number): FarmProgression {
   return farm.progression ??= { firstStep: 0, firstClaimed: false, daily: emptyDay(day), pendingDays: [] };
 }
 
-export function recordCheckIn(farm: Farm, now: number): boolean {
+export function recordCheckIn(farm: Farm, now: number): AttendanceReward | undefined {
   const day = missionDay(now);
   const progress = ensureProgress(farm, day);
   const previous = progress.attendance;
-  if (previous && previous.day >= day) return false;
-  progress.attendance = { day, streak: previous?.day === day - 1 ? previous.streak + 1 : 1 };
-  return true;
+  if (previous && previous.day >= day) return;
+  const consecutive = previous?.day === day - 1;
+  const streak = consecutive ? previous.streak + 1 : 1;
+  const rewardedSince = consecutive ? previous.rewardedSince ?? day : day;
+  progress.attendance = { day, streak, rewardedSince };
+  return attendanceRewards[(streak - 1) % attendanceRewards.length];
 }
 
 export function recordMissionAction(farm: Farm, action: FarmAction, now: number): void {

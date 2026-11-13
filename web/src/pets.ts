@@ -4,13 +4,13 @@ import './pets.css';
 
 const pets = {
   dog: { name: 'Chó', size: 176, foot: 158, idle: 'idle', reaction: 'happy', voice: 'Gâu!' },
-  cat: { name: 'Mèo', size: 128, foot: 116, idle: 'happy', reaction: 'happy', voice: 'Meo!', walk: true },
-  goose: { name: 'Ngỗng', size: 128, foot: 116, idle: 'peck', reaction: 'peck', voice: 'Quác!', walk: true },
+  cat: { name: 'Mèo', size: 128, foot: 116, idle: 'happy', reaction: 'happy', voice: 'Meo!' },
+  goose: { name: 'Ngỗng', size: 128, foot: 116, idle: 'peck', reaction: 'peck', voice: 'Quác!' },
 } as const;
 type Pet = PetSpecies;
 const species = ['dog', 'cat', 'goose'] as const;
 const clips = [
-  ['dog', 'idle', 7], ['dog', 'happy', 7], ['cat', 'happy', 8], ['cat', 'walk', 8],
+  ['dog', 'idle', 7], ['dog', 'happy', 7], ['dog', 'walk', 10], ['cat', 'happy', 8], ['cat', 'walk', 8],
   ['goose', 'walk', 8], ['goose', 'peck', 8],
   ['dog', 'guard', 7], ['cat', 'guard', 8], ['goose', 'guard', 8],
 ] as const;
@@ -32,10 +32,12 @@ export function createFarmPet(
   reduceMotion: MediaQueryList,
   selectPet: (pet: Pet) => Promise<unknown>,
 ) {
+  // Shadow ellipse at (0, 0) in corner container beneath the pet sprite
+  const shadow = scene.add.ellipse(0, 0, 48, 18, 0x122410, 0.38).setVisible(false);
   const sprite = scene.add.sprite(0, 0, texture('dog', 'idle'), 0).setVisible(false);
-  const corner = scene.add.container(0, 0, [sprite]);
+  const corner = scene.add.container(0, 0, [shadow, sprite]);
   const dock = field.querySelector<HTMLElement>('.bottom-dock')!;
-  const profile = field.querySelector<HTMLElement>('.meters')!;
+
   for (const [pet, clip, count] of clips) {
     const key = texture(pet, clip);
     if (!scene.anims.exists(key)) {
@@ -51,6 +53,7 @@ export function createFarmPet(
   opener.setAttribute('aria-haspopup', 'dialog');
   opener.hidden = true;
   field.querySelector('.farm-hud-actions')!.append(opener);
+
   const hit = document.createElement('button');
   hit.type = 'button';
   hit.className = 'farm-pet-hit';
@@ -61,6 +64,7 @@ export function createFarmPet(
   bubble.setAttribute('role', 'status');
   bubble.hidden = true;
   field.append(hit, bubble);
+
   const dialog = document.createElement('dialog');
   dialog.className = 'farm-pet-picker';
   dialog.setAttribute('aria-labelledby', 'farm-pet-title');
@@ -75,6 +79,7 @@ export function createFarmPet(
     </div>
   </form>`;
   document.body.append(dialog);
+
   opener.onclick = () => {
     dialog.returnValue = '';
     dialog.showModal();
@@ -96,6 +101,12 @@ export function createFarmPet(
     originX: number; originY: number; dragging: boolean; reacted: boolean;
   } | undefined;
   let suppressClick = false;
+
+  function updateShadowSize(pet: Pet) {
+    const shadowW = Math.round(displaySize * (pet === 'dog' ? 0.48 : 0.42));
+    const shadowH = Math.round(shadowW * 0.38);
+    shadow.setSize(shadowW, shadowH);
+  }
 
   function say(message: string, duration = 1650) {
     bubble.textContent = message;
@@ -127,6 +138,7 @@ export function createFarmPet(
     const { name, size, foot } = pets[pet];
     stand(pet);
     sprite.setOrigin(.5, foot / size).setScale(displaySize / size);
+    updateShadowSize(pet);
     hit.setAttribute('aria-label', `Vuốt ve ${name.toLowerCase()}`);
     reactionUntil = 0;
     guardUntil = 0;
@@ -148,6 +160,7 @@ export function createFarmPet(
     patrolRight = offsets.find(offset => canDrop(x + offset, y)) ?? 0;
     patrolTime = 0;
     sprite.setPosition(0, 0);
+    shadow.setPosition(0, 0);
   }
 
   function petReaction() {
@@ -189,6 +202,7 @@ export function createFarmPet(
       press.dragging = suppressClick = true;
       stand(chosen);
       sprite.setPosition(0, 0);
+      shadow.setPosition(0, 0).setAlpha(0.2).setScale(0.85);
       hit.classList.add('is-dragging');
       say('Đặt mình ở đây nhé!', Infinity);
     }
@@ -202,6 +216,7 @@ export function createFarmPet(
     placed = canDrop(corner.x, corner.y);
     if (!placed) corner.setPosition(home.x, home.y);
     resetPatrol();
+    shadow.setAlpha(0.38).setScale(1);
     say(placed ? 'Ở đây vui quá!' : 'Mình về góc nhé!');
     press = undefined;
     hit.classList.remove('is-dragging');
@@ -212,6 +227,7 @@ export function createFarmPet(
       corner.setPosition(home.x, home.y);
       resetPatrol();
       reactionUntil = 0;
+      shadow.setAlpha(0.38).setScale(1);
       hit.classList.remove('is-dragging');
     }
     press = undefined;
@@ -236,16 +252,35 @@ export function createFarmPet(
       const dockTop = dock.getBoundingClientRect().top;
       displaySize = bounds.width >= 900 && bounds.height >= 550 ? 120 : bounds.width <= 480 ? 90 : 100;
       sprite.setScale(displaySize / pets[shown].size);
+      updateShadowSize(shown);
       const hitSize = Math.max(52, Math.round(displaySize * .72));
       hit.style.width = hit.style.height = `${hitSize}px`;
-      const x = displaySize / 2 + 12;
-      const cornerCrowded = [...field.querySelectorAll('.plot-targets button')].some(button => {
-        const plot = button.getBoundingClientRect();
-        return plot.left < bounds.left + displaySize + 34 && plot.right > bounds.left + 8
-          && plot.bottom > dockTop - displaySize - 26 && plot.top < dockTop;
-      });
-      const foot = cornerCrowded ? profile.getBoundingClientRect().bottom + displaySize + 26 : dockTop - 12;
-      home = { x, y: foot - bounds.top };
+
+      // Smart placement: beside the path near the field plots, easily visible
+      const firstPlot = field.querySelector<HTMLButtonElement>('.plot-targets button');
+      let targetX = Math.round(displaySize / 2 + 18);
+      let targetY = Math.round(dockTop - bounds.top - 16);
+
+      if (firstPlot) {
+        const plotBox = firstPlot.getBoundingClientRect();
+        // Candidate 1: to the left of the farm plots along the pathway
+        const pathX = Math.round(plotBox.left - bounds.left - displaySize * 0.58);
+        const pathY = Math.round(plotBox.top - bounds.top + displaySize * 0.45);
+        if (canDrop(pathX, pathY)) {
+          targetX = pathX;
+          targetY = pathY;
+        } else {
+          // Candidate 2: along the path in front of the dock
+          const altX = Math.round(bounds.width * 0.22);
+          const altY = Math.round(dockTop - bounds.top - displaySize * 0.22);
+          if (canDrop(altX, altY)) {
+            targetX = altX;
+            targetY = altY;
+          }
+        }
+      }
+
+      home = { x: targetX, y: targetY };
       if (!placed || !canDrop(corner.x, corner.y)) {
         placed = false;
         corner.setPosition(home.x, home.y);
@@ -255,7 +290,9 @@ export function createFarmPet(
     update(now: number, delta: number, atHome: boolean, interactive: boolean, hostPet?: Pet, ownPet: Pet = 'dog') {
       chosen = ownPet;
       opener.hidden = !interactive;
-      sprite.setVisible(atHome || !!hostPet);
+      const shouldVisible = atHome || !!hostPet;
+      sprite.setVisible(shouldVisible);
+      shadow.setVisible(shouldVisible);
       hit.hidden = !interactive;
       bubble.hidden = !sprite.visible || now >= reactionUntil;
       if (!sprite.visible) return;
@@ -272,26 +309,37 @@ export function createFarmPet(
         patrolTime += Math.min(delta, 50);
         const phase = patrolTime / 390;
         const motion = Math.sin(phase);
-        sprite.setX(motion * (motion < 0 ? patrolLeft : patrolRight));
         const direction = Math.cos(phase);
-        sprite.setFlipX(direction < 0);
-        if ('walk' in pets[pet]) {
-          const walking = patrolLeft + patrolRight > 0;
-          const anim = sprite.anims;
-          const walk = texture(pet, 'walk');
-          if (walking && !anim.isPlaying) sprite.play({ key: walk, repeat: -1 });
-          if (anim.isPlaying && anim.currentAnim?.key === walk) {
-            if (walking) anim.timeScale = Math.max(.35, Math.abs(direction));
-            else stand(pet);
-          }
-        } else {
-          sprite.setAngle(Math.sin(patrolTime / 82) * 3);
+
+        // Deceleration when approaching the turnaround point
+        const speedFactor = Math.min(1, Math.max(0.18, Math.abs(direction) / 0.35));
+
+        sprite.setX(motion * (motion < 0 ? patrolLeft : patrolRight));
+        shadow.setX(sprite.x);
+
+        // Turn flip smoothly when clearly in motion direction (avoid rapid flip at 0)
+        if (direction < -0.15) {
+          sprite.setFlipX(true);
+        } else if (direction > 0.15) {
+          sprite.setFlipX(false);
+        }
+
+        const walking = patrolLeft + patrolRight > 0;
+        const anim = sprite.anims;
+        const walk = texture(pet, 'walk');
+        if (walking && !anim.isPlaying) sprite.play({ key: walk, repeat: -1 });
+        if (anim.isPlaying && anim.currentAnim?.key === walk) {
+          if (walking) anim.timeScale = Math.max(0.2, speedFactor * 1.1);
+          else stand(pet);
         }
       } else if (!press) {
+        // Stopped when reduceMotion matches or idle
         sprite.setX(0);
+        shadow.setX(0);
         if (sprite.anims.isPlaying && sprite.anims.currentAnim?.key === texture(pet, 'walk')) stand(pet);
         sprite.setAngle(0);
       }
+
       const x = corner.x + sprite.x;
       const y = corner.y + sprite.y;
       hit.style.left = `${x}px`;

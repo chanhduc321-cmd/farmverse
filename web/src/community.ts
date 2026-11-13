@@ -30,7 +30,7 @@ function makeButton(text: string, click: () => void): HTMLButtonElement {
 
 export function createPlayerAvatar(): HTMLImageElement {
   const portrait = document.createElement('img');
-  portrait.src = '/face/1-1.GIF';
+  portrait.src = '/face/face_1.png';
   portrait.alt = '';
   portrait.className = 'community-avatar';
   return portrait;
