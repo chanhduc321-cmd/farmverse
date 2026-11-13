@@ -34,24 +34,15 @@
 #farm-loading:not([hidden]) ~ main { visibility: hidden; }
 
 .farm-loading-welcome {
-  position: relative;
-  box-sizing: border-box;
-  width: min(100%, 440px);
-  margin-top: 76px;
-  padding: 29px clamp(16px, 5vw, 32px) 24px;
-  border: 2px solid #d4a765;
-  border-radius: 21px;
-  background: #fff3d8;
-  box-shadow: 0 4px 0 #805026, 0 8px 16px #302a1459;
+  width: min(100%, 310px);
+  padding: 0 8px;
   text-align: center;
+  box-sizing: border-box;
 }
 .farm-loading-dog {
-  position: absolute;
-  bottom: calc(100% - 23px);
-  left: 50%;
-  width: 112px;
+  width: 86px;
+  margin: 0 auto 2px;
   aspect-ratio: 1;
-  transform: translateX(-50%);
   background: url('/pets/dog/dog-idle.png') 0 0 / 700% 100% no-repeat;
   filter: drop-shadow(0 3px 2px #27321550);
   animation: farm-loading-blink 4s steps(6, end) infinite;
@@ -63,42 +54,48 @@
 
 #farm-loading-title {
   margin: 0;
-  color: #254c32;
-  font: 950 clamp(1.45rem, 6vw, 2.2rem) / 1.14 'Arial Rounded MT Bold', 'Segoe UI', system-ui, sans-serif;
+  color: #fff5da;
+  font: 950 clamp(1.05rem, 4.4vw, 1.5rem) / 1.15 'Arial Rounded MT Bold', 'Segoe UI', system-ui, sans-serif;
   letter-spacing: -.025em;
-  text-shadow: 0 2px #e2ba77;
+  text-shadow: 0 1px 2px #253817, 0 2px 5px #253817;
   text-wrap: balance;
 }
 #farm-loading-message {
-  margin: 9px auto 0;
-  color: #4d4534;
-  font-size: .92rem;
+  margin: 0;
+  color: #fff5da;
+  font-size: .85rem;
   line-height: 1.45;
   text-wrap: pretty;
 }
+#farm-loading-message:not(:empty) {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: #273619e6;
+}
 #farm-loading-progress {
   display: block;
-  width: min(100%, 240px);
-  height: 8px;
-  margin: 16px auto 0;
+  width: min(75%, 148px);
+  height: 5px;
+  margin: 10px auto 0;
   overflow: hidden;
   appearance: none;
   border: 0;
   border-radius: 10px;
-  background: #ded2ae;
+  background: #3b4c24;
 }
 #farm-loading-progress::-webkit-progress-bar { background: transparent; }
 #farm-loading-progress::-webkit-progress-value {
   border-radius: 10px;
-  background: #568541;
+  background: #ffe296;
   transition: width .2s ease-out;
 }
 #farm-loading-progress::-moz-progress-bar {
   border-radius: 10px;
-  background: #568541;
+  background: #ffe296;
 }
 #farm-loading-progress:indeterminate {
-  background: linear-gradient(105deg, #ded2ae 35%, #568541 50%, #ded2ae 65%) 100% / 250%;
+  background: linear-gradient(105deg, #3b4c24 35%, #ffe296 50%, #3b4c24 65%) 100% / 250%;
   animation: farm-loading-sweep 1.8s linear infinite;
 }
 @keyframes farm-loading-sweep { to { background-position: 0%; } }
@@ -132,9 +129,9 @@
     background-size: 86% auto;
     mask-image: linear-gradient(to right, #000 76%, transparent 86%);
   }
-  .farm-loading-welcome { justify-self: end; width: min(32%, 320px); margin-top: 52px; padding: 16px 12px 13px; }
-  .farm-loading-dog { width: 86px; bottom: calc(100% - 17px); }
-  #farm-loading-title { font-size: clamp(1rem, 2.75vw, 1.45rem); }
+  .farm-loading-welcome { justify-self: end; width: min(32%, 270px); }
+  .farm-loading-dog { width: 70px; }
+  #farm-loading-title { font-size: clamp(.95rem, 2.35vw, 1.3rem); }
 }
 @media (prefers-reduced-motion: reduce) {
   #farm-loading-progress:indeterminate, .farm-loading-dog { animation: none; }
