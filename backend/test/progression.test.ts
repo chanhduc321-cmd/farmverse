@@ -54,7 +54,9 @@ test('điểm danh độc lập, chỉ một lần mỗi ngày và bắt đầu 
   const midnight = Date.parse('2026-11-12T00:00:00+07:00');
   const dayMs = 86_400_000;
   const check = (now: number) => applyAction(farm, { type: 'checkIn', expectedRevision: farm.revision }, now);
+  assert.equal(missionStatus(farm, midnight - 1).attendanceDays[0].status, 'available');
   check(midnight - 1);
+  assert.equal(farm.gold, gold + 5);
   assert.throws(() => check(midnight - 1), /đã điểm danh/i);
   assert.equal(missionStatus(farm, midnight).checkedIn, false);
   for (let day = 0; day < 6; day++) check(midnight + day * dayMs);
@@ -64,9 +66,37 @@ test('điểm danh độc lập, chỉ một lần mỗi ngày và bắt đầu 
   assert.equal(saved.checkedIn, true);
   assert.equal(saved.daily.sold, 0);
   assert.equal(saved.rewardDay, undefined);
-  assert.equal(farm.gold, gold);
-  const afterGap = lastDay + 2 * dayMs;
+  assert.ok(saved.attendanceDays.every(day => day.status === 'claimed'));
+  assert.equal(farm.gold, gold + 40);
+  assert.equal(farm.seeds[1], 3);
+  assert.equal(farm.fertilizer, 1);
+  const nextCycle = lastDay + dayMs;
+  assert.equal(missionStatus(farm, nextCycle).attendanceDays[0].status, 'available');
+  check(nextCycle);
+  assert.equal(missionStatus(farm, nextCycle).streak, 8);
+  assert.equal(farm.gold, gold + 45);
+  const afterGap = nextCycle + 2 * dayMs;
   assert.equal(missionStatus(farm, afterGap).streak, 0);
   check(afterGap);
   assert.equal(missionStatus(farm, afterGap).streak, 1);
+});
+
+test('chuỗi cũ tiếp tục từ đúng ô và chỉ nhận quà cho lượt điểm danh mới', () => {
+  const farm = createFarm();
+  const now = Date.parse('2026-11-13T09:00:00+07:00');
+  const day = missionDay(now);
+  farm.progression = {
+    firstStep: 1,
+    firstClaimed: false,
+    daily: { day, harvested: false, sold: 0, claimed: false },
+    attendance: { day: day - 1, streak: 3 },
+    pendingDays: [],
+  };
+  assert.deepEqual(missionStatus(farm, now).attendanceDays.map(slot => slot.status),
+    ['checked-in', 'checked-in', 'checked-in', 'available', 'upcoming', 'upcoming', 'upcoming']);
+  applyAction(farm, { type: 'checkIn', expectedRevision: 0 }, now);
+  assert.equal(farm.gold, 200);
+  assert.equal(farm.fertilizer, 1);
+  assert.equal(missionStatus(farm, now).attendanceDays[3].status, 'claimed');
+  assert.equal(missionStatus(farm, now).firstStep, 1);
 });

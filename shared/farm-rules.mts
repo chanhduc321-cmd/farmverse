@@ -44,9 +44,20 @@ function applyMutation(farm: Farm, action: FarmMutation, now: number, crops: rea
     case 'selectPet':
       farm.pet = action.pet;
       return 'Đã đổi Pet giữ nhà.';
-    case 'checkIn':
-      if (!recordCheckIn(farm, now)) throw new FarmError('Hôm nay đã điểm danh.');
-      return 'Đã điểm danh hôm nay.';
+    case 'checkIn': {
+      const reward = recordCheckIn(farm, now);
+      if (!reward) throw new FarmError('Hôm nay đã điểm danh.');
+      if (reward.type === 'seed') {
+        farm.seeds[reward.cropId] = (farm.seeds[reward.cropId] ?? 0) + reward.amount;
+        return `Đã điểm danh · +${reward.amount} hạt ${crops[reward.cropId - 1].name.toLowerCase()}.`;
+      }
+      if (reward.type === 'fertilizer') {
+        farm.fertilizer = (farm.fertilizer ?? 0) + reward.amount;
+        return `Đã điểm danh · +${reward.amount} bịch phân.`;
+      }
+      farm.gold += reward.amount;
+      return `Đã điểm danh · +${reward.amount} Gold.`;
+    }
     case 'claimMission': {
       const gold = claimMissionReward(farm, action);
       if (gold === undefined) throw new FarmError('Phần thưởng chưa sẵn sàng hoặc đã nhận.');

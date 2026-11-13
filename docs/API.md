@@ -6,6 +6,8 @@ The Node.js service owns state. In development, the browser calls `/api/...` thr
 
 Call `GET /api/farm` first to start or resume a Guest session with an HttpOnly cookie. If the browser has a valid account session, this endpoint opens its farm. `GET /api/crops` returns the 15 crop definitions. Farm responses include the current farm revision and server time. Backend scripts load `DATABASE_URL` from `backend/.env`. Vercel requires the same server-side variable. Connection failures show a retry screen. [Gameplay](FARMVERSE_GAMEPLAY.md) · [Backend setup](../backend/README.md)
 
+`POST /api/farm/check-in` accepts `expectedRevision`. It records attendance and grants the scheduled reward in the same Farm write. The response carries the updated Farm and a reward message. The web UI uses `missionStatus(farm, now).attendanceDays` for the current seven-day cycle.
+
 | Browser request | JSON fields alongside `expectedRevision` | Effect |
 |---|---|---|
 | `POST /api/farm/buy` | `cropId`, `quantity` | Buy 1–99 seeds |
@@ -105,4 +107,6 @@ Activity routes require the signed-in account and migrations through `009`. The 
 | `GET /api/activity` | Optional `offset`, `limit` from 1 to 50 and `through` | Newest events first, unread summary and next offset. For subsequent pages, set `through` to the first event ID from the initial page to keep the list stable. |
 | `POST /api/activity/read` | JSON `{ "through": "event-id" }` | Mark events up to the displayed event for the current owner. Returns the remaining unread count. |
 
-After displaying the first page, acknowledge its newest event ID. An event that arrives during the read remains unread. The summary lists up to five distinct visitors, totals stolen fruit and counts `recentBlockedSteals`. `pet_block` events use `amount: 0` and include the visitor, crop, plot and timestamp. Visits from the same player to the same Farm are grouped within ten minutes. Blocked attempts and their journal events commit in the same transaction.
+The first page without `through` returns an `ETag`. The client can send it in `If-None-Match` to receive `304` when the latest event and read marker match. The web client keeps one page in memory for the signed-in account and checks at most once per 30 seconds while the player has their own farm open in a visible tab. It sends `X-Farm-Account` with the displayed username to detect when another tab changed the account cookie. A mismatch returns `401`.
+
+After displaying an unread page, acknowledge its newest displayed event ID. An event that arrives during the read remains unread. The summary lists up to five distinct visitors, totals stolen fruit and counts `recentBlockedSteals`. `pet_block` events use `amount: 0` and include the visitor, crop, plot and timestamp. Visits from the same player to the same Farm are grouped within ten minutes. Blocked attempts and their journal events commit in the same transaction.
