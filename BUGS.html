@@ -563,6 +563,78 @@
     "repro": "Vào Guest mới và mua 40 bịch phân với giá 5 Gold/bịch. Thử mua một hạt Dâu tây.",
     "actual": "Đã tái hiện qua API với PostgreSQL riêng. Số dư về 0, túi hạt và kho trống, mua Dâu tây trả 409. Điểm danh ngày đầu chỉ tăng lên 5 Gold, thấp hơn giá hạt rẻ nhất là 10 Gold.",
     "expected": "Chốt cách phục hồi cùng chủ dự án. Kiểm tra người chơi có thể gieo lại trong cùng phiên với 0 Gold, không có hạt, nông sản hoặc cây. Kiểm tra thao tác lặp và gửi đồng thời."
+  },
+  {
+    "id": "BUG-43",
+    "phase": "P1",
+    "title": "Farm mất thao tác đã được API xác nhận",
+    "owner": "Codex",
+    "severity": "HIGH",
+    "status": "FIXED",
+    "foundIn": "T-29/T-48 · Batch Action Sync 0ba42fe · backend/src/farm-store.ts",
+    "repro": "Gửi hai lượt mua cùng revision từ hai tiến trình API dùng chung PostgreSQL. Thử riêng mua, đăng xuất trước lần ghi nền rồi đăng nhập lại.",
+    "actual": "Bản sửa trả 200 sau ghi có điều kiện revision. Hai tiến trình chỉ một lượt nhận 200, lượt còn lại nhận 409. Đăng xuất ngay rồi đăng nhập ở tiến trình kia giữ đúng tiến độ.",
+    "expected": "Chỉ trả 200 sau khi PostgreSQL lưu với điều kiện revision và phiên hợp lệ. Kiểm tra hai tiến trình, tiến trình mới và đăng xuất ngay sau phản hồi."
+  },
+  {
+    "id": "BUG-44",
+    "phase": "P1",
+    "title": "Batch bị từ chối vẫn áp dụng một phần",
+    "owner": "Codex",
+    "severity": "HIGH",
+    "status": "FIXED",
+    "foundIn": "T-29 · Batch Action Sync 0ba42fe · shared/farm-rules.mts",
+    "repro": "Gửi batch mua một hạt Dâu tây rồi gieo Ngô khi Túi hết Ngô. Đọc Farm, đổi nền rồi đọc lại từ tiến trình mới.",
+    "actual": "Bản sửa áp dụng trên bản sao. API trả 409 và hai tiến trình đọc cùng trạng thái trước batch, gồm Gold, hạt và revision.",
+    "expected": "Khi một thao tác lỗi, giữ nguyên Gold, Túi, Kho, ô đất và revision của cả batch ở mọi tiến trình."
+  },
+  {
+    "id": "BUG-45",
+    "phase": "P1",
+    "title": "API cho gieo lùi giờ và thu hoạch ngay",
+    "owner": "Codex",
+    "severity": "HIGH",
+    "status": "FIXED",
+    "foundIn": "T-46 · Batch Action Sync 0ba42fe · shared/farm-rules.mts",
+    "repro": "Gửi batch mua, gieo Dâu tây với plantedAt lùi 60 giây, hái và bán.",
+    "actual": "Batch giả mốc gieo trả 409 khi hái ngay. Test xác nhận mốc gieo do server đặt, hái sớm và tưới cây chín bị từ chối.",
+    "expected": "Server quyết định mốc gieo và kiểm tra chín, chăm cây theo luật đã duyệt ở cả endpoint đơn và batch."
+  },
+  {
+    "id": "BUG-46",
+    "phase": "P1",
+    "title": "Lượt gieo đầu gửi revision đã tăng ở trình duyệt",
+    "owner": "Codex",
+    "severity": "HIGH",
+    "status": "FIXED",
+    "foundIn": "T-29 · Batch Action Sync 0ba42fe · web/src/main.ts",
+    "repro": "Từ Guest mới, mua một hạt Dâu tây, chọn hạt rồi bấm gieo ô đầu.",
+    "actual": "Chromium gom sáu lượt gieo thành một POST tại revision đã xác nhận. Sau F5 đủ sáu ô. Giữ phản hồi batch đầu để kiểm tra lượt chờ gửi đúng revision kế tiếp.",
+    "expected": "Batch đầu dùng revision đã được server xác nhận trước thao tác đầu tiên. Phản hồi xác nhận cập nhật nền cho các thao tác còn chờ."
+  },
+  {
+    "id": "BUG-47",
+    "phase": "P1",
+    "title": "Đổi phiên có thể kẹt khi đồng bộ nhận lỗi kéo dài",
+    "owner": "Codex",
+    "severity": "HIGH",
+    "status": "FIXED",
+    "foundIn": "T-24 · Batch Action Sync 0ba42fe · web/src/batch-queue.ts",
+    "repro": "Để queue có thao tác chờ, cho API batch trả 503 rồi gọi đường chờ đồng bộ trước khi đổi phiên.",
+    "actual": "Chromium mô phỏng 503 lúc đăng xuất. Một POST thất bại trả lại nút thao tác, chưa gửi logout. Queue thử lại có khoảng chờ và đăng xuất được sau khi lưu.",
+    "expected": "Khi đồng bộ thất bại, báo lỗi cho thao tác phụ thuộc và giữ queue cho lần thử lại có giới hạn."
+  },
+  {
+    "id": "BUG-48",
+    "phase": "P1",
+    "title": "Batch chấp nhận loại thao tác ngoài schema",
+    "owner": "Codex",
+    "severity": "MEDIUM",
+    "status": "FIXED",
+    "foundIn": "T-29 · Batch Action Sync 0ba42fe · backend/src/farm.ts",
+    "repro": "Gửi POST /farm/batch với revision đúng và action { \"type\": \"invalid\", \"plot\": 0 }.",
+    "actual": "API trả 400 cho loại lạ hoặc quá 20 action, trả 413 cho body quá 4 KiB.",
+    "expected": "Trả 400 cho loại thao tác ngoài schema và giữ nguyên trạng thái Farm."
   }
 ]
 </script>

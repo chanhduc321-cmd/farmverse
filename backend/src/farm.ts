@@ -1,10 +1,11 @@
-import type { Farm, FarmMutation } from '../../shared/farm.mts';
-import { applyFarmAction } from '../../shared/farm-rules.mts';
+import { FARM_BATCH_LIMIT } from '../../shared/farm.mts';
+import type { Farm, FarmAction, FarmBatchMutation, FarmMutation } from '../../shared/farm.mts';
+import { applyFarmAction, applyFarmBatch } from '../../shared/farm-rules.mts';
 import { crops } from './catalog.ts';
 
 export { createFarm, FarmError } from '../../shared/farm-rules.mts';
 
-export function parseAction(type: FarmMutation['type'], value: unknown): FarmMutation | undefined {
+export function parseAction(type: unknown, value: unknown): FarmMutation | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return;
   const { expectedRevision, cropId, quantity, plot } = value as Record<string, unknown>;
   if (typeof expectedRevision !== 'number' || !Number.isSafeInteger(expectedRevision) || expectedRevision < 0) return;
@@ -33,12 +34,35 @@ export function parseAction(type: FarmMutation['type'], value: unknown): FarmMut
     return;
   }
   if (typeof plot !== 'number' || !Number.isInteger(plot) || plot < 0 || plot >= 6) return;
-  if (type !== 'plant') return { type, plot, expectedRevision };
-  if (typeof cropId === 'number' && Number.isInteger(cropId) && crops[cropId - 1]) {
+  if (type === 'harvest' || type === 'clear' || type === 'water' || type === 'fertilize') {
+    return { type, plot, expectedRevision };
+  }
+  if (type === 'plant' && typeof cropId === 'number' && Number.isInteger(cropId) && crops[cropId - 1]) {
     return { type, plot, cropId, expectedRevision };
   }
 }
 
 export function applyAction(farm: Farm, action: FarmMutation, now: number, random = Math.random): string {
   return applyFarmAction(farm, action, now, crops, random);
+}
+
+export function parseBatch(value: unknown): FarmBatchMutation | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return;
+  const { expectedRevision, actions } = value as Record<string, unknown>;
+  if (typeof expectedRevision !== 'number' || !Number.isSafeInteger(expectedRevision) || expectedRevision < 0) return;
+  if (!Array.isArray(actions) || actions.length === 0 || actions.length > FARM_BATCH_LIMIT) return;
+  const parsedActions: FarmAction[] = [];
+  for (const item of actions) {
+    if (typeof item !== 'object' || item === null || Array.isArray(item)) return;
+    const type = (item as { type?: unknown }).type;
+    const parsed = parseAction(type, { ...item, expectedRevision });
+    if (!parsed) return;
+    const { expectedRevision: _, ...action } = parsed;
+    parsedActions.push(action);
+  }
+  return { expectedRevision, actions: parsedActions };
+}
+
+export function applyBatch(farm: Farm, batch: FarmBatchMutation, now: number, random = Math.random): string[] {
+  return applyFarmBatch(farm, batch, now, crops, random);
 }
