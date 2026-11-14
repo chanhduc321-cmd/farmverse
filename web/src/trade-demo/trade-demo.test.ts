@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 import { getTradeDemoFixture } from '../../../shared/fixtures/trade-demo.mts';
 import type { PaymentAmount } from '../../../shared/payments.mts';
 import { createFixtureTradeDemoClient } from './fixtures.ts';
@@ -40,6 +40,7 @@ describe('Trade Demo Helpers (T-18 / T-62)', () => {
 
     const zeroGas: PaymentAmount = { asset: near, amountAtomic: '0' };
     assert.equal(formatPaymentAmount(zeroGas), '0 NEAR');
+    assert.equal(formatPaymentAmount({ asset: near, amountAtomic: '1' }), '0,000000000000000000000001 NEAR');
   });
 
   it('formats Gross Profit according to T-62 specifications', () => {

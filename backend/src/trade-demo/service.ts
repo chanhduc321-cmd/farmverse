@@ -3,13 +3,13 @@ import type { PaymentAmount, PaymentAsset, PaymentIntent, PaymentResult, Payment
 import { TRADE_DEMO_PRICES } from '../../../shared/trade-demo.mts';
 import type {
   TradeDemoActionRequest, TradeDemoActionResponse, TradeDemoBlockReason, TradeDemoErrorCode, TradeDemoOffer,
-  TradeDemoOrder, TradeDemoOrderResponse, TradeDemoOrderStatus, TradeDemoPnl, TradeDemoPnlResponse, TradeDemoRole, TradeDemoSnapshot,
+  TradeDemoOrder, TradeDemoOrderResponse, TradeDemoOrderStatus, TradeDemoPnl, TradeDemoPnlResponse, TradeDemoRole, TradeDemoSnapshot, TradeDemoVisitResponse,
 } from '../../../shared/trade-demo.mts';
 import { withDatabaseLock } from '../database-lock.ts';
 import { tradePayments } from '../payments/provider.ts';
 import { PaymentPreparationRefused } from '../payments/trade-payments.ts';
 import type { TradePayments, TradeWalletState } from '../payments/trade-payments.ts';
-import { applyDemoAction, isDismissed, offerAvailable, offerIdFor, orderPending, readDemoOrder, readDemoState, settleDemoOrder } from './store.ts';
+import { applyDemoAction, isDismissed, offerAvailable, offerIdFor, orderPending, readDemoOrder, readDemoState, scheduleDemoVisit, settleDemoOrder, visitTime } from './store.ts';
 import type { DemoOrderRow, DemoState } from './store.ts';
 
 const messages: Record<TradeDemoErrorCode, string> = {
@@ -233,6 +233,23 @@ export function createTradeDemoService(payments: TradePayments) {
       if (order && orderPending(order)) await reconcile(farmId, orderId, payments);
     },
     async read(farmId: string) { return snapshotView(farmId, await currentState(farmId), payments); },
+    async visit(farmId: string): Promise<TradeDemoVisitResponse> {
+      const state = await currentState(farmId);
+      const { role, run, reservation } = state;
+      let arrivesAt: Date | null = null;
+      if (offerAvailable(run, role) && !reservation) {
+        arrivesAt = visitTime(run, role);
+        if (!arrivesAt) {
+          const wallet = await readWallet(farmId, walletFor(state), payments);
+          if (!await offerReason(role, wallet, payments)) arrivesAt = await scheduleDemoVisit(farmId, run.id, role);
+        }
+      }
+      const checkAgain = run.item_owner !== 'basket' && !isDismissed(run, role) &&
+        (role === 'buyer' ? !run.seller_dismissed : run.item_owner === 'seller');
+      const canRevisitStall = Boolean(state.latest || isDismissed(run, role));
+      return { runId: run.id, serverTime: Date.now(), checkAgain, canRevisitStall,
+        visit: arrivesAt ? { offerId: offerIdFor(run, role), kind: kindFor(role), arrivesAt: arrivesAt.getTime() } : null };
+    },
     async pnl(farmId: string): Promise<TradeDemoPnlResponse> {
       const state = await currentState(farmId);
       return { runId: state.run.id, revision: state.run.revision, serverTime: Date.now(), pnl: pnlView(state, payments) };

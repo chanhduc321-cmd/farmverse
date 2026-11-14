@@ -20,8 +20,8 @@ export function formatPaymentAmount(
 
   const showSymbol = options?.showSymbol ?? true;
   const decimalSeparator = options?.decimalSeparator ?? ',';
-  const maxDecimals = options?.maxDecimals ?? 6;
   const { decimals, symbol } = amount.asset;
+  const maxDecimals = options?.maxDecimals ?? decimals;
 
   const rawAtomic = amount.amountAtomic ? amount.amountAtomic.trim() : '0';
   const isNegative = rawAtomic.startsWith('-');

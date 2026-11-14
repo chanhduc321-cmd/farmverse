@@ -116,6 +116,9 @@ test('HTTP trade demo reserves, recovers, settles and awards once on PostgreSQL'
   let server = http();
   const get = (person: typeof seller, path = '/trade-demo') =>
     server.request(path, { headers: { Cookie: `farmverse_account=${person.token}` } });
+  const visit = (person: typeof seller, extraHeaders = {}) => server.request('/trade-demo/visit', {
+    method: 'POST', headers: { Cookie: `farmverse_account=${person.token}`, ...extraHeaders },
+  });
   const act = (person: typeof seller, action: 'accept' | 'skip', body: TradeDemoActionRequest, extraHeaders = {}) =>
     server.request(`/trade-demo/${action}`, { method: 'POST',
       headers: { 'Content-Type': 'application/json', Cookie: `farmverse_account=${person.token}`, ...extraHeaders },
@@ -129,6 +132,9 @@ test('HTTP trade demo reserves, recovers, settles and awards once on PostgreSQL'
     assert.equal(run.created, true);
     assert.deepEqual(await initializeDemoRun(seller, buyer, false), { runId: run.runId, created: false });
     assert.equal((await get(outside)).status, 409);
+    assert.equal((await visit(outside)).status, 409);
+    assert.equal((await visit(seller, { 'Sec-Fetch-Site': 'cross-site' })).status, 400);
+    assert.equal((await (await visit(buyer)).json()).visit, null);
     const first = await (await get(seller)).json() as TradeDemoSnapshot;
     assert.equal(first.offer?.amount.amountAtomic, '1000000');
     const waiting = await (await get(buyer)).json();
@@ -142,9 +148,21 @@ test('HTTP trade demo reserves, recovers, settles and awards once on PostgreSQL'
     balances.set(npc.accountId, '0');
     const blocked = await (await get(seller)).json();
     assert.equal(blocked.offer.unavailableReason, 'NPC_INSUFFICIENT_USDC');
+    assert.equal((await (await visit(seller)).json()).visit, null);
     assert.equal((await act(seller, 'accept', request)).status, 409);
     assert.equal(intents.size, 0);
     balances.set(npc.accountId, '2000000');
+    const visits = await Promise.all([visit(seller), visit(seller)]);
+    const sameVisit = await Promise.all(visits.map(response => response.json()));
+    assert.ok(sameVisit[0].visit);
+    assert.deepEqual(sameVisit[0].visit, sameVisit[1].visit);
+    assert.equal(sameVisit[0].visit.kind, 'sell_to_npc');
+    assert.equal(sameVisit[0].visit.offerId, first.offer?.id);
+    assert.ok(sameVisit[0].visit.arrivesAt > sameVisit[0].serverTime);
+    assert.ok(sameVisit[0].visit.arrivesAt <= sameVisit[0].serverTime + 12_000);
+    assert.equal(sameVisit[0].canRevisitStall, false);
+    server = http();
+    assert.deepEqual((await (await visit(seller)).json()).visit, sameVisit[0].visit);
 
     const interrupted = await act(seller, 'accept', request);
     assert.equal(interrupted.status, 503);
@@ -181,6 +199,10 @@ test('HTTP trade demo reserves, recovers, settles and awards once on PostgreSQL'
     assert.equal(afterA.pnl.costBasis.amountAtomic, '1000000');
     assert.equal(afterA.pnl.grossProfit, null);
     assert.equal(afterA.basket.badge, null);
+    const buyerVisit = await (await visit(buyer)).json();
+    assert.equal(buyerVisit.visit?.kind, 'buy_from_npc');
+    assert.equal(buyerVisit.visit?.offerId, afterA.offer?.id);
+    assert.equal((await (await visit(seller)).json()).visit, null);
     assert.equal((await act(seller, 'accept', request)).status, 200);
 
     const bids = await Promise.all([act(buyer, 'accept', requestFor(afterA)), act(buyer, 'accept', requestFor(afterA))]);
@@ -192,12 +214,16 @@ test('HTTP trade demo reserves, recovers, settles and awards once on PostgreSQL'
     assert.equal(awaiting.snapshot.basket.filled, 2);
     assert.equal(awaiting.snapshot.pnl.revenue.amountAtomic, '0');
     assert.equal(submitCount, 1);
+    const reservedVisit = await (await visit(buyer)).json();
+    assert.equal(reservedVisit.visit, null);
+    assert.equal(reservedVisit.canRevisitStall, true);
 
     setPayment(awaiting.order.id, 'cancelled');
     const cancelled = await (await get(buyer, `/trade-demo/orders/${awaiting.order.id}`)).json();
     assert.equal(cancelled.order.status, 'cancelled');
     assert.equal(cancelled.snapshot.item.reservedByOrderId, null);
     assert.equal(cancelled.snapshot.basket.badge, null);
+    assert.deepEqual((await (await visit(buyer)).json()).visit, buyerVisit.visit);
     const retryRequest = requestFor(cancelled.snapshot);
     const resumed = await (await act(buyer, 'accept', retryRequest)).json();
     assert.notEqual(resumed.order.id, awaiting.order.id);
@@ -234,6 +260,10 @@ test('HTTP trade demo reserves, recovers, settles and awards once on PostgreSQL'
     assert.equal(complete.pnl.costBasis.amountAtomic, '1000000');
     assert.equal(complete.pnl.revenue.amountAtomic, '1500000');
     assert.equal(complete.pnl.grossProfit.amountAtomic, '500000');
+    const completedVisit = await (await visit(buyer)).json();
+    assert.equal(completedVisit.visit, null);
+    assert.equal(completedVisit.checkAgain, false);
+    assert.equal(completedVisit.canRevisitStall, true);
     assert.equal(bodies[2].pnl.sponsorGas.amountAtomic, '4308598804695900000000');
     assert.deepEqual(await readFarm(seller.farmId, true), sellerFarm);
     assert.deepEqual(await readFarm(buyer.farmId, true), buyerFarm);
@@ -248,6 +278,9 @@ test('HTTP trade demo reserves, recovers, settles and awards once on PostgreSQL'
     assert.equal(skipped.snapshot.offer, null);
     assert.equal(skipped.snapshot.item.owner, 'seller');
     assert.equal(skipped.snapshot.pnl.costBasis.amountAtomic, '0');
+    const skippedVisit = await (await visit(seller)).json();
+    assert.equal(skippedVisit.visit, null);
+    assert.equal(skippedVisit.checkAgain, false);
     const repeatedSkip = await (await act(seller, 'skip', skipRequest)).json();
     assert.equal(repeatedSkip.snapshot.revision, skipped.snapshot.revision);
     assert.equal(submitCount, 1);

@@ -19,6 +19,7 @@ Trong `backend/`, bật adapter NEAR USDC testnet và đặt `TRADE_DEMO_SELLER_
 | Request | Input | Response |
 |---|---|---|
 | `GET /api/trade-demo` | Cookie phiên | `TradeDemoSnapshot`. |
+| `POST /api/trade-demo/visit` | Cookie phiên, body rỗng | `TradeDemoVisitResponse` với lịch NPC của farm. |
 | `POST /api/trade-demo/accept` | `TradeDemoActionRequest` | 202 khi lệnh đang xử lý, 200 khi cùng lệnh đã đạt trạng thái cuối. Body `TradeDemoActionResponse`. |
 | `POST /api/trade-demo/skip` | `TradeDemoActionRequest` | 200, `TradeDemoActionResponse`, `order: null`, `offerDismissed: true`. |
 | `GET /api/trade-demo/orders/:orderId` | ID lệnh | `TradeDemoOrderResponse`, gồm lệnh được hỏi và snapshot hiện tại. |
@@ -38,6 +39,12 @@ Path trong `TRADE_DEMO_API` chưa gồm `/api`. Thay `:orderId` bằng ID đã q
 Tạo UUID v4 `requestId` một lần khi bấm Accept/Skip. Retry mạng dùng cùng ID/body. Server ràng buộc request với farm/run/offer/loại hành động. Cùng ID và cùng nội dung trả kết quả đã lưu trước khi kiểm tra revision. Cùng ID nhưng nội dung khác trả `REQUEST_CONFLICT`. `expectedRevision` thuộc snapshot demo.
 
 Server kiểm tra quyền, vai trò, giá, ví, số dư và trạng thái quả trước khi tạo lệnh. Lệnh của farm khác trả 404. Khi kết quả chưa rõ, đọc cùng lệnh hoặc snapshot để khôi phục. Sau khi lệnh đã hủy/thất bại và lời mời mở lại, hành động mới dùng requestId mới.
+
+## NPC ghé ruộng
+
+Web hỏi lịch trong tab hiện tại khi người chơi ở ruộng của mình. Khi ví, số dư và lượt quả đều hợp lệ, backend lưu một thời điểm đến cách 6–12 giây theo run/vai trò (migration 014). Reload và các tab cùng phiên nhận cùng `offerId` và `arrivesAt`. Lượt B chỉ có lịch sau khi NPC đã nhận quả. Web đọc lại lịch lúc đến trước khi hiện NPC và mở hội thoại khi người chơi bấm.
+
+Đã bỏ qua hoặc hoàn thành thì không có lời mời mới trong cùng vòng. Sau khi người chơi có lệnh hoặc đã bỏ qua, họ có thể ghé lại quầy để xem trạng thái. Thao tác tại quầy dùng chung cơ chế kiểm tra giá, phiên, revision và giữ quả.
 
 ## Snapshot
 
@@ -63,7 +70,7 @@ PnL lấy từ các lượt đã áp dụng trong run. Phí sponsor cộng gas c
 
 Callback xác nhận đọc lại kết quả qua adapter rồi lưu lệnh, quả và huy hiệu trong cùng transaction PostgreSQL. Khi callback gián đoạn, đọc snapshot hoặc cùng order sẽ tiếp tục đối chiếu lệnh đã lưu.
 
-Đọc lệnh mỗi 2–3 giây khi đang chờ. B đang chờ NPC có quả có thể đọc snapshot mỗi 3 giây trong màn demo. Dừng polling khi tab ẩn/reset/đăng xuất hoặc lệnh kết thúc. Khi trở lại tab, đọc trạng thái server trước khi thao tác tiếp.
+Đọc lại lệnh mỗi 4 giây khi đang xử lý. Kiểm tra lịch NPC mỗi 8 giây khi vào ruộng của mình và còn lượt có thể thực hiện. Tab ẩn, đóng quầy hoặc đổi phiên dừng lượt đọc tương ứng. Khi trở lại tab, đọc lại trạng thái server.
 
 ## Lỗi
 

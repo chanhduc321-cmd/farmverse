@@ -2,6 +2,7 @@ import type { PaymentAmount, PaymentResult, PaymentWallet } from './payments.mts
 
 export const TRADE_DEMO_API = {
   read: { method: 'GET', path: '/trade-demo' },
+  visit: { method: 'POST', path: '/trade-demo/visit' },
   accept: { method: 'POST', path: '/trade-demo/accept' },
   skip: { method: 'POST', path: '/trade-demo/skip' },
   order: { method: 'GET', path: '/trade-demo/orders/:orderId' },
@@ -19,6 +20,14 @@ export type TradeDemoStage = 'awaiting_seller' | 'paying_seller' | 'awaiting_buy
 export type TradeDemoOfferKind = 'sell_to_npc' | 'buy_from_npc';
 export type TradeDemoOrderStatus = 'awaiting_approval' | 'processing' | 'verifying' | 'succeeded' | 'failed' | 'cancelled' | 'expired';
 export type TradeDemoBlockReason = 'WALLET_NOT_READY' | 'INSUFFICIENT_USDC' | 'NPC_INSUFFICIENT_USDC' | 'ITEM_RESERVED';
+
+export interface TradeDemoVisitResponse {
+  runId: string;
+  serverTime: number;
+  checkAgain: boolean;
+  canRevisitStall: boolean;
+  visit: { offerId: string; kind: TradeDemoOfferKind; arrivesAt: number } | null;
+}
 
 export type TradeDemoOffer = {
   id: string;
@@ -107,10 +116,10 @@ export interface TradeDemoPnlResponse {
 }
 
 export interface TradeDemoClient {
-  read(): Promise<TradeDemoSnapshot>;
-  accept(request: TradeDemoActionRequest): Promise<TradeDemoActionResponse>;
-  skip(request: TradeDemoActionRequest): Promise<TradeDemoActionResponse>;
-  readOrder(orderId: string): Promise<TradeDemoOrderResponse>;
+  read(signal?: AbortSignal): Promise<TradeDemoSnapshot>;
+  accept(request: TradeDemoActionRequest, signal?: AbortSignal): Promise<TradeDemoActionResponse>;
+  skip(request: TradeDemoActionRequest, signal?: AbortSignal): Promise<TradeDemoActionResponse>;
+  readOrder(orderId: string, signal?: AbortSignal): Promise<TradeDemoOrderResponse>;
 }
 
 export const TRADE_DEMO_ERROR_STATUS = {

@@ -15,6 +15,7 @@ import { createMissions } from './missions.ts';
 import { farmLoading } from './loading.ts';
 import { createFarmPet, loadPetSprites } from './pets.ts';
 import { mountTransactionHistory } from './transactions/history.ts';
+import { mountFarmTradeVisit } from './trade-demo/farm-visit.ts';
 import './style.css';
 
 // Initialize Vercel Web Analytics
@@ -436,6 +437,7 @@ function setSnapshot(next: FarmResponse | FarmSessionResponse, optimistic = fals
 
 function updateCommunityAccess(): void {
   const available = sessionSynchronized && Boolean(session?.account);
+  farmTradeVisit.setHome(available && !visit ? session?.sessionKey : undefined);
   community.updateAccess(available, busy || accountSubmitting);
   if (!available) {
     activity.setSession(undefined);
@@ -449,6 +451,7 @@ function setVisit(next: FarmVisit | undefined): void {
   const wasVisiting = Boolean(visit);
   hidePlotTooltip();
   visit = next;
+  farmTradeVisit.setHome(sessionSynchronized && session?.account && !next ? session.sessionKey : undefined);
   if (next) activeCareTool = undefined;
   visitReceivedAt = performance.now();
   activity.setAtHome(!next);
@@ -1770,7 +1773,7 @@ class FarmScene extends Phaser.Scene {
       ['fence-locked', 'soil/fence-locked.png'],
     ];
     const interfaceImages = new Map([...document.images]
-      .filter(image => !image.closest('#farm-loading'))
+      .filter(image => image.loading !== 'lazy' && !image.closest('#farm-loading'))
       .map(image => [image.src, image]));
     for (const crop of crops) {
       const art = cropArt(crop);
@@ -1812,6 +1815,7 @@ class FarmScene extends Phaser.Scene {
       this.game.events.once(Phaser.Core.Events.POST_RENDER, () => {
         farmLoading.finish();
         if (farmLoading.failed) return;
+        farmTradeVisit.farmReady();
         trackEvent('game_boot', { load_ms: Math.round(performance.now()) });
         activity.start();
       });
@@ -2458,6 +2462,7 @@ const community = createCommunity({
 const transactionHistoryContainer = document.createElement('div');
 viewProfile.insertBefore(transactionHistoryContainer, btnAccountLogout);
 const transactionHistory = mountTransactionHistory(transactionHistoryContainer);
+const farmTradeVisit = mountFarmTradeVisit(field);
 
 const missions = createMissions(field, farmTime,
   async claim => Boolean(await send({ type: 'claimMission', ...claim })),

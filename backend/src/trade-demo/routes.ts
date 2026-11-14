@@ -39,6 +39,12 @@ export function tradeDemoRoutes(
 
   routes.get(TRADE_DEMO_API.read.path, async context =>
     context.json(await context.get('service').read(context.get('farmId'))));
+  routes.post(TRADE_DEMO_API.visit.path, async context => {
+    if (context.req.header('Sec-Fetch-Site') === 'cross-site') {
+      return failure(context, new TradeDemoError('INVALID_REQUEST'));
+    }
+    return context.json(await context.get('service').visit(context.get('farmId')));
+  });
   routes.get(TRADE_DEMO_API.pnl.path, async context =>
     context.json(await context.get('service').pnl(context.get('farmId'))));
   routes.get(TRADE_DEMO_API.order.path, async context =>

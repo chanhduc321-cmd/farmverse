@@ -245,24 +245,24 @@
     "phase": "P4",
     "target": "Ưu tiên 1 · UI lời mời",
     "title": "Đổi, Mua, Bỏ qua và badge Mâm quả",
-    "owner": "Antigravity",
-    "scope": "web/src/trade-demo/ theo [brief](docs/agents/handoff-usdc-trade.md). Codex giữ điểm nối web và asset runtime.",
-    "branch": "feat/near-auth-ui",
-    "status": "REVIEW",
-    "dependsOn": "Đã nhận 5a52a60. Build và 11 test đạt. Sửa BUG-49–BUG-53 và bổ sung cảnh cửa hàng/NPC theo hướng chủ dự án chốt trước khi tích hợp.",
-    "acceptance": "A đổi quả lấy 1 USDC, B mua với 1,5 USDC. Cảnh cửa hàng có một NPC. Có thể tiếp tục duyệt sau reload, hủy polling khi đổi phiên và nhận badge sau xác minh."
+    "owner": "Codex",
+    "scope": "Tích hợp bản bàn giao của Antigravity trong web/src/trade-demo/, dùng asset T-14 đã duyệt.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Cảnh quầy, mâm 2/3 → 3/3, badge và kiểm tra tải lại đã đạt local. Đã sửa BUG-49–BUG-53 và BUG-55.",
+    "acceptance": "A đổi quả lấy 1 USDC, B mua với 1,5 USDC. Khôi phục lệnh chờ duyệt sau reload. Badge hiển thị khi thanh toán và cấp quả hoàn tất."
   },
   {
     "id": "T-62",
     "phase": "P4",
     "target": "Ưu tiên 1 · UI PnL",
     "title": "Hiện giá vốn, doanh thu và lãi gộp của NPC",
-    "owner": "Antigravity",
-    "scope": "Màn PnL trong web/src/trade-demo/ theo [brief](docs/agents/handoff-usdc-trade.md).",
-    "branch": "feat/near-auth-ui",
-    "status": "REVIEW",
-    "dependsOn": "Đã nhận 5a52a60. Cần xử lý BUG-53/BUG-54 và đưa PnL vào góc nhìn NPC.",
-    "acceptance": "Giá vốn 1, doanh thu 1,5, lãi gộp 0,5 USDC sau lượt bán. Phí sponsor ghi đơn vị NEAR, giữ độ chính xác đến một yoctoNEAR."
+    "owner": "Codex",
+    "scope": "Sổ quầy trong web/src/trade-demo/ từ bản bàn giao Antigravity.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Sau reload, sổ quầy hiện giá vốn 1, doanh thu 1,5, lãi gộp +0,5 USDC và phí sponsor 0,0043043662645273 NEAR. BUG-54 có ca kiểm thử một yoctoNEAR.",
+    "acceptance": "Phí sponsor ghi riêng bằng NEAR với đủ độ chính xác."
   },
   {
     "id": "T-65",
@@ -270,11 +270,11 @@
     "target": "Ưu tiên 1 · Sự kiện tại ruộng",
     "title": "NPC ghé ruộng ngẫu nhiên, mời mua hoặc bán nông sản",
     "owner": "Codex",
-    "scope": "Backend chọn thời điểm và lưu sự kiện theo Farm. Web hiển thị NPC tại ruộng và mở lời mời qua UI T-18.",
-    "branch": "codex/npc-farm-visit",
-    "status": "TODO",
-    "dependsOn": "T-57 cung cấp lời mời USDC hợp lệ, T-18 cung cấp hội thoại. Chốt khoảng chờ và thời gian nghỉ giữa hai lượt khi triển khai.",
-    "acceptance": "NPC có thể ghé khi người chơi ở ruộng của mình. NPC hỏi mua nếu lượt A đủ điều kiện, hoặc chào bán nếu đã có quả cho lượt B. Mỗi ruộng chỉ có một lời mời đang mở. Đồng ý đi qua luồng xác nhận hiện có. Bỏ qua giữ nguyên tài sản. Reload hoặc mở hai tab không tạo thêm lời mời cho cùng sự kiện."
+    "scope": "Migration 014, API lịch ghé và NPC tại ruộng nhà.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Lịch 6–12 giây, một lần theo mỗi vai trò/vòng. Chromium thấy NPC của B sau khi A bán. Kiểm thử PostgreSQL kiểm tra hai tab, reload, bỏ qua và phục hồi cùng lời mời sau hủy.",
+    "acceptance": "NPC mời A bán khi đủ điều kiện và mời B mua sau khi nhận quả. Thăm ruộng khác ẩn lời mời."
   },
   {
     "id": "T-19",
@@ -282,11 +282,11 @@
     "target": "Ưu tiên 1 · Nghiệm thu",
     "title": "Chạy đủ vòng A → NPC → B và mở badge",
     "owner": "Codex",
-    "scope": "Tích hợp develop, hai phiên local rồi public khi callback sẵn.",
+    "scope": "Hai phiên testnet, local rồi public khi callback sẵn.",
     "branch": "develop",
-    "status": "TODO",
-    "dependsOn": "T-17, T-57, T-58, T-65 và UI bàn giao.",
-    "acceptance": "45–75 phút. Hai khoản USDC khớp ví và số tiền, NPC lãi gộp 0,5, sponsor trả gas, badge/log bền qua reload. Thử lời mời tại ruộng, tranh suất/bấm lặp/hủy/timeout."
+    "status": "REVIEW",
+    "dependsOn": "Vòng local đạt với hai chuyển khoản thật và một badge lưu PostgreSQL. Khởi động lại Farm rồi đối chiếu badge/PnL. T-55 còn callback public.",
+    "acceptance": "Khớp người gửi/nhận, giá 1 và 1,5 USDC, lãi gộp 0,5, sponsor trả phí. Kiểm tra tranh suất/bấm lặp/hủy/hết hạn bằng bộ test PostgreSQL."
   },
   {
     "id": "T-24",

@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import type { PaymentIntent, PaymentResult, PaymentWallet } from '../../../shared/payments.mts';
 import type { TradeDemoActionRequest, TradeDemoBlockReason, TradeDemoErrorCode, TradeDemoOrderStatus, TradeDemoRole } from '../../../shared/trade-demo.mts';
@@ -22,6 +22,8 @@ interface RunRow {
   seller_dismissed: boolean;
   buyer_dismissed: boolean;
   badge_awarded_at: Date | null;
+  seller_visit_at: Date | null;
+  buyer_visit_at: Date | null;
 }
 
 export interface DemoOrderRow {
@@ -65,6 +67,10 @@ export function offerAvailable(run: RunRow, role: TradeDemoRole) {
   return !isDismissed(run, role) && run.item_owner === (role === 'seller' ? 'seller' : 'npc');
 }
 
+export function visitTime(run: RunRow, role: TradeDemoRole) {
+  return role === 'seller' ? run.seller_visit_at : run.buyer_visit_at;
+}
+
 async function activeRun(client: PoolClient, farmId: string, lock: 'share' | 'update') {
   const { rows: [run] } = await client.query<RunRow>(`
     SELECT * FROM farm_trade_demo_runs
@@ -72,6 +78,25 @@ async function activeRun(client: PoolClient, farmId: string, lock: 'share' | 'up
     ${lock === 'update' ? 'FOR UPDATE' : 'FOR SHARE'}
   `, [farmId]);
   return run;
+}
+
+async function hasReservation(client: PoolClient, runId: string) {
+  const { rowCount } = await client.query(`SELECT 1 FROM farm_trade_demo_orders WHERE run_id=$1
+    AND status IN ('processing','verifying','awaiting_approval')`, [runId]);
+  return Boolean(rowCount);
+}
+
+export async function scheduleDemoVisit(farmId: string, runId: string, role: TradeDemoRole) {
+  return transactFarm(async client => {
+    const run = await activeRun(client, farmId, 'update');
+    if (!run || run.id !== runId || !offerAvailable(run, role) || await hasReservation(client, run.id)) return null;
+    const existing = visitTime(run, role);
+    if (existing) return existing;
+    const arrivesAt = new Date(Date.now() + randomInt(6, 13) * 1_000);
+    const column = role === 'seller' ? 'seller_visit_at' : 'buyer_visit_at';
+    await client.query(`UPDATE farm_trade_demo_runs SET ${column}=$2 WHERE id=$1`, [run.id, arrivesAt]);
+    return arrivesAt;
+  });
 }
 
 export async function readDemoState(farmId: string): Promise<DemoState | undefined> {
@@ -128,9 +153,7 @@ export async function applyDemoAction(
     if (run.id !== request.runId || run.revision !== request.expectedRevision) return { error: 'STALE_RUN' };
     const role = roleOf(run, farmId);
     if (offerIdFor(run, role) !== request.offerId || !offerAvailable(run, role)) return { error: 'OFFER_NOT_ACTIVE' };
-    const { rowCount } = await client.query(`SELECT 1 FROM farm_trade_demo_orders WHERE run_id=$1
-      AND status IN ('processing','verifying','awaiting_approval')`, [run.id]);
-    if (rowCount) return { error: 'ITEM_RESERVED' };
+    if (await hasReservation(client, run.id)) return { error: 'ITEM_RESERVED' };
 
     let orderId: string | null = null;
     if (action === 'accept') {
