@@ -36,3 +36,9 @@ BUGS.html
 BUGS.md
 TASKS.html
 TASKS.md
+
+# Local recordings & inspection artifacts
+artifacts/
+temp_inspect/
+*.mp4
+*.webm
