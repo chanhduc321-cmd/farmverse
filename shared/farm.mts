@@ -3,6 +3,7 @@ import type { FarmProgression, MissionClaim } from './progression.mts';
 export const FARM_API = {
   read: { path: '/farm' },
   catalog: { path: '/crops' },
+  batch: { path: '/farm/batch' },
   buy: { path: '/farm/buy' },
   buyFertilizer: { path: '/farm/buy-fertilizer' },
   sell: { path: '/farm/sell' },
@@ -76,6 +77,7 @@ export interface FarmResponse {
 export interface FarmSessionResponse extends FarmResponse {
   accountsAvailable: boolean;
   account: { username: string } | null;
+  sessionKey: string;
 }
 
 export type FarmAction =
@@ -89,6 +91,17 @@ export type FarmAction =
   | ({ type: 'claimMission' } & MissionClaim);
 
 export type FarmMutation = FarmAction & { expectedRevision: number };
+
+export interface FarmBatchMutation {
+  expectedRevision: number;
+  actions: FarmAction[];
+}
+
+export interface FarmBatchRequest extends FarmBatchMutation {
+  sessionKey: string;
+}
+
+export const FARM_BATCH_LIMIT = 20;
 
 export const FERTILIZER_COST = 5;
 

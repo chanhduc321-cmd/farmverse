@@ -1,5 +1,7 @@
 # FarmVerse backend
 
+**Tên tiếng Anh:** FarmVerse · **Tên tiếng Việt:** Nông Trại Mộng Mơ
+
 Backend chạy Hono và lưu Guest, tài khoản, ruộng, kho, bạn bè và nhật ký vào PostgreSQL. Các script tự nạp `.env` trong `backend/`. Chạy các lệnh dưới đây trong `backend/` với Docker Desktop, Node.js 22.22.2 trở lên và pnpm.
 
 ```powershell

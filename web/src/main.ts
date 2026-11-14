@@ -1,8 +1,13 @@
 import Phaser from 'phaser';
+import { inject } from '@vercel/analytics';
 import { ACCOUNT_API, FARM_API, FERTILIZER_COST, ripeAt, stageAt } from '../../shared/farm.mts';
-import type { Crop, FarmAction, FarmMutation, FarmResponse, FarmSessionResponse, Plot } from '../../shared/farm.mts';
+import type { Crop, FarmAction, FarmBatchRequest, FarmMutation, FarmResponse, FarmSessionResponse, Plot } from '../../shared/farm.mts';
+import { applyFarmAction } from '../../shared/farm-rules.mts';
+import { BatchQueueManager, FarmRateLimitError } from './batch-queue.ts';
 import { createActivity } from './activity.ts';
 import { beginNearAuth, consumeNearAuthResult } from './auth/near.ts';
+import { initAnalytics, trackEvent } from './analytics.ts';
+import { farmActionEvent } from './analytics-events.ts';
 import { COMMUNITY_API } from '../../shared/community.mts';
 import type { FarmVisit, PlayerPage, StealResponse } from '../../shared/community.mts';
 import { createCommunity, createPlayerAvatar, playerPath } from './community.ts';
@@ -11,6 +16,9 @@ import { farmLoading } from './loading.ts';
 import { createFarmPet, loadPetSprites } from './pets.ts';
 import { mountTransactionHistory } from './transactions/history.ts';
 import './style.css';
+
+// Initialize Vercel Web Analytics
+inject();
 
 const width = 800;
 const height = 600;
@@ -296,6 +304,7 @@ let accountSubmitting = false;
 let sessionSynchronized = false;
 let busy = false;
 let snapshot: FarmResponse;
+let confirmedRevision = 0;
 let session: FarmSessionResponse | undefined;
 let activeTooltipPlot: number | null = null;
 let lastGuideCheck = 0;
@@ -312,8 +321,12 @@ async function request<T>(path: string, body?: unknown, signal?: AbortSignal): P
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
     signal,
+    keepalive: path === FARM_API.batch.path,
   } : { signal });
   if (!response.ok) {
+    if (path === FARM_API.batch.path && response.status === 429) {
+      throw new FarmRateLimitError(response.headers.get('Retry-After'));
+    }
     const result = await response.json().catch(() => null) as { error?: string } | null;
     throw new Error(result?.error ?? 'Chưa kết nối được máy chủ Nông Trại Mộng Mơ.', { cause: response.status });
   }
@@ -351,15 +364,17 @@ function bumpStat(element: HTMLElement | null): void {
   element.classList.add('is-bumped');
 }
 
-function setSnapshot(next: FarmResponse | FarmSessionResponse): void {
+function setSnapshot(next: FarmResponse | FarmSessionResponse, optimistic = false): void {
   const prevGold = snapshot?.farm.gold;
   const prevLevel = snapshot?.farm.level;
   snapshot = next;
+  if (!optimistic) confirmedRevision = next.farm.revision;
   if ('accountsAvailable' in next) {
-    if (!sessionSynchronized || session?.account?.username !== next.account?.username) {
+    if (!sessionSynchronized || session?.sessionKey !== next.sessionKey) {
       transactionHistory.reset();
       selectedCropId = undefined;
       activeCareTool = undefined;
+      batchQueue.reset();
     }
     session = next;
     sessionSynchronized = true;
@@ -415,9 +430,7 @@ function setSnapshot(next: FarmResponse | FarmSessionResponse): void {
     selectedCropId = undefined;
   }
   updateToolHint();
-  if (dialog.open && activePanel !== 'shop') {
-    renderPanel();
-  }
+  if (dialog.open) renderPanel();
   updateCommunityAccess();
 }
 
@@ -482,6 +495,13 @@ async function runVisitAction(action: () => Promise<void>): Promise<void> {
 
 async function readVisit(username: string): Promise<FarmVisit> {
   return request<FarmVisit>(playerPath(COMMUNITY_API.visit, username));
+}
+
+async function openFarmVisit(username: string): Promise<FarmVisit> {
+  await batchQueue.flushAndWait();
+  const farmVisit = await readVisit(username);
+  trackEvent('farm_visit');
+  return farmVisit;
 }
 
 async function refreshVisit(username: string): Promise<void> {
@@ -675,7 +695,8 @@ function updateGuidedTour(): void {
   }
   const produce = Object.values(snapshot.farm.produce).reduce((sum, count) => sum + count, 0);
   if (produce > 0) guideHadProduce = true;
-  if (guideHadProduce && produce === 0) {
+  if (guideHadProduce && produce === 0 && snapshot.farm.revision === confirmedRevision) {
+    trackEvent('tutorial_complete');
     finishGuidedTour();
     return;
   }
@@ -745,7 +766,10 @@ function updateGuidedTour(): void {
   positionGuide(spotlight);
 }
 
-guideSkip.onclick = finishGuidedTour;
+guideSkip.onclick = () => {
+  trackEvent('tutorial_skip');
+  finishGuidedTour();
+};
 dialog.addEventListener('close', () => {
   if (guideActive && guidedPanel && !guidePanelCompleted) finishGuidedTour();
   guidedPanel = undefined;
@@ -1007,6 +1031,102 @@ function initKeyboardShortcuts(): void {
   });
 }
 
+const batchQueue = new BatchQueueManager({
+  getExpectedRevision: () => confirmedRevision,
+  sendBatch: (batch) => {
+    const body: FarmBatchRequest = { ...batch, sessionKey: session!.sessionKey };
+    return request<FarmResponse>(FARM_API.batch.path, body, AbortSignal.timeout(15_000));
+  },
+  onSuccess: (result, actions) => {
+    for (const action of actions) trackFarmAction(action);
+    confirmedRevision = result.farm.revision;
+    const farm = structuredClone(result.farm);
+    const now = result.serverTime;
+    for (const action of batchQueue.pendingActions) {
+      try {
+        applyFarmAction(farm, { ...action, expectedRevision: farm.revision }, now, crops);
+      } catch {
+        // The server can validate this intent against the state at its next write.
+        break;
+      }
+    }
+    setSnapshot({ ...result, farm }, true);
+    if (guideActive && guidedPanel === 'shop' && actions.some(action => action.type === 'buy')) {
+      guidePanelCompleted = true;
+      dialog.close();
+    }
+    if (!batchQueue.length && result.message) {
+      const hasOrder = actions.some(action => action.type === 'buy' || action.type === 'buyFertilizer' || action.type === 'sell');
+      const message = hasOrder && actions.length > 1 ? 'Đã lưu các thao tác nông trại.' : result.message;
+      showFarmSyncFeedback(message, 'success');
+    }
+  },
+  onError: (error) => {
+    const message = error instanceof FarmRateLimitError
+      ? error.message
+      : 'Chưa lưu được thao tác. Hãy kiểm tra kết nối.';
+    showFarmSyncFeedback(message, 'warning');
+  },
+  onConflict: async (error) => {
+    sessionSynchronized = false;
+    updateCommunityAccess();
+    try {
+      const latest = await request<FarmSessionResponse>(FARM_API.read.path, undefined, AbortSignal.timeout(15_000));
+      setSnapshot(latest);
+      const message = error instanceof Error ? error.message : 'Thao tác chưa được đồng bộ.';
+      showFarmSyncFeedback(message, 'warning');
+    } catch {
+      updateToolHint();
+      showFarmSyncFeedback('Chưa tải lại được nông trại. Mở Tài khoản để thử lại.', 'error');
+    }
+  },
+});
+
+function trackFarmAction(action: FarmAction): void {
+  const event = farmActionEvent(action);
+  trackEvent(event.name, event.params);
+}
+
+function showFarmSyncFeedback(message: string, type: 'success' | 'warning' | 'error'): void {
+  setFeedback(message, type);
+  if (dialog.open) {
+    showInventoryToast(message, type);
+    panelFeedback.textContent = message;
+  }
+}
+
+function queueFarmAction(action: FarmAction): FarmResponse | undefined {
+  if (visit || busy || accountSubmitting) return;
+  if (!sessionSynchronized) {
+    showFarmSyncFeedback('Chưa tải được phiên nông trại. Hãy kiểm tra kết nối và thử lại.', 'error');
+    return;
+  }
+  try {
+    const now = farmTime();
+    const farm = structuredClone(snapshot.farm);
+    const message = applyFarmAction(farm, { ...action, expectedRevision: farm.revision }, now, crops);
+    if (farm.revision === snapshot.farm.revision) {
+      showFarmSyncFeedback(message, 'success');
+      return;
+    }
+    batchQueue.enqueue(action);
+    const result: FarmResponse = { farm, serverTime: now, message };
+    setSnapshot(result, true);
+    return result;
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Thao tác gặp lỗi.';
+    showFarmSyncFeedback(msg, 'error');
+    return;
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') batchQueue.flush();
+});
+
+window.addEventListener('pagehide', () => batchQueue.flush());
+window.addEventListener('online', () => batchQueue.retry());
+
 async function send(action: FarmAction): Promise<FarmResponse | undefined> {
   if (visit || busy || accountSubmitting) return;
   if (!sessionSynchronized) {
@@ -1019,10 +1139,14 @@ async function send(action: FarmAction): Promise<FarmResponse | undefined> {
   }
   busy = true;
   updateAccountButtons();
+  let requestStarted = false;
   try {
-    const mutation: FarmMutation = { ...action, expectedRevision: snapshot.farm.revision };
+    await batchQueue.flushAndWait();
+    const mutation: FarmMutation = { ...action, expectedRevision: confirmedRevision };
+    requestStarted = true;
     const result = await request<FarmResponse>(FARM_API[action.type].path, mutation);
     setSnapshot(result);
+    trackFarmAction(action);
     if (result.message) {
       setFeedback(result.message, 'success');
       if (dialog.open) {
@@ -1030,22 +1154,14 @@ async function send(action: FarmAction): Promise<FarmResponse | undefined> {
         panelFeedback.textContent = result.message;
       }
     }
-    if (guideActive && action.type === 'buy' && guidedPanel === 'shop') {
-      guidePanelCompleted = true;
-      dialog.close();
-    }
-    if (dialog.open) {
-      if (activePanel !== 'shop' || action.type === 'buyFertilizer') renderPanel();
-    }
     return result;
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Thao tác gặp lỗi.';
     setFeedback(msg, 'error');
-    if (error instanceof Error && (error.cause === 401 || error.cause === 409)) {
+    if (requestStarted && error instanceof Error && (error.cause === 401 || error.cause === 409)) {
       const latest = await request<FarmSessionResponse>(FARM_API.read.path).catch(() => undefined);
       if (latest) {
         setSnapshot(latest);
-        if (dialog.open) renderPanel();
       }
     }
     if (dialog.open) {
@@ -1059,9 +1175,10 @@ async function send(action: FarmAction): Promise<FarmResponse | undefined> {
   }
 }
 
-function createInventoryCard(name: string, imagePath: string, summary: string) {
+function createInventoryCard(key: string, name: string, imagePath: string, summary: string) {
   const item = document.createElement('article');
   item.className = 'item';
+  item.dataset.item = key;
   const art = document.createElement('div');
   art.className = 'item-art';
   const icon = document.createElement('img');
@@ -1107,12 +1224,25 @@ function renderPanel(): void {
   dialog.querySelector('#inventory-description')!.textContent = description;
   dialog.querySelector<HTMLImageElement>('#inventory-icon')!.src = asset(`icon/topbutton%20(${panelIcon}).png`);
   for (const tab of panelTabs) tab.setAttribute('aria-pressed', String(tab.dataset.panel === activePanel));
-  const cards = document.createDocumentFragment();
+  const previousScroll = panel.scrollTop;
+  if (panel.dataset.panel !== activePanel) {
+    panel.replaceChildren();
+    panel.dataset.panel = activePanel;
+  }
+  const existing = new Map([...panel.querySelectorAll<HTMLElement>('[data-item]')]
+    .map(item => [item.dataset.item!, item]));
+  const cards: HTMLElement[] = [];
   if (activePanel === 'shop') {
-    const { item, controls } = createInventoryCard('Phân bón', 'icon/fertilizer-sack.png',
-      `${FERTILIZER_COST} Gold/bịch · Đang có ${snapshot.farm.fertilizer ?? 0} bịch`);
-    appendInventoryOrder(controls, 'phân bón', 'buy', 99, quantity => void send({ type: 'buyFertilizer', quantity }));
-    cards.append(item);
+    const summary = `${FERTILIZER_COST} Gold/bịch · Đang có ${snapshot.farm.fertilizer ?? 0} bịch`;
+    const fertilizer = existing.get('fertilizer');
+    if (fertilizer) {
+      fertilizer.querySelector('small')!.textContent = summary;
+      cards.push(fertilizer);
+    } else {
+      const { item, controls } = createInventoryCard('fertilizer', 'Phân bón', 'icon/fertilizer-sack.png', summary);
+      appendInventoryOrder(controls, 'phân bón', 'buy', 99, quantity => queueFarmAction({ type: 'buyFertilizer', quantity }));
+      cards.push(item);
+    }
   }
   for (const crop of crops) {
     const seeds = snapshot.farm.seeds[crop.id] ?? 0;
@@ -1123,7 +1253,20 @@ function renderPanel(): void {
     const artPaths = cropArt(crop);
     const summary = activePanel === 'shop' ? `${crop.buyPrice} Gold/hạt · Cấp tham khảo ${crop.level}`
       : activePanel === 'bag' ? `Còn ${seeds} hạt` : `${produce} quả · ${crop.sellPrice} Gold/quả`;
-    const { item, controls } = createInventoryCard(crop.name,
+    const key = String(crop.id);
+    const current = existing.get(key);
+    if (current) {
+      current.querySelector('small')!.textContent = summary;
+      const quantity = current.querySelector<HTMLInputElement>('input');
+      if (activePanel === 'warehouse' && quantity) {
+        const max = Math.min(999, produce);
+        quantity.max = String(max);
+        if (quantity.valueAsNumber > max) quantity.value = quantity.max;
+      }
+      cards.push(current);
+      continue;
+    }
+    const { item, controls } = createInventoryCard(key, crop.name,
       activePanel === 'warehouse' ? artPaths.produce : artPaths.seedBag, summary);
     if (activePanel === 'bag') {
       const action = document.createElement('button');
@@ -1142,11 +1285,12 @@ function renderPanel(): void {
     } else {
       const type = activePanel === 'shop' ? 'buy' : 'sell';
       appendInventoryOrder(controls, crop.name, type, type === 'buy' ? 99 : Math.min(999, produce),
-        quantity => void send({ type, cropId: crop.id, quantity }));
+        quantity => queueFarmAction({ type, cropId: crop.id, quantity }));
     }
-    cards.append(item);
+    cards.push(item);
   }
-  if (!cards.firstChild) {
+  if (!cards.length) {
+    if (panel.firstElementChild?.classList.contains('inventory-empty')) return;
     const empty = document.createElement('div');
     empty.className = 'inventory-empty';
     const icon = document.createElement('img');
@@ -1157,10 +1301,17 @@ function renderPanel(): void {
     const note = document.createElement('p');
     note.textContent = activePanel === 'bag' ? 'Mua hạt giống trong Tiệm hạt.' : 'Thu hoạch cây chín để đưa nông sản về kho.';
     empty.append(icon, label, note);
-    cards.append(empty);
+    panel.replaceChildren(empty);
+  } else {
+    const visible = new Set(cards);
+    for (const child of Array.from(panel.children)) {
+      if (!visible.has(child as HTMLElement)) child.remove();
+    }
+    cards.forEach((card, index) => {
+      const current = panel.children[index];
+      if (current !== card) panel.insertBefore(card, current ?? null);
+    });
   }
-  const previousScroll = panel.scrollTop;
-  panel.replaceChildren(cards);
   panel.scrollTop = previousScroll;
 }
 
@@ -1183,11 +1334,11 @@ function createQuantity(name: string, max: number, min: number): { stepper: HTML
   decrease.setAttribute('aria-label', `Giảm số lượng ${name}`);
   increase.setAttribute('aria-label', `Tăng số lượng ${name}`);
   decrease.onclick = () => {
-    quantity.value = String(Math.max(min, Math.min(max, (quantity.valueAsNumber || 0) - 1)));
+    quantity.value = String(Math.max(min, Math.min(Number(quantity.max), (quantity.valueAsNumber || 0) - 1)));
     quantity.classList.remove('is-invalid');
   };
   increase.onclick = () => {
-    quantity.value = String(Math.max(min, Math.min(max, (quantity.valueAsNumber || 0) + 1)));
+    quantity.value = String(Math.max(min, Math.min(Number(quantity.max), (quantity.valueAsNumber || 0) + 1)));
     quantity.classList.remove('is-invalid');
   };
   quantity.addEventListener('input', () => {
@@ -1325,8 +1476,10 @@ function attachControls(scene: FarmScene): void {
 
     setAccountBusy(true, 'Đang tạo tài khoản và lưu nông trại...');
     try {
+      await batchQueue.flushAndWait();
       const res = await request<FarmSessionResponse>(ACCOUNT_API.register.path, { username, password });
       setSnapshot(res);
+      trackEvent('sign_up', { method: 'password' });
       formRegister.reset();
       setFeedback(`Tài khoản ${res.account?.username ?? username} đã được tạo và lưu trữ nông trại!`, 'success');
       accountDialog.close();
@@ -1358,8 +1511,10 @@ function attachControls(scene: FarmScene): void {
 
     setAccountBusy(true, 'Đang đăng nhập...');
     try {
+      await batchQueue.flushAndWait();
       const res = await request<FarmSessionResponse>(ACCOUNT_API.login.path, { username, password });
       setSnapshot(res);
+      trackEvent('login', { method: 'password' });
       formLogin.reset();
       setFeedback(`Chào mừng ${res.account?.username ?? username} trở lại nông trại!`, 'success');
       accountDialog.close();
@@ -1375,7 +1530,10 @@ function attachControls(scene: FarmScene): void {
     if (busy || accountSubmitting) return;
     setAccountBusy(true, 'Đang đăng xuất...');
     try {
+      await batchQueue.flushAndWait();
       await request<void>(ACCOUNT_API.logout.path, {});
+      batchQueue.reset();
+      trackEvent('logout');
       session = undefined;
       sessionSynchronized = false;
       updateCommunityAccess();
@@ -1425,7 +1583,7 @@ function attachControls(scene: FarmScene): void {
       if (tool === 'account') {
         openAccountDialog();
       } else if (tool === 'theme') {
-        void send({ type: 'theme' });
+        void queueFarmAction({ type: 'theme' });
       } else if (tool === 'water' || tool === 'fertilize') {
         if (tool === 'fertilize' && activeCareTool !== tool && !(snapshot.farm.fertilizer ?? 0)) {
           openFertilizerShop();
@@ -1469,6 +1627,7 @@ function attachControls(scene: FarmScene): void {
             const result = await request<StealResponse>(playerPath(COMMUNITY_API.steal, currentVisit.username), action);
             setSnapshot(result);
             setVisit(result.visit);
+            trackEvent('farm_steal', { blocked: Boolean(result.blocked) });
             if (result.blocked) {
               setFeedback('Pet giữ nhà đã chặn! Bạn chưa lấy được quả.', 'warning');
               scene.playPetGuard();
@@ -1517,11 +1676,12 @@ function attachControls(scene: FarmScene): void {
         return;
       }
 
-      const result = await send(action);
+      const cropId = action.type === 'plant' ? action.cropId : current?.cropId;
+      const previousProduce = cropId !== undefined ? (previous.produce[cropId] ?? 0) : 0;
+      const result = queueFarmAction(action);
       if (!result) return;
-      const cropId = current?.cropId;
       const amount = action.type === 'harvest' && cropId !== undefined
-        ? (result.farm.produce[cropId] ?? 0) - (previous.produce[cropId] ?? 0)
+        ? (result.farm.produce[cropId] ?? 0) - previousProduce
         : 0;
       scene.playPlotFeedback(plot, action.type, amount);
     };
@@ -1563,6 +1723,7 @@ function attachControls(scene: FarmScene): void {
     inventoryToast.onclick = () => hideInventoryToast();
   }
   dialog.addEventListener('close', () => {
+    batchQueue.flush();
     hideInventoryToast();
     updateToolHint();
   });
@@ -1650,7 +1811,9 @@ class FarmScene extends Phaser.Scene {
       this.ready = true;
       this.game.events.once(Phaser.Core.Events.POST_RENDER, () => {
         farmLoading.finish();
-        if (!farmLoading.failed) activity.start();
+        if (farmLoading.failed) return;
+        trackEvent('game_boot', { load_ms: Math.round(performance.now()) });
+        activity.start();
       });
     }).catch(error => {
       console.error('Không mở được cảnh nông trại:', error);
@@ -1691,7 +1854,7 @@ class FarmScene extends Phaser.Scene {
     });
     this.ground.add(this.visuals.map(({ plant }) => plant));
     this.ground.add(this.visuals.map(({ label }) => label));
-    this.pet = createFarmPet(this, field, reduceMotion, pet => send({ type: 'selectPet', pet }));
+    this.pet = createFarmPet(this, field, reduceMotion, async pet => queueFarmAction({ type: 'selectPet', pet }));
     attachControls(this);
     this.layout();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.layout, this);
@@ -2282,7 +2445,7 @@ const community = createCommunity({
     const params = new URLSearchParams({ list, q: query, offset: String(offset) });
     return request<PlayerPage>(`${COMMUNITY_API.players}?${params}`);
   },
-  visitFarm: readVisit,
+  visitFarm: openFarmVisit,
   openVisit: setVisit,
   refreshSession: refreshCommunitySession,
   signIn: () => {
@@ -2333,6 +2496,7 @@ const activity = createActivity({
       summary.recentStolenFruit > 0 ? 'warning' : 'info', 4500);
   },
 });
+initAnalytics();
 farmLoading.start();
 void start().catch(error => {
   console.error('Không khởi động được nông trại:', error);
