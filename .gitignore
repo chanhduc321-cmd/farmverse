@@ -36,9 +36,16 @@ BUGS.html
 BUGS.md
 TASKS.html
 TASKS.md
+docs/agents/
+AGENTS.md
 
 # Local recordings & inspection artifacts
 artifacts/
 temp_inspect/
 *.mp4
 *.webm
+
+# Local tools (keep only Vercel build script)
+/tools/*
+!/tools/build-vercel.mjs
+

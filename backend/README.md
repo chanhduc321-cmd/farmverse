@@ -1,36 +1,64 @@
-# FarmVerse backend
+# FarmVerse Backend
 
-**Tên tiếng Anh:** FarmVerse · **Tên tiếng Việt:** Nông Trại Mộng Mơ
+The FarmVerse backend is a high-performance RESTful API built on **Node.js** and **Hono**, using **PostgreSQL** for persistent game state (guest sessions, player accounts, plots, warehouse inventory, social connections, and activity logs).
 
-Backend chạy Hono và lưu Guest, tài khoản, ruộng, kho, bạn bè và nhật ký vào PostgreSQL. Các script tự nạp `.env` trong `backend/`. Chạy các lệnh dưới đây trong `backend/` với Docker Desktop, Node.js 22.22.2 trở lên và pnpm.
+---
 
-```powershell
-if (!(Test-Path -LiteralPath '.env')) { Copy-Item .env.example .env }
+## 1. Quickstart
+
+Prerequisites: Node.js >= 22.22.2, pnpm, and Docker (or a local PostgreSQL instance).
+
+```bash
+cd backend
+
+# Copy environment variables
+cp -n .env.example .env
+
+# Start local PostgreSQL via Docker
 docker compose up -d --wait postgres
+
+# Install dependencies, run migrations, and seed sample neighbors
 pnpm install --frozen-lockfile
 pnpm migrate
 pnpm seed:friends
+
+# Start development server (Port 8092)
 pnpm dev
 ```
 
-Dùng `PORT=8092` trong `.env` để khớp proxy mặc định của web. Nếu cổng PostgreSQL 5432 đang được dùng, chọn cổng khác qua `POSTGRES_PORT` và dùng cùng cổng trong `DATABASE_URL`. Nếu dùng database có sẵn, đặt `DATABASE_URL` theo thông tin kết nối của database đó.
+---
 
-`DATABASE_URL` bắt buộc cho gameplay; thiếu cấu hình hoặc mất kết nối trả 503, không chuyển sang RAM. Migrations `003` đến `013` chạy trong một transaction với khóa để hai lượt không chạy xen nhau. Có thể chạy lại trên tiến độ đã lưu. Phiên Guest và phiên tài khoản dùng cookie HttpOnly 30 ngày. Khi backend khởi động lại, cùng cookie mở đúng Gold, XP, Túi hạt, Kho, thời điểm gieo, Pet và trạng thái NPC đã lưu. `/health` trả 503 nếu schema hoặc kết nối chưa sẵn sàng.
+## 2. Configuration & Environment
 
-`pnpm seed:friends` tạo 10 cư dân `farm_ban_01`–`farm_ban_10`, mỗi ruộng sáu cây chín. Tổng cộng bao phủ 15 giống, có Pet ngẫu nhiên giữa chó, mèo và ngỗng. Chạy lại giữ ruộng và Pet đã tạo. Tài khoản seed dùng hash ngẫu nhiên và không có mật khẩu đăng nhập được bàn giao.
+- `PORT`: Defaults to `8092`, matching the Vite proxy configuration in `web/vite.config.ts`.
+- `DATABASE_URL`: Connection string for PostgreSQL (e.g. `postgresql://postgres:postgres@127.0.0.1:5432/farmverse`). Required for gameplay persistence; if unavailable, the API responds with `503 Service Unavailable`.
+- **Database Migrations:** Schema files (`003` to `014`) execute inside an atomic transaction guarded by `pg_advisory_xact_lock`.
+- **Session Lifespan:** Guest and registered accounts use 30-day HttpOnly cookies. Progress (Gold, XP, seeds, warehouse, plots, pets, and merchant state) survives server restarts.
 
-Mọi tài khoản đăng nhập thấy cư dân seed cùng người chơi thật. Bạn bè đã xác nhận được ẩn khỏi Cư dân. Với dữ liệu test, `pnpm seed:friends ten_tai_khoan` nối 10 cư dân thành bạn đã xác nhận của tài khoản đó.
+---
 
-API tạo tài khoản gắn đúng ruộng của phiên Guest hiện tại. Đăng nhập từ trình duyệt khác mở lại ruộng đã gắn. [API tài khoản](../docs/API.md#accounts-t-24)
+## 3. Concurrency & Optimistic Locking
 
-Chế độ offline và lưu RAM đã bỏ. Guest cũng lưu tiến độ vào PostgreSQL.
+All gameplay mutations enforce an `expectedRevision` parameter:
+- Concurrent requests with identical revisions result in only one winning write; subsequent writes return `409 Conflict`.
+- On 409 responses, the client fetches the latest snapshot before allowing subsequent player actions.
+- Details in [API Reference](../docs/API.md).
 
-Mỗi yêu cầu thay đổi gameplay mang `expectedRevision`. Nếu hai yêu cầu dùng cùng revision đến đồng thời, PostgreSQL chỉ nhận một lần ghi. Khi nhận 409, web đọc trạng thái mới trước khi người chơi thử lại. [API](../docs/API.md)
+---
 
-Dùng `docker compose stop postgres` để dừng database và giữ volume. Chạy `pnpm typecheck` và `pnpm exec node --env-file=.env --import tsx --test test/*.test.ts` để kiểm tra backend. Kiểm thử nhật ký cần database test riêng.
+## 4. Seeding & Testing
 
-Web báo lỗi kết nối và hiện nút Thử lại khi API chưa sẵn sàng. Máy dev hiện dùng PostgreSQL ở `127.0.0.1:55431`. API Vercel yêu cầu `DATABASE_URL`. [Kế hoạch migration và setup Vercel](../docs/POSTGRES_MIGRATION_PLAN.md)
+- `pnpm seed:friends`: Seeds 10 resident neighbor farms (`farm_ban_01` through `farm_ban_10`) with mature crops and randomized companion pets (dog, cat, goose).
+- `pnpm typecheck`: Runs TypeScript static type checks without emitting code.
+- `pnpm test`: Runs backend test suites:
+  ```bash
+  node --env-file=.env --import tsx --test test/*.test.ts
+  ```
 
-USDC testnet dùng adapter server riêng. `pnpm near:setup` đọc ví/số dư; các bước đăng ký token, cấp vốn và xác nhận Google được ghi ở [hướng dẫn T-17](../docs/NEAR_USDC_ADAPTER.md).
+---
 
-`pnpm trade-demo:setup` tạo vòng A → NPC → B cho hai Farm ID Google trong `.env`. API, mâm quả, badge và cách tạo lại vòng được ghi ở [hướng dẫn demo](../docs/TRADE_DEMO_API.md).
+## 5. Web3 & Payment Integrations
+
+- **NEAR USDC Adapter:** Gasless payments and sponsored transfers. See [NEAR USDC Adapter Guide](../docs/NEAR_USDC_ADAPTER.md).
+- **Trade Demo Setup:** Creates the Player A $\rightarrow$ NPC $\rightarrow$ Player B demo loop. See [Trade Demo API Specification](../docs/TRADE_DEMO_API.md).
+- **Vercel Deployment:** Production serverless setup and database pooler configurations are documented in the [PostgreSQL & Vercel Guide](../docs/POSTGRES_MIGRATION_PLAN.md).

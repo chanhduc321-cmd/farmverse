@@ -1,8 +1,8 @@
 # FarmVerse API
 
-The USDC testnet trade scenario has a shared contract and fixtures in the [T-16 API handoff](TRADE_DEMO_API.md). Gameplay routes follow that contract during T-57/T-58 implementation.
+The USDC testnet trade scenario has a shared contract and fixtures in the [USDC Trade Demo API](TRADE_DEMO_API.md).
 
-The [USDC adapter](NEAR_USDC_ADAPTER.md) now handles sponsored testnet transfers and Google payment approval callbacks. Its transaction history metadata is available on `/api/account/transactions`.
+The [USDC adapter](NEAR_USDC_ADAPTER.md) handles sponsored testnet transfers and Google payment approval callbacks. Its transaction history metadata is available on `/api/account/transactions`.
 
 The Node.js service owns state. In development, the browser calls `/api/...` through the Vite proxy to the matching Hono route without the `/api` prefix. Send JSON POST bodies with `Content-Type: application/json` and include cookies. Responses carrying game state use `Cache-Control: no-store`.
 
@@ -27,7 +27,7 @@ Call `GET /api/farm` first to start or resume a Guest session with an HttpOnly c
 
 `farm.fertilizer` is the number of bags available. Older saves may omit the field, which represents zero bags.
 
-## Accounts (T-24)
+## Accounts
 
 `GET /api/farm` returns a `FarmSessionResponse` with `farm`, `serverTime`, `accountsAvailable` and `account`. Render the Guest identity when `account` is `null`. A signed-in player has `account: { username }`. When `accountsAvailable` is `false`, allow play as Guest and disable account actions. [Shared API paths and types](../shared/farm.mts)
 
@@ -41,7 +41,7 @@ Usernames accept 3–24 ASCII letters, digits or underscores. The server trims a
 
 Account routes return `{ error: string }` on failure. Show the returned message. Common cases are 400 for invalid input, 401 for an invalid login or missing Guest session, 409 for a name conflict or active account, 429 for too many attempts, and 503 when account storage is unavailable. Account POSTs require JSON from the game origin and a body of at most 2,048 bytes. On 401 from a gameplay mutation, refresh via `GET /api/farm` before the player chooses their next action.
 
-## Merchant interface for T-25
+## Merchant Interface
 
 Use `MERCHANT_API` for routes and `MERCHANT_CROP_IDS` to resolve the NPC's two crop slots against the Farm catalog. [Shared merchant contract](../shared/merchant.mts)
 
@@ -86,7 +86,7 @@ Merchant offers in this interface use GOLD. C03 Micro uses the separate testnet 
 
 Errors use `{ "error": { "code": "STALE_MERCHANT", "message": "..." } }`. The shared `MERCHANT_ERROR_STATUS` maps codes to HTTP status. Request validation is required at runtime. `isMerchantOfferRequest` checks the request shape, and the server checks session ownership, active offer identity, affordability, capacity, and timing against persisted state.
 
-## Community (T-36)
+## Community & Social Features
 
 Community routes require a signed-in PostgreSQL account and migration `006`. Use the same browser cookies and API prefix as Farm. [Shared route templates and response types](../shared/community.mts)
 
@@ -98,13 +98,13 @@ Community routes require a signed-in PostgreSQL account and migration `006`. Use
 | `GET /api/community/farms/:username` | Target username | `FarmVisit` with plot snapshots, remaining ripe fruit and `canSteal` for the current visitor. |
 | `POST /api/community/farms/:username/steal` | `{ plot, plantedAt }` | `StealResponse` with `farm`, updated `visit`, `serverTime` and `blocked`. |
 
-Search filters the current list by username substring. Residents lists the other accounts except confirmed friends. Use the zero-based plot index and `plantedAt` from the visit response to identify the crop. The server rolls a 50% block chance after claiming a valid attempt. Both outcomes return 200. With `blocked: true`, the visitor sees the guard reaction. With `blocked: false`, the server transfers one fruit from the host's crop to the visitor's warehouse and increments both Farm revisions. Each visitor gets one attempt per plot and crop. Replays and invalid attempts return 409. The client displays the error and refreshes the visit. [Pet rules](FARMVERSE_GAMEPLAY.md#pet-giữ-nhà-t-41)
+Search filters the current list by username substring. Residents lists the other accounts except confirmed friends. Use the zero-based plot index and `plantedAt` from the visit response to identify the crop. The server rolls a 50% block chance after claiming a valid attempt. Both outcomes return 200. With `blocked: true`, the visitor sees the guard reaction. With `blocked: false`, the server transfers one fruit from the host's crop to the visitor's warehouse and increments both Farm revisions. Each visitor gets one attempt per plot and crop. Replays and invalid attempts return 409. The client displays the error and refreshes the visit. [Pet rules](FARMVERSE_GAMEPLAY.md#5-guard-pets-system)
 
 Directory pages are cached for 15 seconds in the active browser session and 20 seconds per account in each backend instance. Successful invites and confirmations invalidate both accounts' pages in the instance that processed the write. The directory allows 18 reads per session per 30 seconds in each instance, then returns `429` with `Retry-After`. Reads within this limit verify the session before accessing cached data.
 
 `POST /api/farm/pet` accepts `{ pet: 'dog' | 'cat' | 'goose', expectedRevision }` for Guest and account sessions, and returns `FarmResponse`. A new or legacy farm defaults to dog. Selection persists in Farm JSON and uses the same revision protection as other mutations.
 
-## Farm activity (T-42)
+## Farm Activity & Journal
 
 Activity routes require the signed-in account and migrations through `009`. The server identifies the owner from the session cookie. [Shared response types](../shared/activity.mts)
 

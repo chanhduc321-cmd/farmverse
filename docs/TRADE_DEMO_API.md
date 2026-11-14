@@ -1,32 +1,37 @@
-# T-16 · Hợp đồng API demo USDC
+# USDC Trade Demo API Specification
 
-Chốt ngày 14/11/2026 theo FV-NEAR-01. Schema ở `shared/trade-demo.mts` và `shared/payments.mts`. Fixture ở `shared/fixtures/trade-demo.mts`. Các route T-57/T-58 dùng migration 013 và adapter T-17. API lịch sử `/api/account/transactions` đã chạy từ T-63.
+Technical specification for the sponsored NEAR testnet USDC trading scenario, inventory exchange, seasonal basket badges, and merchant PnL accounting.
 
-## Phiên và đơn vị
+---
 
-Gọi cùng origin với prefix `/api` và cookie FarmVerse. Backend lấy farm/vai trò/ví từ phiên đã xác minh. `seller` là A, `buyer` là B. Backend gắn farm vào `runId` đang hoạt động trong T-60/T-57.
+## 1. Overview & Currency Units
 
-### Tạo vòng demo local
+The Trade Demo simulates a multi-party marketplace where:
+- **Player A (Seller):** Sells freshly harvested produce to the NPC Merchant for **1.00 USDC**.
+- **Player B (Buyer):** Purchases seasonal produce from the NPC Merchant for **1.50 USDC** to complete a Seasonal Basket.
+- **NPC Merchant:** Acts as intermediary, recording cost basis, revenue, gross profit (+0.50 USDC), and sponsored network gas fees.
 
-Trong `backend/`, bật adapter NEAR USDC testnet và đặt `TRADE_DEMO_SELLER_FARM_ID` cùng `TRADE_DEMO_BUYER_FARM_ID` bằng hai Farm ID Google đã xác minh trong `.env`. Chạy `pnpm migrate`, rồi `pnpm trade-demo:setup`. Lệnh trả lại cùng run ID khi chạy lại với cùng hai vai trò. Dùng `pnpm trade-demo:setup --new-run` để mở lượt khác sau khi đã xử lý xong lệnh đang giữ quả. Kiểm tra vốn bằng `pnpm near:setup`. [Cấu hình adapter](NEAR_USDC_ADAPTER.md)
+### Currency Precision
+- **USDC:** 6 decimal places (e.g., `1000000` = 1.00 USDC, `1500000` = 1.50 USDC). Amounts are serialized as atomic string representations to avoid floating-point inaccuracies.
+- **NEAR:** 24 decimal places (used for sponsored gas fee accounting).
+- **Timestamps:** `serverTime` in Unix milliseconds; order and badge timestamps in ISO 8601 strings.
 
-`PaymentAmount` gồm `asset: { id, symbol, decimals }` và `amountAtomic` dạng chuỗi. USDC có 6 chữ số thập phân, NEAR có 24. Giá A là `1000000`, giá B là `1500000`, lãi gộp là `500000` đơn vị USDC nhỏ nhất. Tính bằng BigInt hoặc xử lý chuỗi. `serverTime` là Unix milliseconds, thời gian lệnh/badge là ISO 8601.
+---
 
-`asset.id` trỏ tới cấu hình tài sản theo provider/network. Adapter NEAR ánh xạ mã này sang contract USDC đã xác minh.
+## 2. HTTP Endpoints
 
-## HTTP
+All endpoints share the same origin, prefixed with `/api` and authenticated via session cookies.
 
-| Request | Input | Response |
-|---|---|---|
-| `GET /api/trade-demo` | Cookie phiên | `TradeDemoSnapshot`. |
-| `POST /api/trade-demo/visit` | Cookie phiên, body rỗng | `TradeDemoVisitResponse` với lịch NPC của farm. |
-| `POST /api/trade-demo/accept` | `TradeDemoActionRequest` | 202 khi lệnh đang xử lý, 200 khi cùng lệnh đã đạt trạng thái cuối. Body `TradeDemoActionResponse`. |
-| `POST /api/trade-demo/skip` | `TradeDemoActionRequest` | 200, `TradeDemoActionResponse`, `order: null`, `offerDismissed: true`. |
-| `GET /api/trade-demo/orders/:orderId` | ID lệnh | `TradeDemoOrderResponse`, gồm lệnh được hỏi và snapshot hiện tại. |
-| `GET /api/trade-demo/pnl` | Cookie phiên | `TradeDemoPnlResponse`. |
+| Method & Route | Request Body | Response Body | Description |
+|---|---|---|---|
+| `GET /api/trade-demo` | None | `TradeDemoSnapshot` | Fetches current trading stage, role, wallet balance, active offer, order status, and merchant PnL. |
+| `POST /api/trade-demo/visit` | Empty body `{}` | `TradeDemoVisitResponse` | Queries or schedules the NPC visit arrival time for the current player's farm. |
+| `POST /api/trade-demo/accept` | `TradeDemoActionRequest` | `TradeDemoActionResponse` | Accepts an offer. Returns `202 Accepted` during processing or `200 OK` on terminal state. |
+| `POST /api/trade-demo/skip` | `TradeDemoActionRequest` | `TradeDemoActionResponse` | Dismisses an offer (`order: null`, `offerDismissed: true`). |
+| `GET /api/trade-demo/orders/:orderId` | None | `TradeDemoOrderResponse` | Polls the current status of an order along with updated snapshot. |
+| `GET /api/trade-demo/pnl` | None | `TradeDemoPnlResponse` | Retrieves comprehensive merchant ledger and PnL breakdown. |
 
-Path trong `TRADE_DEMO_API` chưa gồm `/api`. Thay `:orderId` bằng ID đã qua `encodeURIComponent`. Gửi JSON với `Content-Type: application/json`.
-
+### Action Request Schema:
 ```json
 {
   "runId": "20000000-0000-4000-8000-000000000001",
@@ -36,48 +41,83 @@ Path trong `TRADE_DEMO_API` chưa gồm `/api`. Thay `:orderId` bằng ID đã q
 }
 ```
 
-Tạo UUID v4 `requestId` một lần khi bấm Accept/Skip. Retry mạng dùng cùng ID/body. Server ràng buộc request với farm/run/offer/loại hành động. Cùng ID và cùng nội dung trả kết quả đã lưu trước khi kiểm tra revision. Cùng ID nhưng nội dung khác trả `REQUEST_CONFLICT`. `expectedRevision` thuộc snapshot demo.
+### Idempotency & Concurrency:
+- `requestId`: A UUID v4 generated once per user click. Network retries must resend the exact same `requestId`.
+- Replaying the same `requestId` returns the cached result without re-executing transactions.
+- Reusing a `requestId` with differing payloads returns a `409 REQUEST_CONFLICT`.
+- `expectedRevision`: Optimistic concurrency control matching the latest snapshot revision.
 
-Server kiểm tra quyền, vai trò, giá, ví, số dư và trạng thái quả trước khi tạo lệnh. Lệnh của farm khác trả 404. Khi kết quả chưa rõ, đọc cùng lệnh hoặc snapshot để khôi phục. Sau khi lệnh đã hủy/thất bại và lời mời mở lại, hành động mới dùng requestId mới.
+---
 
-## NPC ghé ruộng
+## 3. Order Lifecycle & State Machine
 
-Web hỏi lịch trong tab hiện tại khi người chơi ở ruộng của mình. Khi ví, số dư và lượt quả đều hợp lệ, backend lưu một thời điểm đến cách 6–12 giây theo run/vai trò (migration 014). Reload và các tab cùng phiên nhận cùng `offerId` và `arrivesAt`. Lượt B chỉ có lịch sau khi NPC đã nhận quả. Web đọc lại lịch lúc đến trước khi hiện NPC. Bấm NPC mở màn Hội chợ nông sản ở `#quay-nong-san`.
+```mermaid
+stateDiagram-v2
+    [*] --> awaiting_approval: Order Created
+    awaiting_approval --> processing: User Authorized / Redirect
+    processing --> verifying: Transaction Broadcasted
+    verifying --> succeeded: On-chain Finality Confirmed
+    verifying --> failed: Execution or Slippage Error
+    awaiting_approval --> cancelled: User Cancelled
+    awaiting_approval --> expired: TTL Exceeded
+    succeeded --> [*]
+    failed --> [*]
+    cancelled --> [*]
+    expired --> [*]
+```
 
-Đã bỏ qua hoặc hoàn thành thì không có lời mời mới trong cùng vòng. Sau khi người chơi có lệnh hoặc đã bỏ qua, họ có thể ghé lại quầy để xem trạng thái. Thao tác tại quầy dùng chung cơ chế kiểm tra giá, phiên, revision và giữ quả.
+| Order Status | Description | UI Behavior |
+|---|---|---|
+| `awaiting_approval` | Awaiting user signature or payment authorization. | Displays confirmation prompt or redirect button. |
+| `processing` | Server is constructing transaction and acquiring advisory locks. | Shows loading spinner, locks input controls. |
+| `verifying` | Transaction submitted to NEAR testnet, awaiting RPC finality. | Polls order status at 4-second intervals. |
+| `succeeded` | Settlement confirmed. Inventory, badge, and PnL updated. | Displays success feedback, animates badge/item transfer. |
+| `failed` | Transaction reverted or verification failed. | Displays localized error message, unlocks retry. |
+| `cancelled` | Order intentionally abandoned by user. | Clears pending state, restores offer view. |
+| `expired` | Order timed out before completion. | Prompts user to generate a new trade request. |
 
-## Snapshot
+---
 
-Snapshot gồm run/revision/serverTime, role/stage, wallet/balance, một item, offer, offerDismissed, activeOrder, basket và pnl. `activeOrder` là lệnh hiện tại hoặc gần nhất của vai trò này, gồm trạng thái cuối để hiển thị sau reload. `offer: null` khi chưa đến lượt, đã bỏ qua, đang xử lý hoặc hoàn tất. `stage` giải thích tiến độ của cả vòng.
+## 4. NPC Visit Scheduling & Farm Stall Flow
 
-Sau lượt A, item thuộc `npc`, tồn NPC 1, giá vốn 1 USDC, doanh thu 0, `grossProfit: null`. Sau lượt B, item thuộc `basket`, mâm 3/3, badge có giá trị, tồn NPC 0, doanh thu 1,5 và lãi gộp 0,5 USDC. `balance: null` khi chưa lấy được số dư. `canAccept` và `unavailableReason` quyết định trạng thái nút.
+1. **Visit Scheduling (`POST /api/trade-demo/visit`):**
+   - When a player enters their farm, the client checks if an NPC schedule exists.
+   - If conditions are met (valid wallet, active run, pending trade role), the backend assigns an arrival time 6–12 seconds in the future.
+   - When `arrivesAt` timestamp is reached, the NPC avatar appears on the farm.
+2. **Farm Stall Interaction (`#quay-nong-san`):**
+   - Clicking the NPC opens the Farm Stall modal.
+   - The UI mounts the trade component, fetching `GET /api/trade-demo`.
+   - Player reviews the offer, cost/sale price, and initiates transaction via `POST /api/trade-demo/accept`.
 
-PnL lấy từ các lượt đã áp dụng trong run. Phí sponsor cộng gas của các giao dịch và chữ ký gắn với lệnh của run. Các khoản nạp vốn, kích hoạt ví và kiểm tra adapter trước đó nằm ngoài PnL của run.
+---
 
-## Lệnh và khôi phục
+## 5. Merchant PnL & Ledger Model
 
-| Trạng thái lệnh | Hiển thị |
-|---|---|
-| `awaiting_approval` | Chờ người dùng xác nhận. |
-| `processing` | Backend đang xử lý. |
-| `verifying` | Đang xác minh thanh toán, tiếp tục đọc cùng lệnh. |
-| `succeeded` | Thanh toán đã xác minh và vật phẩm/badge/PnL đã áp dụng. |
-| `failed` | Thất bại, hiển thị lỗi server và snapshot mới. |
-| `cancelled` | Đã hủy xác nhận. |
-| `expired` | Yêu cầu hết hạn. |
+The merchant accounting engine computes:
+- **Cost of Goods Sold (COGS):** Total USDC disbursed to purchase produce from Player A.
+- **Gross Revenue:** Total USDC received from selling produce to Player B.
+- **Gross Profit:** $\text{Gross Revenue} - \text{COGS}$ (Expected: $+0.50\text{ USDC}$).
+- **Network Fees:** Gas fees in atomic NEAR sponsored by the relayer wallet (not deducted from user USDC balances).
 
-`order.payment` là kết quả provider chuẩn hóa. Với `requiredAction.type='redirect'`, web chuyển tới URL backend trả về sau thao tác nhận lời mời. Callback quay về FarmVerse và mở lại quầy cho cùng phiên. Reload quầy đọc snapshot để khôi phục cùng lệnh. `payment.status='confirmed'` cùng `order.status='processing'` tiếp tục hiện đang xử lý. Badge/thành công lấy từ snapshot sau khi lệnh `succeeded`.
+---
 
-Callback xác nhận đọc lại kết quả qua adapter rồi lưu lệnh, quả và huy hiệu trong cùng transaction PostgreSQL. Khi callback gián đoạn, đọc snapshot hoặc cùng order sẽ tiếp tục đối chiếu lệnh đã lưu.
+## 6. Error Handling
 
-Đọc lại lệnh mỗi 4 giây khi đang xử lý. Kiểm tra lịch NPC mỗi 8 giây khi vào ruộng của mình và còn lượt có thể thực hiện. Tab ẩn, đóng quầy hoặc đổi phiên dừng lượt đọc tương ứng. Khi trở lại tab, đọc lại trạng thái server.
+Errors follow the standard format:
+```json
+{
+  "error": {
+    "code": "REQUEST_CONFLICT",
+    "message": "Phiên chơi đã thay đổi. Hãy thử lại.",
+    "orderId": "..."
+  }
+}
+```
 
-## Lỗi
-
-`TradeDemoErrorResponse` có dạng `{ error: { code, message, orderId? } }`. Dùng `TRADE_DEMO_ERROR_STATUS`. 401 xóa dữ liệu phiên và yêu cầu đăng nhập. 409 đọc lại snapshot trước hành động mới. 503 `PAYMENT_UNCONFIRMED` có thể kèm orderId, tiếp tục đọc cùng lệnh. Hiển thị message server trả về.
-
-## Provider và lịch sử
-
-Auth hiện tại xác minh Google và liên kết Farm. Gameplay nhận ví bằng `PaymentWallet`. `PaymentProvider` có `id`, `prepare(intent)`, `submit(intent, authorization)`, `getStatus(reference)`. Intent do server tạo, gồm order/idempotency, sender/receiver/sponsor và số tiền. Authorization là dữ liệu callback nội bộ backend. Adapter sở hữu SDK/contract/nonce/gas/chữ ký/receipt và trả `PaymentResult`. Gameplay giữ vật phẩm/mâm/badge/PnL.
-
-Lịch sử T-64 bổ sung các field tùy chọn `assetDecimals`, `tokenContractId`, `feeAsset`, `feeDecimals`. Response native hiện tại trả 24, null, NEAR, 24. Response NEAR cũ thiếu metadata dùng 24 chữ số cho số tiền/phí. Adapter T-17 đã lưu và trả metadata USDC qua migration 012. Fixture ở `shared/fixtures/blockchain.mts` có 1,5 USDC và phí 0,0001 NEAR. [Thiết lập và bằng chứng adapter](NEAR_USDC_ADAPTER.md).
+| HTTP Status | Error Code | Recommended Client Action |
+|---|---|---|
+| `400 Bad Request` | `INVALID_ACTION` | Validate request payload against schema. |
+| `401 Unauthorized` | `UNAUTHENTICATED` | Redirect user to Google / NEAR sign-in. |
+| `404 Not Found` | `ORDER_NOT_FOUND` | Clear stale order reference, reload snapshot. |
+| `409 Conflict` | `REVISION_MISMATCH` | Refresh snapshot, re-evaluate button availability. |
+| `503 Service Unavailable` | `PAYMENT_UNCONFIRMED` | Continue polling order status until finality. |

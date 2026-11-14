@@ -1,6 +1,6 @@
 # FarmVerse ImageGen Prompts & Asset References
 
-Lưu trữ các prompt sinh ảnh bằng ImageGen để tái tạo hoặc mở rộng asset cùng phong cách nghệ thuật của HappyFarm / FarmVerse.
+Archive of ImageGen prompts used to generate and extend visual assets matching FarmVerse's signature art style.
 
 ## 1. Ground Textures
 

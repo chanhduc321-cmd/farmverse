@@ -28,7 +28,7 @@ Build a **browser-playable** casual farming game: **Farm → Harvest → Town Sq
 | Persistence | **PostgreSQL** | Save session, GOLD, inventory, NPC/offer state |
 | Blockchain | **`near-api-js` on the server** | Sign and send a native NEAR testnet transfer for C03 Micro |
 | Deployment | Public **HTTPS web demo URL** + publicly accessible backend | No client installation |
-| Art production | **Premium hand-painted 2.5D**, following the shared [Art Bible](art/ART_BIBLE.md) | Keep Codex and Antigravity assets consistent |
+| Art production | **Premium hand-painted 2.5D**, following the shared [Art Bible](art/ART_BIBLE.md) | Ensure visual consistency across all game assets |
 
 **Future development:** Khi có đủ nguồn lực hoặc thắng giải hackathon, team có thể đánh giá chuyển sang engine mạnh hơn để phát triển FarmVerse dài hạn.
 
@@ -180,4 +180,4 @@ PostgreSQL remains the persistence layer. Follow the current delivery order belo
 
 ### MVP-PLAN-01 — Farm-first delivery
 
-Complete the Farm foundation and playable loop first, then the merchant and Store. Verify the server-side NEAR transfer and integrate it in P4 before final QA. The [task dashboard](../TASKS.md) and [collaboration workflow](agents/workflow.md) define task ownership and integration.
+Complete the Farm foundation and playable loop first, then the merchant and Store. Verify server-side NEAR transfer and integration before final release.
