@@ -1,14 +1,26 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { getCookie, setCookie } from 'hono/cookie';
+import { html } from 'hono/html';
 import { ACCOUNT_API, FARM_API } from '../../shared/farm.mts';
 import type { Farm, FarmSessionResponse } from '../../shared/farm.mts';
+import { SOCIAL_AUTH_API } from '../../shared/social-auth.mts';
+import { BLOCKCHAIN_API } from '../../shared/blockchain.mts';
+import type { SocialAuthResult } from '../../shared/social-auth.mts';
 import { MERCHANT_API, MERCHANT_ERROR_STATUS, isMerchantOfferRequest } from '../../shared/merchant.mts';
 import type { MerchantErrorCode, MerchantErrorResponse } from '../../shared/merchant.mts';
 import { accountLifetimeSeconds, findAccountSession, hashToken, loginAccount, logoutAccount, parseCredentials, registerAccount } from './account-store.ts';
 import { activityRoutes } from './activity-routes.ts';
+import { authenticateNear, nearAuthConfig, nearAuthorizationUrl, nearDemoEnabled } from './auth/near.ts';
+import { findNearTestWallet, finishNearTestSignature, nearSigningDemoConfig, nearTestTransactionHistory, prepareNearTestSignature } from './auth/near-test-signing.ts';
+import { signInSocial } from './auth/social-store.ts';
+import { completeNearPayment, nearPaymentRoutes } from './blockchain/near-payment-routes.ts';
+import { claimTransactionRecord, readTransactionRecord, setTransactionError } from './blockchain/transaction-store.ts';
+import { tradeDemoRoutes } from './trade-demo/routes.ts';
+import { reconcileTradeDemoCallback } from './trade-demo/service.ts';
+import type { TransactionRecord } from './blockchain/transaction-store.ts';
 import { crops } from './catalog.ts';
 import { communityRoutes } from './community-routes.ts';
 import { FarmError, parseAction, parseBatch } from './farm.ts';
@@ -60,7 +72,8 @@ function farmSessionKey(kind: 'account' | 'guest', identity: string): string {
 }
 
 function sessionResponse(farm: Farm, sessionKey: string, username?: string): FarmSessionResponse {
-  return { farm, serverTime: Date.now(), accountsAvailable, account: username ? { username } : null, sessionKey };
+  return { farm, serverTime: Date.now(), accountsAvailable, nearDemoAvailable: accountsAvailable && Boolean(nearAuthConfig()),
+    account: username ? { username } : null, sessionKey };
 }
 
 function isJson(context: Context): boolean {
@@ -94,6 +107,13 @@ app.use('*', async (context, next) => {
   context.header('Cache-Control', 'no-store');
   await next();
 });
+
+for (const path of [SOCIAL_AUTH_API.near.path + '/*', '/account/payments/near/*', '/trade-demo/*', BLOCKCHAIN_API.history.path]) {
+  app.use(path, async (context, next) => {
+    if (!nearDemoEnabled()) return context.notFound();
+    await next();
+  });
+}
 
 app.onError((error, context) => {
   if (/^\/merchant(?:\/|$)/.test(context.req.path)) {
@@ -137,6 +157,142 @@ app.get(FARM_API.read.path, async (context) => {
   setSessionCookie(context, guestCookie, id, accountsAvailable ? accountLifetimeSeconds : undefined);
   return context.json(sessionResponse(farm, farmSessionKey('guest', id)));
 });
+
+const nearFlowCookie = 'farmverse_near_login';
+const nearTestCookie = 'farmverse_near_test_signing';
+const nearFlowPattern = /^([A-Za-z0-9_-]{43})\.([A-Za-z0-9_-]{43})\.([A-Za-z0-9_-]{43})$/;
+const nearTestPattern = /^(test-[A-Za-z0-9_-]{43})\.([A-Za-z0-9_-]{43})\.([A-Za-z0-9_-]{43})\.([0-9]{1,20})\.([0-9]{1,20})$/;
+
+function nearTestPage(context: Context, message: string, hash?: string) {
+  context.header('Referrer-Policy', 'no-referrer');
+  return context.html(html`<!doctype html><html lang="vi"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Thử ký NEAR testnet</title><main><h1>Thử ký NEAR testnet</h1><p>${message}</p>
+    ${hash ? html`<p><a href="https://explorer.testnet.near.org/transactions/${hash}">Xem giao dịch trên NEAR Explorer</a></p>` : ''}
+    <p><a href="/">Về nông trại</a></p></main></html>`);
+}
+
+function nearTestRecordedResult(context: Context, record: TransactionRecord) {
+  if (record.status === 'confirmed') return nearTestPage(context, 'Giao dịch 0 NEAR đã xác nhận trên testnet. Ví demo FarmVerse đã trả phí.', record.transaction_hash ?? undefined);
+  if (record.status === 'failed') return nearTestPage(context, 'Lượt thử ký đã thất bại. Chi tiết đã được lưu vào lịch sử giao dịch.');
+  if (record.status === 'cancelled') return nearTestPage(context, 'Yêu cầu ký đã được hủy.');
+  if (record.status === 'expired') return nearTestPage(context, 'Yêu cầu ký đã hết hạn. Hãy bắt đầu lượt mới.');
+  return nearTestPage(context, 'Giao dịch đang chờ xác nhận. Xem lại trong lịch sử giao dịch.', record.transaction_hash ?? undefined);
+}
+
+app.get(SOCIAL_AUTH_API.nearTest.path, async (context) => {
+  const config = nearSigningDemoConfig();
+  if (!config) return context.notFound();
+  if (context.req.header('Sec-Fetch-Site') === 'cross-site') return nearTestPage(context, 'Hãy mở đường dẫn trực tiếp từ localhost.');
+  const session = await farmSession(context);
+  const wallet = session?.tokenHash ? await findNearTestWallet(session.id) : undefined;
+  if (!wallet) return nearTestPage(context, 'Hãy đăng nhập FarmVerse bằng Google trước khi thử ký.');
+
+  try {
+    const state = `test-${randomBytes(32).toString('base64url')}`;
+    const action = await prepareNearTestSignature(config, wallet, `near-test:${hashToken(state)}`);
+    const nonce = randomBytes(32).toString('base64url');
+    const verifier = randomBytes(32).toString('base64url');
+    const challenge = createHash('sha256').update(verifier).digest('base64url');
+    setCookie(context, nearTestCookie, `${state}.${nonce}.${verifier}.${action.nonce}.${action.maxBlockHeight}`, {
+      httpOnly: true, sameSite: 'Lax', path: config.auth.callback.pathname, maxAge: 300,
+    });
+    return context.redirect(nearAuthorizationUrl(config.auth, state, nonce, challenge, action.payload).href, 303);
+  } catch (error) {
+    console.warn('Chuẩn bị ký NEAR testnet thất bại.', error instanceof Error ? error.name : 'UnknownError');
+    return nearTestPage(context, 'Chưa chuẩn bị được giao dịch testnet. Hãy thử lại.');
+  }
+});
+
+async function completeNearTest(context: Context, state: string) {
+  const config = nearSigningDemoConfig();
+  if (!config) return context.notFound();
+  const session = await farmSession(context);
+  const wallet = session?.tokenHash ? await findNearTestWallet(session.id) : undefined;
+  if (!wallet) return nearTestPage(context, 'Phiên FarmVerse đã hết hạn. Hãy đăng nhập lại bằng Google.');
+  const requestKey = `near-test:${hashToken(state)}`;
+  const record = await readTransactionRecord(requestKey);
+  if (record && record.farm_id !== wallet.farm_id) return nearTestPage(context, 'Phiên thử ký không khớp.');
+  if (record && record.status !== 'awaiting_signature') return nearTestRecordedResult(context, record);
+  const flow = nearTestPattern.exec(getCookie(context, nearTestCookie) ?? '');
+  if (!flow || flow[1] !== state) return nearTestPage(context, 'Phiên thử ký đã hết hạn hoặc không khớp.');
+  setCookie(context, nearTestCookie, '', { httpOnly: true, sameSite: 'Lax', path: config.auth.callback.pathname, maxAge: 0 });
+  const code = context.req.query('code');
+  const cancelled = Boolean(context.req.query('error'));
+  const validCode = Boolean(code && code.length <= 1024);
+  const claimed = await claimTransactionRecord(requestKey, wallet.farm_id, cancelled ? 'cancelled' : validCode ? 'signing' : 'failed');
+  if (!claimed) return nearTestPage(context, 'Lượt thử ký đã được xử lý. Xem lại trong lịch sử giao dịch.');
+  if (cancelled || !validCode) return nearTestRecordedResult(context, claimed);
+
+  try {
+    const hash = await finishNearTestSignature(config, wallet, code!, flow[3], flow[2], BigInt(flow[4]), BigInt(flow[5]), requestKey);
+    return nearTestPage(context, 'Giao dịch 0 NEAR đã xác nhận trên testnet. Ví demo FarmVerse đã trả phí.', hash);
+  } catch (error) {
+    await setTransactionError(claimed.id, 'SIGNING_UNCONFIRMED');
+    console.warn('Ký NEAR testnet thất bại.', error instanceof Error ? error.name : 'UnknownError');
+    return nearTestPage(context, 'Chưa xác nhận được giao dịch trên NEAR testnet.');
+  }
+}
+
+app.get(BLOCKCHAIN_API.history.path, async context => {
+  const session = await farmSession(context);
+  if (!session?.tokenHash) return context.json({ error: 'Hãy đăng nhập để xem lịch sử giao dịch.' }, 401);
+  const limit = context.req.query('limit') ?? '25';
+  if (!/^(?:[1-9]|[1-4][0-9]|50)$/.test(limit)) return context.json({ error: 'Giới hạn phải từ 1 đến 50.' }, 400);
+  return context.json(await nearTestTransactionHistory(session.id, Number(limit)));
+});
+
+function returnFromNear(context: Context, result: SocialAuthResult) {
+  context.header('Referrer-Policy', 'no-referrer');
+  return context.redirect(`/?${SOCIAL_AUTH_API.resultParam}=${result}`, 303);
+}
+
+app.get(SOCIAL_AUTH_API.near.path, (context) => {
+  const config = nearAuthConfig();
+  if (!config) return returnFromNear(context, 'unavailable');
+  if (context.req.header('Sec-Fetch-Site') === 'cross-site') return returnFromNear(context, 'failed');
+  const state = randomBytes(32).toString('base64url');
+  const nonce = randomBytes(32).toString('base64url');
+  const verifier = randomBytes(32).toString('base64url');
+  const challenge = createHash('sha256').update(verifier).digest('base64url');
+  setCookie(context, nearFlowCookie, `${state}.${nonce}.${verifier}`, {
+    httpOnly: true, sameSite: 'Lax', secure: config.callback.protocol === 'https:',
+    path: config.callback.pathname, maxAge: 600,
+  });
+  return context.redirect(nearAuthorizationUrl(config, state, nonce, challenge).href, 303);
+});
+
+app.get(SOCIAL_AUTH_API.near.callback, async (context) => {
+  const state = context.req.query('state');
+  if (state?.startsWith('test-')) return completeNearTest(context, state);
+  if (state?.startsWith('pay-')) {
+    const session = await farmSession(context);
+    return completeNearPayment(context, session?.tokenHash ? session.id : undefined, undefined, reconcileTradeDemoCallback);
+  }
+  const config = nearAuthConfig();
+  if (!config) return returnFromNear(context, 'unavailable');
+  const flow = nearFlowPattern.exec(getCookie(context, nearFlowCookie) ?? '');
+  const code = context.req.query('code');
+  if (!flow || flow[1] !== state) return returnFromNear(context, 'failed');
+  const secure = config.callback.protocol === 'https:';
+  setCookie(context, nearFlowCookie, '', { httpOnly: true, sameSite: 'Lax', secure, path: config.callback.pathname, maxAge: 0 });
+  if (!code || code.length > 1024 || context.req.query('error')) return returnFromNear(context, 'failed');
+  try {
+    const identity = await authenticateNear(config, code, flow[3], flow[2]);
+    const session = await signInSocial(identity, guestId(context));
+    if (!session) return returnFromNear(context, 'failed');
+    setCookie(context, accountCookie, session.token, { httpOnly: true, sameSite: 'Lax', secure, path: '/', maxAge: accountLifetimeSeconds });
+    if (session.claimedGuest) setSessionCookie(context, guestCookie, '', 0);
+    return returnFromNear(context, 'success');
+  } catch (error) {
+    console.warn('Đăng nhập NEAR Auth thất bại.', error instanceof Error ? error.name : 'UnknownError');
+    return returnFromNear(context, 'failed');
+  }
+});
+
+app.route('/', nearPaymentRoutes(async context => {
+  const session = await farmSession(context);
+  return session?.tokenHash ? session.id : undefined;
+}));
 
 app.use('/account/*', bodyLimit({
   maxSize: 2_048,
@@ -252,6 +408,11 @@ for (const kind of ['accept', 'reject'] as const) {
 app.route('/', communityRoutes(async (context) => {
   const session = await farmSession(context);
   if (session?.tokenHash) return { id: session.id, tokenHash: session.tokenHash };
+}, context => accountTokenHash(getCookie(context, accountCookie))));
+
+app.route('/', tradeDemoRoutes(async (context) => {
+  const session = await farmSession(context);
+  return session?.tokenHash ? session.id : undefined;
 }));
 
 app.route('/', activityRoutes(async (context) => {

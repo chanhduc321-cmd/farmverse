@@ -68,14 +68,14 @@ export async function registerAccount(guestId: string, { username, password }: A
 }
 
 export async function loginAccount({ username, password }: AccountCredentials) {
-  const result = await queryFarmDatabase<{ farm_id: string; password_hash: string }>(`
+  const result = await queryFarmDatabase<{ farm_id: string; password_hash: string | null }>(`
     SELECT farm_id, password_hash FROM farm_accounts WHERE username = $1
   `, [username]);
   const account = result.rows[0];
-  const [salt, storedKey] = account?.password_hash.split(':') ?? [];
+  const [salt, storedKey] = account?.password_hash?.split(':') ?? [];
   const key = await deriveKey(password, salt ? Buffer.from(salt, 'hex') : dummySalt);
   const expectedKey = storedKey ? Buffer.from(storedKey, 'hex') : dummyKey;
-  if (!timingSafeEqual(key, expectedKey) || !account) return;
+  if (!timingSafeEqual(key, expectedKey) || !account?.password_hash) return;
 
   const token = randomBytes(32).toString('hex');
   const session = await queryFarmDatabase<{ state: Farm }>(`

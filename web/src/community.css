@@ -210,6 +210,10 @@
 #community [hidden], #community-open[hidden], [data-visit-exit][hidden] { display: none; }
 
 .field.is-visiting :is(.farm-hud-row, .top-dropdown, .side-drawer, .bottom-dock) { display: none; }
+@media (any-hover: hover) and (any-pointer: fine) {
+  .field.is-visiting .plot-targets button:enabled { cursor: grab; }
+  .field.is-visiting .plot-targets button:enabled:active { cursor: grabbing; }
+}
 .field.is-visiting .instructions {
   bottom: max(16px, env(safe-area-inset-bottom));
   width: max-content;

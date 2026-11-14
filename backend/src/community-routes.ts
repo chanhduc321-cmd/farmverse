@@ -1,13 +1,51 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
-import { COMMUNITY_API } from '../../shared/community.mts';
+import { COMMUNITY_API, COMMUNITY_RESULT_LIMIT, COMMUNITY_SEARCH_MIN } from '../../shared/community.mts';
 import { confirmFriend, inviteFriend, listPlayers, stealFruit, visitFarm } from './community-store.ts';
 
 interface AccountSession { id: string; tokenHash: string }
+const directoryWindowMs = 30_000;
+const directoryRequestLimit = 18;
+const directorySessionLimit = 1024;
 
-export function communityRoutes(sessionFor: (context: Context) => Promise<AccountSession | undefined>) {
+export function communityRoutes(
+  sessionFor: (context: Context) => Promise<AccountSession | undefined>,
+  sessionToken: (context: Context) => string | undefined,
+) {
   const routes = new Hono<{ Variables: { session: AccountSession } }>();
+  const directoryRequests = new Map<string, { count: number; expiresAt: number }>();
+  routes.get(COMMUNITY_API.players, async (context) => {
+    const list = context.req.query('list') ?? 'residents';
+    const search = (context.req.query('q') ?? '').trim().toLowerCase();
+    const offset = Number(context.req.query('offset') ?? 0);
+    if ((list !== 'residents' && list !== 'friends' && list !== 'invitations')
+      || !/^[a-z0-9_]{0,24}$/.test(search) || (search.length > 0 && search.length < COMMUNITY_SEARCH_MIN)
+      || !Number.isSafeInteger(offset) || offset < 0 || offset >= COMMUNITY_RESULT_LIMIT) {
+      return context.json({ error: 'Bộ lọc người chơi không hợp lệ.' }, 400);
+    }
+
+    const token = sessionToken(context);
+    if (!token) return context.json({ error: 'Hãy đăng nhập để thăm ruộng.' }, 401);
+    const now = Date.now();
+    let window = directoryRequests.get(token);
+    if (!window || window.expiresAt <= now) {
+      directoryRequests.delete(token);
+      if (directoryRequests.size >= directorySessionLimit) directoryRequests.delete(directoryRequests.keys().next().value!);
+      window = { count: 0, expiresAt: now + directoryWindowMs };
+      directoryRequests.set(token, window);
+    }
+    if (window.count >= directoryRequestLimit) {
+      context.header('Retry-After', String(Math.ceil((window.expiresAt - now) / 1000)));
+      return context.json({ error: 'Bạn đang xem danh sách quá nhanh. Thử lại sau ít giây nhé.' }, 429);
+    }
+    window.count++;
+
+    const session = await sessionFor(context);
+    if (!session) return context.json({ error: 'Hãy đăng nhập để thăm ruộng.' }, 401);
+    return context.json(await listPlayers(session.id, list, search, offset));
+  });
+
   routes.use('/community/*', async (context, next) => {
     const session = await sessionFor(context);
     if (!session) return context.json({ error: 'Hãy đăng nhập để thăm ruộng.' }, 401);
@@ -24,17 +62,6 @@ export function communityRoutes(sessionFor: (context: Context) => Promise<Accoun
       }
     }
     await next();
-  });
-
-  routes.get(COMMUNITY_API.players, async (context) => {
-    const list = context.req.query('list') ?? 'residents';
-    const search = (context.req.query('q') ?? '').trim().toLowerCase();
-    const offset = Number(context.req.query('offset') ?? 0);
-    if ((list !== 'residents' && list !== 'friends' && list !== 'invitations')
-      || !/^[a-z0-9_]{0,24}$/.test(search) || !Number.isSafeInteger(offset) || offset < 0) {
-      return context.json({ error: 'Bộ lọc người chơi không hợp lệ.' }, 400);
-    }
-    return context.json(await listPlayers(context.get('session').id, list, search, offset));
   });
 
   for (const [path, handle] of [[COMMUNITY_API.invite, inviteFriend], [COMMUNITY_API.confirm, confirmFriend]] as const) {

@@ -1,5 +1,9 @@
 # FarmVerse API
 
+The USDC testnet trade scenario has a shared contract and fixtures in the [T-16 API handoff](TRADE_DEMO_API.md). Gameplay routes follow that contract during T-57/T-58 implementation.
+
+The [USDC adapter](NEAR_USDC_ADAPTER.md) now handles sponsored testnet transfers and Google payment approval callbacks. Its transaction history metadata is available on `/api/account/transactions`.
+
 The Node.js service owns state. In development, the browser calls `/api/...` through the Vite proxy to the matching Hono route without the `/api` prefix. Send JSON POST bodies with `Content-Type: application/json` and include cookies. Responses carrying game state use `Cache-Control: no-store`.
 
 ## Session and Farm
@@ -88,13 +92,15 @@ Community routes require a signed-in PostgreSQL account and migration `006`. Use
 
 | Browser request | Input | Result |
 |---|---|---|
-| `GET /api/community/players` | Query `list` set to `residents`, `friends` or `invitations`, with optional `q` and `offset` | `PlayerPage` with up to 25 usernames and `nextOffset`. Invitations lists pending incoming requests. |
+| `GET /api/community/players` | Query `list` set to `residents`, `friends` or `invitations`, with optional `q` (empty or 3–24 characters) and `offset` (0–119) | `PlayerPage` with up to 12 usernames and `nextOffset`. Pagination stops at 120 results per filter. Invitations lists pending incoming requests. |
 | `POST /api/community/friends/:username/invite` | `{}` | 204. Sends an invitation. |
 | `POST /api/community/friends/:username/confirm` | `{}` | 204. The recipient confirms the named sender. Both players appear in each other's friends lists. |
 | `GET /api/community/farms/:username` | Target username | `FarmVisit` with plot snapshots, remaining ripe fruit and `canSteal` for the current visitor. |
 | `POST /api/community/farms/:username/steal` | `{ plot, plantedAt }` | `StealResponse` with `farm`, updated `visit`, `serverTime` and `blocked`. |
 
-Search filters the current list by username substring. Residents lists the other accounts except confirmed friends. Use the zero-based plot index and `plantedAt` from the visit response to identify the crop. Owner-approved T-41 rule (12/11/2026): every farm has a Pet that guards for free, without energy deductions. Valid attempts return HTTP 200 with `blocked: true`; fruit and both inventories remain unchanged. Each visitor has one attempt per plot/crop, including a blocked attempt. Replays return 409 without another event. Invalid/unripe attempts do not generate block events. After HTTP 409, display `{ error }` and refresh the visit. [Pet rules](FARMVERSE_GAMEPLAY.md#pet-giữ-nhà-t-41)
+Search filters the current list by username substring. Residents lists the other accounts except confirmed friends. Use the zero-based plot index and `plantedAt` from the visit response to identify the crop. The server rolls a 50% block chance after claiming a valid attempt. Both outcomes return 200. With `blocked: true`, the visitor sees the guard reaction. With `blocked: false`, the server transfers one fruit from the host's crop to the visitor's warehouse and increments both Farm revisions. Each visitor gets one attempt per plot and crop. Replays and invalid attempts return 409. The client displays the error and refreshes the visit. [Pet rules](FARMVERSE_GAMEPLAY.md#pet-giữ-nhà-t-41)
+
+Directory pages are cached for 15 seconds in the active browser session and 20 seconds per account in each backend instance. Successful invites and confirmations invalidate both accounts' pages in the instance that processed the write. The directory allows 18 reads per session per 30 seconds in each instance, then returns `429` with `Retry-After`. Reads within this limit verify the session before accessing cached data.
 
 `POST /api/farm/pet` accepts `{ pet: 'dog' | 'cat' | 'goose', expectedRevision }` for Guest and account sessions, and returns `FarmResponse`. A new or legacy farm defaults to dog. Selection persists in Farm JSON and uses the same revision protection as other mutations.
 

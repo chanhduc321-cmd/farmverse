@@ -2,8 +2,10 @@
 
 - **Version** — 1.1
 - **Date** — 2026-11-06
-- **Last updated** — 2026-11-09
+- **Last updated** — 2026-11-13
 - **Status** — LOCKED for MVP implementation
+
+The USDC testnet scenario follows the approved [FV-NEAR-01 amendment](#fv-near-01--usdc-testnet-trade-demo) below.
 
 Implement a small, playable casual farming game with one NPC trader and one verifiable NEAR testnet transaction demonstration. This is a product/implementation contract, not a promise of production readiness or hackathon placement.
 
@@ -217,4 +219,17 @@ The judge-facing README must cover the gameplay concept, local setup, demo accou
 - **Next design phase:** UI/UX screens, Phaser scenes and input behaviors, art direction, API schemas, persistence, and task decomposition. These decisions must honor the locked behavior and may not silently add new mechanics.
 - **Approved stack amendment:** See [MVP-TECH-01](FARMVERSE_PHASER_MVP_GUIDE.md#mvp-tech-01--backend-runtime) for the backend runtime decision.
 - **Change process:** Any change to a locked rule or AC requires a labeled amendment with reason, impact and approval before implementation.
+
+### FV-NEAR-01 — USDC testnet trade demo
+
+Approved by the project owner on 2026-11-13 through the two-offer scenario and the decision to use USDC. This amendment adds a testnet trade loop with Google onboarding, sponsored gas and USDC payments.
+
+- A exchanges one demo strawberry with the NPC for 1 USDC testnet. B buys that strawberry from the NPC for 1.5 USDC testnet, completes a 2/3 basket and receives one badge.
+- The server reserves each demo item before payment and applies ownership, badge and PnL changes once after verifying successful execution, token contract, sender, recipient and amount.
+- Demo item and basket state use a dedicated run identifier in PostgreSQL.
+- The NPC records a 1 USDC cost and 1.5 USDC sale, producing 0.5 USDC gross profit. The FarmVerse sponsor records NEAR gas costs.
+- Persist order references and blockchain transaction logs. Repeated callbacks and reloads retrieve the same order and verified outcome.
+- Acceptance requires two distinct Google identities and wallets, both USDC transfers confirmed, one badge, correct NPC gross profit and consistent behavior after cancellation, concurrent requests and reloads.
+
+Implementation details, ownership and remaining estimates are maintained in the [USDC testnet build plan](FARMVERSE_NEAR_TRADE_PLAN.md). Current implementation status is tracked in [TASKS.md](../TASKS.md).
 

@@ -30,3 +30,9 @@ vendor/
 *.swo
 .DS_Store
 Thumbs.db
+
+# Dashboards & tracking
+BUGS.html
+BUGS.md
+TASKS.html
+TASKS.md

@@ -1,3 +1,4 @@
+import { COMMUNITY_PAGE_SIZE, COMMUNITY_RESULT_LIMIT } from '../../shared/community.mts';
 import type { FarmVisit, PlayerList, PlayerPage, StealRequest, StealResponse } from '../../shared/community.mts';
 import type { Farm } from '../../shared/farm.mts';
 import { ripeYield } from '../../shared/farm-rules.mts';
@@ -5,52 +6,84 @@ import { recordActivity } from './activity-store.ts';
 import { crops } from './catalog.ts';
 import { queryFarmDatabase, transactFarm } from './farm-store.ts';
 
-const PAGE_SIZE = 25;
+const directoryTtl = 20_000;
+const directoryCapacity = 512;
+const directoryPages = new Map<string, { farmId: string; expiresAt: number; page: Promise<PlayerPage> }>();
 type CommunityError = { status: 401 | 404 | 409; error: string };
 
-export async function listPlayers(visitorId: string, list: PlayerList, search: string, offset: number): Promise<PlayerPage> {
+export function listPlayers(visitorId: string, list: PlayerList, search: string, offset: number): Promise<PlayerPage> {
+  const key = `${visitorId}:${list}:${search}:${offset}`;
+  const cached = directoryPages.get(key);
+  if (cached && cached.expiresAt > Date.now()) return cached.page;
+
+  directoryPages.delete(key);
+  if (directoryPages.size >= directoryCapacity) directoryPages.delete(directoryPages.keys().next().value!);
+  const entry = {
+    farmId: visitorId, expiresAt: Infinity,
+    page: readPlayerPage(visitorId, list, search, offset),
+  };
+  directoryPages.set(key, entry);
+  void entry.page.then(
+    () => { entry.expiresAt = Date.now() + directoryTtl; },
+    () => { if (directoryPages.get(key) === entry) directoryPages.delete(key); },
+  );
+  return entry.page;
+}
+
+function invalidatePlayerPages(first: string, second: string) {
+  for (const [key, entry] of directoryPages) {
+    if (entry.farmId === first || entry.farmId === second) directoryPages.delete(key);
+  }
+}
+
+async function readPlayerPage(visitorId: string, list: PlayerList, search: string, offset: number): Promise<PlayerPage> {
+  const pageSize = Math.min(COMMUNITY_PAGE_SIZE, COMMUNITY_RESULT_LIMIT - offset);
+  const hasRoom = offset + pageSize < COMMUNITY_RESULT_LIMIT;
+  const isDirectory = list === 'residents';
+  // Start from the indexed incoming/outgoing relationships for this account.
   const { rows } = await queryFarmDatabase<{ username: string }>(`
+    WITH related AS (
+      SELECT sender_id AS id FROM farm_friendships
+      WHERE recipient_id = $1 AND confirmed = ($2 <> 'invitations')
+      UNION ALL
+      SELECT recipient_id AS id FROM farm_friendships
+      WHERE sender_id = $1 AND confirmed AND $2 <> 'invitations'
+    )
     SELECT username FROM farm_accounts AS player
-    WHERE farm_id <> $1 AND strpos(username, $3) > 0
-      AND (($2 = 'residents' AND NOT EXISTS (
-        SELECT 1 FROM farm_friendships
-        WHERE confirmed AND (
-          (sender_id = $1 AND recipient_id = player.farm_id)
-          OR (recipient_id = $1 AND sender_id = player.farm_id)
-        )
-      )) OR ($2 <> 'residents' AND EXISTS (
-        SELECT 1 FROM farm_friendships
-        WHERE (recipient_id = $1 AND sender_id = player.farm_id AND confirmed = ($2 = 'friends'))
-           OR ($2 = 'friends' AND confirmed AND sender_id = $1 AND recipient_id = player.farm_id)
-      )))
+    ${isDirectory ? '' : 'JOIN related ON related.id = player.farm_id'}
+    WHERE farm_id <> $1 AND ($3 = '' OR strpos(username, $3) > 0)
+    ${isDirectory ? 'AND NOT EXISTS (SELECT 1 FROM related WHERE related.id = player.farm_id)' : ''}
     ORDER BY username
     LIMIT $4 OFFSET $5
-  `, [visitorId, list, search, PAGE_SIZE + 1, offset]);
-  return { players: rows.slice(0, PAGE_SIZE), nextOffset: rows.length > PAGE_SIZE ? offset + PAGE_SIZE : null };
+  `, [visitorId, list, search, pageSize + Number(hasRoom), offset]);
+  return { players: rows.slice(0, pageSize), nextOffset: rows.length > pageSize ? offset + pageSize : null };
 }
 
 export async function inviteFriend(senderId: string, username: string): Promise<CommunityError | undefined> {
-  const { rows: [result] } = await queryFarmDatabase<{ found: boolean; inserted: boolean }>(`
+  const { rows: [result] } = await queryFarmDatabase<{ found: boolean; recipient_id: string | null }>(`
     WITH target AS (
       SELECT farm_id FROM farm_accounts WHERE username = $2
     ), invitation AS (
       INSERT INTO farm_friendships (sender_id, recipient_id)
       SELECT $1, farm_id FROM target WHERE farm_id <> $1
-      ON CONFLICT DO NOTHING RETURNING sender_id
+      ON CONFLICT DO NOTHING RETURNING recipient_id
     )
-    SELECT EXISTS (SELECT 1 FROM target) AS found, EXISTS (SELECT 1 FROM invitation) AS inserted
+    SELECT EXISTS (SELECT 1 FROM target) AS found, (SELECT recipient_id FROM invitation) AS recipient_id
   `, [senderId, username]);
   if (!result.found) return { status: 404, error: 'Không tìm thấy cư dân.' };
-  if (!result.inserted) return { status: 409, error: 'Lời mời hoặc kết bạn đã tồn tại.' };
+  if (!result.recipient_id) return { status: 409, error: 'Lời mời hoặc kết bạn đã tồn tại.' };
+  invalidatePlayerPages(senderId, result.recipient_id);
 }
 
 export async function confirmFriend(recipientId: string, username: string): Promise<CommunityError | undefined> {
-  const result = await queryFarmDatabase(`
+  const { rows: [result] } = await queryFarmDatabase<{ sender_id: string }>(`
     UPDATE farm_friendships SET confirmed = true
     FROM farm_accounts
     WHERE sender_id = farm_id AND username = $2 AND recipient_id = $1 AND NOT confirmed
+    RETURNING sender_id
   `, [recipientId, username]);
-  if (!result.rowCount) return { status: 409, error: 'Không có lời mời đang chờ xác nhận.' };
+  if (!result) return { status: 409, error: 'Không có lời mời đang chờ xác nhận.' };
+  invalidatePlayerPages(recipientId, result.sender_id);
 }
 
 function farmVisit(username: string, farm: Farm, taken: readonly number[], now: number): FarmVisit {
@@ -89,7 +122,7 @@ export async function visitFarm(visitorId: string, username: string): Promise<Fa
   }
 }
 
-export async function stealFruit(visitorId: string, tokenHash: string, username: string, action: StealRequest):
+export async function stealFruit(visitorId: string, tokenHash: string, username: string, action: StealRequest, random = Math.random):
 Promise<StealResponse | CommunityError> {
   return transactFarm(async (client): Promise<StealResponse | CommunityError> => {
     const { rows: [account] } = await client.query<{ farm_id: string }>(
@@ -123,21 +156,32 @@ Promise<StealResponse | CommunityError> {
     `, [hostId, action.plot, action.plantedAt, visitorId]);
     if (!inserted.rowCount) return { status: 409, error: 'Bạn đã thử lấy quả ở vụ này.' };
 
-    // Every farm has a Pet. Free guarding is the approved temporary T-41 rule.
-    // Consume the attempt and record its actual outcome in the same transaction.
+    // Roll once after claiming the attempt so a retry cannot roll again.
+    const blocked = random() < 0.5;
+    if (!blocked) {
+      plot.fruitTaken = (plot.fruitTaken ?? 0) + 1;
+      visitor.produce[plot.cropId] = (visitor.produce[plot.cropId] ?? 0) + 1;
+      host.revision++;
+      visitor.revision++;
+      await client.query(`
+        UPDATE farm_guest_progress
+        SET state = CASE WHEN session_id = $1 THEN $3::jsonb ELSE $4::jsonb END
+        WHERE session_id IN ($1, $2)
+      `, [hostId, visitorId, host, visitor]);
+    }
     await recordActivity(client, {
       hostId,
       visitorId,
-      type: 'pet_block',
+      type: blocked ? 'pet_block' : 'steal',
       plotIndex: action.plot,
       cropId: plot.cropId,
       plantedAt: action.plantedAt,
-      amount: 0,
+      amount: blocked ? 0 : 1,
     });
     const { rows: taken } = await client.query<{ plot_index: number }>(`
       SELECT plot_index FROM farm_crop_steals
       WHERE host_id = $1 AND visitor_id = $2 AND planted_at = ($3::jsonb->'plots'->plot_index::integer->>'plantedAt')::bigint
     `, [hostId, visitorId, host]);
-    return { farm: visitor, visit: farmVisit(username, host, taken.map(row => row.plot_index), now), serverTime: now, blocked: true };
+    return { farm: visitor, visit: farmVisit(username, host, taken.map(row => row.plot_index), now), serverTime: now, blocked };
   });
 }
