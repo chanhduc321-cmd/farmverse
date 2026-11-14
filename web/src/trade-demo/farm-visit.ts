@@ -2,16 +2,17 @@ import { tradeArt } from './assets.ts';
 import { createDefaultTradeDemoClient, TradeRequestError } from './client.ts';
 import { mountTradeDemo } from './trade.ts';
 
+const stallHash = '#quay-nong-san';
 const returnKey = 'farmverse:trade-return';
 const checkInterval = 8_000;
 
 export function mountFarmTradeVisit(field: HTMLElement) {
   const client = createDefaultTradeDemoClient();
+  const farm = field.closest('main')!;
   const invite = document.createElement('button');
   invite.type = 'button';
   invite.className = 'farm-trade-invite';
   invite.hidden = true;
-  invite.setAttribute('aria-haspopup', 'dialog');
   const portrait = document.createElement('img');
   portrait.loading = 'lazy';
   portrait.src = tradeArt.merchant;
@@ -20,38 +21,80 @@ export function mountFarmTradeVisit(field: HTMLElement) {
   invite.append(portrait, label);
   field.append(invite);
 
-  const dialog = document.createElement('dialog');
-  dialog.className = 'farm-trade-dialog';
-  dialog.setAttribute('aria-labelledby', 'trade-dialog-title');
-  const close = document.createElement('button');
-  close.type = 'button';
-  close.className = 'farm-trade-close';
-  close.textContent = '×';
-  close.setAttribute('aria-label', 'Đóng quầy nông sản');
-  close.autofocus = true;
-  dialog.append(close);
-  document.body.append(dialog);
+  const screen = document.createElement('main');
+  screen.className = 'farm-trade-screen';
+  screen.hidden = true;
+  screen.setAttribute('aria-labelledby', 'trade-screen-title');
+  screen.innerHTML = '<header class="farm-trade-header"><button type="button" class="farm-trade-back">← Về ruộng</button>' +
+    '<h1 id="trade-screen-title">Quầy nông sản</h1></header>';
+  const back = screen.querySelector('button')!;
+  document.body.append(screen);
 
   let sessionKey: string | undefined;
   let visitRequest: AbortController | undefined;
   let visitTimer: number | undefined;
   let farmReady = false;
-  let returnToTrade = sessionStorage.getItem(returnKey) === '1';
-  sessionStorage.removeItem(returnKey);
-  const trade = mountTradeDemo(dialog, {
+  let canOpen = false;
+  let returnSession: string | null = null;
+  try {
+    returnSession = sessionStorage.getItem(returnKey);
+    sessionStorage.removeItem(returnKey);
+  } catch { /* Fragment navigation still works without session storage. */ }
+  const trade = mountTradeDemo(screen, {
     client,
     onSessionExpired() { setHome(undefined); },
     onRedirect(url) {
-      sessionStorage.setItem(returnKey, '1');
+      try {
+        if (sessionKey) sessionStorage.setItem(returnKey, sessionKey);
+      } catch { /* The player can reopen the stall from the farm. */ }
       window.location.assign(url);
     },
   });
 
-  function open() {
-    if (!farmReady || !sessionKey || dialog.open || document.querySelector('dialog[open]')) return false;
-    dialog.showModal();
-    void trade.refresh();
+  function clearStallUrl() {
+    if (location.hash !== stallHash) return;
+    const url = new URL(location.href);
+    url.hash = '';
+    history.replaceState(null, '', url);
+  }
+
+  function hideScreen(restoreFocus: boolean) {
+    if (screen.hidden) return false;
+    screen.hidden = true;
+    farm.inert = false;
+    farm.classList.remove('is-stall-open');
+    trade.reset();
+    if (restoreFocus && !invite.hidden) invite.focus({ preventScroll: true });
     return true;
+  }
+
+  function syncScreen() {
+    const returning = Boolean(sessionKey && returnSession === sessionKey);
+    if (location.hash !== stallHash && !returning) {
+      if (hideScreen(true)) void checkVisit();
+      return;
+    }
+    if (!farmReady || !sessionKey || !canOpen || !screen.hidden || document.querySelector('dialog[open]')) return;
+    if (returning) {
+      returnSession = null;
+      if (location.hash !== stallHash) history.pushState({ farmTradeEntry: true }, '', stallHash);
+    }
+    cancelVisitCheck();
+    farm.inert = true;
+    farm.classList.add('is-stall-open');
+    screen.hidden = false;
+    screen.scrollTop = 0;
+    back.focus({ preventScroll: true });
+    void trade.refresh();
+  }
+
+  function leave() {
+    if (screen.hidden) return;
+    if (history.state?.farmTradeEntry) history.back();
+    else {
+      clearStallUrl();
+      syncScreen();
+    }
   }
 
   function cancelVisitCheck() {
@@ -70,7 +113,7 @@ export function mountFarmTradeVisit(field: HTMLElement) {
   }
 
   async function checkVisit() {
-    if (!sessionKey || document.hidden || visitRequest) return;
+    if (!sessionKey || !screen.hidden || document.hidden || visitRequest) return;
     const controller = new AbortController();
     const { signal } = controller;
     visitRequest = controller;
@@ -79,21 +122,26 @@ export function mountFarmTradeVisit(field: HTMLElement) {
       if (signal.aborted) return;
       const remaining = state.visit ? state.visit.arrivesAt - state.serverTime : 0;
       const arrived = Boolean(state.visit && remaining <= 0);
-      invite.hidden = !(arrived || state.canRevisitStall);
+      canOpen = arrived || state.canRevisitStall;
+      invite.hidden = !canOpen;
       invite.classList.toggle('is-calling', arrived);
       label.textContent = state.visit && arrived
         ? state.visit.kind === 'sell_to_npc' ? 'Bạn có dâu bán không?' : 'Mình có dâu cho mâm quả!'
         : 'Quầy nông sản';
-      if (returnToTrade && open()) returnToTrade = false;
+      syncScreen();
+      if (signal.aborted) return;
+      if (!canOpen && !state.checkAgain) clearStallUrl();
       if (state.checkAgain) checkAfter(state.visit && !arrived ? remaining + 50 : checkInterval);
     } catch (error) {
       if (signal.aborted) return;
-      if (error instanceof TradeRequestError && error.status === 401) {
-        returnToTrade = false;
+      if (error instanceof TradeRequestError && [401, 404].includes(error.status)) {
         setHome(undefined);
       } else if (error instanceof TradeRequestError && error.status === 409) {
+        returnSession = null;
+        canOpen = false;
         invite.hidden = true;
-        returnToTrade = false;
+        clearStallUrl();
+        hideScreen(false);
       } else {
         checkAfter(checkInterval);
       }
@@ -103,32 +151,43 @@ export function mountFarmTradeVisit(field: HTMLElement) {
   }
 
   function setHome(nextKey: string | undefined) {
+    if (!nextKey || (sessionKey && sessionKey !== nextKey)) {
+      returnSession = null;
+      clearStallUrl();
+    }
     if (sessionKey === nextKey) return;
     sessionKey = nextKey;
+    canOpen = false;
     cancelVisitCheck();
+    hideScreen(false);
     invite.hidden = true;
-    if (dialog.open) dialog.close();
-    trade.reset();
     void checkVisit();
   }
 
-  invite.addEventListener('click', open);
-  close.addEventListener('click', () => dialog.close());
-  dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
-  dialog.addEventListener('close', () => {
-    if (dialog.open) return;
-    trade.reset();
-    if (!visitRequest) void checkVisit();
+  invite.addEventListener('click', () => {
+    if (!farmReady || !canOpen || document.querySelector('dialog[open]')) return;
+    if (location.hash !== stallHash) history.pushState({ farmTradeEntry: true }, '', stallHash);
+    syncScreen();
   });
+  back.addEventListener('click', leave);
+  screen.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    leave();
+  });
+  window.addEventListener('popstate', syncScreen);
+  window.addEventListener('hashchange', syncScreen);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) cancelVisitCheck();
     else void checkVisit();
   });
   return {
+    isOpen: () => !screen.hidden,
     setHome,
     farmReady() {
       farmReady = true;
-      if (returnToTrade && open()) returnToTrade = false;
+      syncScreen();
     },
   };
 }

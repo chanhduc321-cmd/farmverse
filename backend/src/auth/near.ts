@@ -9,7 +9,12 @@ const callbackPath = `/api${SOCIAL_AUTH_API.near.callback}`;
 const localDemoCallback = 'http://localhost:3000/';
 const jwks = createRemoteJWKSet(new URL('.well-known/jwks.json', issuer));
 
+export function nearDemoEnabled(): boolean {
+  return process.env.NEAR_DEMO_ENABLED === 'true';
+}
+
 export function nearAuthConfig() {
+  if (!nearDemoEnabled()) return;
   const configured = process.env.NEAR_AUTH_CALLBACK_URL;
   if (!configured) return;
   const callback = URL.parse(configured);

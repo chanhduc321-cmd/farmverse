@@ -28,10 +28,40 @@ async function participant() {
   return { farmId: account.farm_id, wallet, token: session.token };
 }
 
-test('trade demo uses the mounted FarmVerse account route for authentication', async () => {
-  const response = await app.request('/trade-demo');
-  assert.equal(response.status, 401);
-  assert.equal((await response.json()).error.code, 'SESSION_REQUIRED');
+test('NEAR demo is private by default and exposes capability only when enabled', async () => {
+  const previousFlag = process.env.NEAR_DEMO_ENABLED;
+  const previousCallback = process.env.NEAR_AUTH_CALLBACK_URL;
+  process.env.NEAR_AUTH_CALLBACK_URL = 'http://localhost:3000/';
+  try {
+    delete process.env.NEAR_DEMO_ENABLED;
+    const disabled = await app.request('/farm');
+    assert.equal(disabled.status, 200);
+    assert.equal((await disabled.json()).nearDemoAvailable, false);
+    const routes = [
+      ['/account/social/near', 'GET'],
+      ['/account/social/near/callback', 'GET'],
+      ['/account/social/near/test-signature', 'GET'],
+      ['/account/transactions', 'GET'],
+      ['/account/payments/near/example/authorize', 'GET'],
+      ['/trade-demo', 'GET'],
+      ['/trade-demo/visit', 'POST'],
+      ['/trade-demo/accept', 'POST'],
+    ];
+    for (const [path, method] of routes) assert.equal((await app.request(path, { method })).status, 404, path);
+
+    process.env.NEAR_DEMO_ENABLED = 'true';
+    const enabled = await app.request('/farm', { headers: { Cookie: disabled.headers.get('set-cookie')!.split(';')[0] } });
+    assert.equal((await enabled.json()).nearDemoAvailable, true);
+    const login = await app.request('/account/social/near');
+    assert.equal(login.status, 303);
+    assert.equal(new URL(login.headers.get('location')!).searchParams.get('redirect_uri'), 'http://localhost:3000/');
+    const response = await app.request('/trade-demo');
+    assert.equal(response.status, 401);
+    assert.equal((await response.json()).error.code, 'SESSION_REQUIRED');
+  } finally {
+    if (previousFlag === undefined) delete process.env.NEAR_DEMO_ENABLED; else process.env.NEAR_DEMO_ENABLED = previousFlag;
+    if (previousCallback === undefined) delete process.env.NEAR_AUTH_CALLBACK_URL; else process.env.NEAR_AUTH_CALLBACK_URL = previousCallback;
+  }
 });
 
 test('HTTP trade demo reserves, recovers, settles and awards once on PostgreSQL', async () => {

@@ -13,7 +13,7 @@ import { MERCHANT_API, MERCHANT_ERROR_STATUS, isMerchantOfferRequest } from '../
 import type { MerchantErrorCode, MerchantErrorResponse } from '../../shared/merchant.mts';
 import { accountLifetimeSeconds, findAccountSession, hashToken, loginAccount, logoutAccount, parseCredentials, registerAccount } from './account-store.ts';
 import { activityRoutes } from './activity-routes.ts';
-import { authenticateNear, nearAuthConfig, nearAuthorizationUrl } from './auth/near.ts';
+import { authenticateNear, nearAuthConfig, nearAuthorizationUrl, nearDemoEnabled } from './auth/near.ts';
 import { findNearTestWallet, finishNearTestSignature, nearSigningDemoConfig, nearTestTransactionHistory, prepareNearTestSignature } from './auth/near-test-signing.ts';
 import { signInSocial } from './auth/social-store.ts';
 import { completeNearPayment, nearPaymentRoutes } from './blockchain/near-payment-routes.ts';
@@ -72,7 +72,8 @@ function farmSessionKey(kind: 'account' | 'guest', identity: string): string {
 }
 
 function sessionResponse(farm: Farm, sessionKey: string, username?: string): FarmSessionResponse {
-  return { farm, serverTime: Date.now(), accountsAvailable, account: username ? { username } : null, sessionKey };
+  return { farm, serverTime: Date.now(), accountsAvailable, nearDemoAvailable: accountsAvailable && Boolean(nearAuthConfig()),
+    account: username ? { username } : null, sessionKey };
 }
 
 function isJson(context: Context): boolean {
@@ -106,6 +107,13 @@ app.use('*', async (context, next) => {
   context.header('Cache-Control', 'no-store');
   await next();
 });
+
+for (const path of [SOCIAL_AUTH_API.near.path + '/*', '/account/payments/near/*', '/trade-demo/*', BLOCKCHAIN_API.history.path]) {
+  app.use(path, async (context, next) => {
+    if (!nearDemoEnabled()) return context.notFound();
+    await next();
+  });
+}
 
 app.onError((error, context) => {
   if (/^\/merchant(?:\/|$)/.test(context.req.path)) {

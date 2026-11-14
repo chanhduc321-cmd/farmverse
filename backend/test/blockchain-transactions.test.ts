@@ -18,6 +18,7 @@ test('blockchain log persists before broadcast and reconciles uncertain submissi
     'SELECT farm_id FROM farm_social_identities WHERE issuer = $1 AND subject = $2', ['https://logging.test.invalid/', subject],
   );
   const farmId = account.farm_id;
+  const previousFlag = process.env.NEAR_DEMO_ENABLED;
   const requestKey = `log-test:${subject}`;
   const sponsorId = 'log-test.testnet';
   const secretMarker = 'jwt-must-never-be-in-the-log';
@@ -88,9 +89,10 @@ test('blockchain log persists before broadcast and reconciles uncertain submissi
     } as typeof receipt);
     assert.equal((await readTransactionRecord(`${requestKey}:failed`))?.status, 'failed');
 
+    const headers = { cookie: `farmverse_account=${session.token}` };
+    process.env.NEAR_DEMO_ENABLED = 'true';
     const unauthenticated = await app.request('/account/transactions');
     assert.equal(unauthenticated.status, 401);
-    const headers = { cookie: `farmverse_account=${session.token}` };
     assert.equal((await app.request('/account/transactions?limit=51', { headers })).status, 400);
     const response = await app.request('/account/transactions?limit=25', { headers });
     assert.equal(response.status, 200);
@@ -103,6 +105,7 @@ test('blockchain log persists before broadcast and reconciles uncertain submissi
     );
     assert.equal(security.relrowsecurity, true);
   } finally {
+    if (previousFlag === undefined) delete process.env.NEAR_DEMO_ENABLED; else process.env.NEAR_DEMO_ENABLED = previousFlag;
     await queryFarmDatabase('DELETE FROM farm_blockchain_transactions WHERE farm_id=$1', [farmId]);
     await queryFarmDatabase('DELETE FROM farm_social_identities WHERE farm_id=$1', [farmId]);
     await queryFarmDatabase('DELETE FROM farm_accounts WHERE farm_id=$1', [farmId]);

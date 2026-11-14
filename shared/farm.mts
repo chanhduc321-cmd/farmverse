@@ -76,6 +76,7 @@ export interface FarmResponse {
 
 export interface FarmSessionResponse extends FarmResponse {
   accountsAvailable: boolean;
+  nearDemoAvailable: boolean;
   account: { username: string } | null;
   sessionKey: string;
 }

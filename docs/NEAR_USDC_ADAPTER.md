@@ -7,6 +7,7 @@
 Node.js từ 22.22.2. Chạy migration 012 bằng `pnpm --dir backend migrate`. Trong tệp môi trường **backend** đặt:
 
 ```dotenv
+NEAR_DEMO_ENABLED=true
 NEAR_AUTH_CALLBACK_URL=http://localhost:3000/
 NEAR_USDC_ENABLED=true
 NEAR_TEST_SIGNING_SPONSOR_KEY=<server sponsor key>
@@ -14,6 +15,8 @@ NEAR_USDC_NPC_KEY=<server NPC key>
 ```
 
 Callback phải thuộc allowlist của NEAR Auth client. Không chép khóa, provisioning JSON hoặc tệp môi trường vào frontend/Git. Adapter ghim RPC, token contract và mạng testnet. Sponsor là `farmverse-demo-payer.testnet`, NPC là `farmverse-demo-npc.testnet`.
+
+Trên server, bỏ trống `NEAR_DEMO_ENABLED` hoặc đặt `false` trong lúc chờ callback được duyệt. Khi tắt, nút Google và quầy USDC ẩn, các route Auth/NEAR/USDC trả 404 và game vẫn cho vào bằng Guest hoặc tài khoản FarmVerse.
 
 Từ thư mục `backend/`:
 

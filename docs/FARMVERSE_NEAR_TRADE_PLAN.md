@@ -78,9 +78,7 @@ Lệnh gameplay liên kết với `farm_blockchain_transactions` và giữ mốc
 | T-62 · UI PnL | Antigravity | 20–40 phút | Giá vốn, doanh thu và lãi gộp theo server. |
 | T-19 · Tích hợp | Codex | 45–75 phút | Hai phiên thật, số dư/hash/log, bấm đúp/hủy/reload/timeout. |
 
-Phần còn lại của bản local gồm UI lời mời/PnL, NPC ghé ruộng T-65 và nghiệm thu T-19. Thời gian mở callback public phụ thuộc dịch vụ ngoài.
-
-T-16/T-60/T-17/T-57/T-58 và T-64 đã xong. Gameplay đã nối adapter và được kiểm thử bằng thanh toán giả lập. T-19 chạy trọn vòng local với thanh toán thật rồi nghiệm thu public khi callback được chấp nhận.
+T-18, T-62 và T-65 đã tích hợp. T-19 đã chạy trọn vòng local với hai khoản USDC testnet. T-67 đưa lời mời và sổ quầy vào một màn riêng. T-66 dùng `NEAR_DEMO_ENABLED` để bật ở local và tắt mặc định trên server. Sau khi chủ dự án review, mã có thể lên main cho hackathon. Nghiệm thu public thực hiện sau khi callback được chấp nhận.
 
 ## Quyền ghi khi làm song song
 

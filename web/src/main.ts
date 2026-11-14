@@ -379,6 +379,10 @@ function setSnapshot(next: FarmResponse | FarmSessionResponse, optimistic = fals
     }
     session = next;
     sessionSynchronized = true;
+    const showNearDemo = next.nearDemoAvailable === true;
+    nearAuthButtons.forEach(button => { button.hidden = !showNearDemo; });
+    transactionHistoryContainer.hidden = !showNearDemo;
+    if (showNearDemo) farmTradeVisit ??= mountFarmTradeVisit(field);
     activity.setSession(next.account?.username);
     updateToolHint();
   }
@@ -437,7 +441,7 @@ function setSnapshot(next: FarmResponse | FarmSessionResponse, optimistic = fals
 
 function updateCommunityAccess(): void {
   const available = sessionSynchronized && Boolean(session?.account);
-  farmTradeVisit.setHome(available && !visit ? session?.sessionKey : undefined);
+  farmTradeVisit?.setHome(available && session?.nearDemoAvailable && !visit ? session.sessionKey : undefined);
   community.updateAccess(available, busy || accountSubmitting);
   if (!available) {
     activity.setSession(undefined);
@@ -451,7 +455,7 @@ function setVisit(next: FarmVisit | undefined): void {
   const wasVisiting = Boolean(visit);
   hidePlotTooltip();
   visit = next;
-  farmTradeVisit.setHome(sessionSynchronized && session?.account && !next ? session.sessionKey : undefined);
+  farmTradeVisit?.setHome(sessionSynchronized && session?.nearDemoAvailable && session.account && !next ? session.sessionKey : undefined);
   if (next) activeCareTool = undefined;
   visitReceivedAt = performance.now();
   activity.setAtHome(!next);
@@ -519,7 +523,7 @@ visitExit.onclick = () => setVisit(undefined);
 
 function updateAccountButtons(): void {
   const pending = busy || accountSubmitting;
-  nearAuthButtons.forEach(button => { button.disabled = pending; });
+  nearAuthButtons.forEach(button => { button.disabled = pending || button.hidden; });
   btnSubmitRegister.disabled = pending;
   btnSubmitLogin.disabled = pending;
   btnAccountLogout.disabled = pending;
@@ -529,7 +533,7 @@ function updateAccountButtons(): void {
 
 nearAuthButtons.forEach(button => {
   button.addEventListener('click', () => {
-    if (busy || accountSubmitting) return;
+    if (!session?.nearDemoAvailable || busy || accountSubmitting) return;
     nearAuthButtons.forEach(control => { control.disabled = true; });
     beginNearAuth();
   });
@@ -995,6 +999,7 @@ function attachPlotTooltip(button: HTMLButtonElement, plot: number): void {
 
 function initKeyboardShortcuts(): void {
   document.addEventListener('keydown', (event) => {
+    if (farmTradeVisit?.isOpen()) return;
     const target = event.target as HTMLElement;
     if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
       return;
@@ -1815,7 +1820,7 @@ class FarmScene extends Phaser.Scene {
       this.game.events.once(Phaser.Core.Events.POST_RENDER, () => {
         farmLoading.finish();
         if (farmLoading.failed) return;
-        farmTradeVisit.farmReady();
+        farmTradeVisit?.farmReady();
         trackEvent('game_boot', { load_ms: Math.round(performance.now()) });
         activity.start();
       });
@@ -2409,7 +2414,7 @@ async function start(): Promise<void> {
   setSnapshot(initial);
   if (farmLoading.failed) return;
   const nearAuthResult = consumeNearAuthResult();
-  if (nearAuthResult) {
+  if (nearAuthResult && initial.nearDemoAvailable) {
     if (nearAuthResult === 'success' && initial.account) {
       setFeedback('Đã đăng nhập với Google.', 'success');
     } else {
@@ -2460,9 +2465,10 @@ const community = createCommunity({
 });
 
 const transactionHistoryContainer = document.createElement('div');
+transactionHistoryContainer.hidden = true;
 viewProfile.insertBefore(transactionHistoryContainer, btnAccountLogout);
 const transactionHistory = mountTransactionHistory(transactionHistoryContainer);
-const farmTradeVisit = mountFarmTradeVisit(field);
+let farmTradeVisit: ReturnType<typeof mountFarmTradeVisit> | undefined;
 
 const missions = createMissions(field, farmTime,
   async claim => Boolean(await send({ type: 'claimMission', ...claim })),

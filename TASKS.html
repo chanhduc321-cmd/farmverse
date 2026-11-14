@@ -277,6 +277,30 @@
     "acceptance": "NPC mời A bán khi đủ điều kiện và mời B mua sau khi nhận quả. Thăm ruộng khác ẩn lời mời."
   },
   {
+    "id": "T-66",
+    "phase": "P4",
+    "target": "Ưu tiên cao nhất · Phát hành hackathon",
+    "title": "Feature flag cho demo NEAR và tích hợp mã vào main",
+    "owner": "Codex",
+    "scope": "Cờ phía server điều khiển cả UI và API NEAR. Cập nhật hướng dẫn chạy demo từ repo.",
+    "branch": "develop → main",
+    "status": "REVIEW",
+    "dependsOn": "Local 3000 bật; bản kiểm tra 3001 tắt. Đã kiểm tra hai tab tài khoản, truy cập trực tiếp trả 404 khi tắt và build server. Callback public thuộc T-55.",
+    "acceptance": "Server mặc định tắt: ẩn hai nút Google, NPC mời giao dịch và điểm mở Quầy nông sản USDC; API demo NEAR tắt, Guest và tài khoản thường vẫn chơi được. Local bật cờ để demo. Chủ dự án review trên develop trước khi đưa mã lên main."
+  },
+  {
+    "id": "T-67",
+    "phase": "P4",
+    "target": "Ưu tiên cao nhất · Quầy nông sản",
+    "title": "Tách Quầy nông sản thành màn riêng",
+    "owner": "Codex",
+    "scope": "web/src/trade-demo/, đường vào từ NPC, điều hướng và quay lại từ Google.",
+    "branch": "develop",
+    "status": "REVIEW",
+    "dependsOn": "Desktop xem lại mâm 3/3 từ vòng testnet đã lưu. Mobile 390 px kiểm tra lời mời mâm 2/3, thanh toán và quay lại quầy bằng dữ liệu mẫu.",
+    "acceptance": "NPC mở cảnh quầy toàn màn hình desktop/mobile. Về ruộng và Back trả lại Farm. Reload hoặc quay về sau duyệt khôi phục đúng quầy, mâm, lệnh và sổ quầy từ backend."
+  },
+  {
     "id": "T-19",
     "phase": "P4",
     "target": "Ưu tiên 1 · Nghiệm thu",

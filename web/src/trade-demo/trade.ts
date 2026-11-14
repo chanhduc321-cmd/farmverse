@@ -49,9 +49,9 @@ export function mountTradeDemo(container: HTMLElement, options: MountTradeDemoOp
   const root = document.createElement('article');
   root.className = 'trade-card';
   root.innerHTML = '<div class="trade-scene" aria-hidden="true"><img class="trade-stone" alt=""><img class="trade-stall" alt=""><img class="trade-merchant" alt=""></div>' +
-    '<div class="trade-contents"><div class="trade-dialogue"><h2 id="trade-dialog-title">Quầy nông sản</h2><p class="trade-message" role="status"></p></div>' +
+    '<div class="trade-panel"><div class="trade-contents"><div class="trade-dialogue"><h2>Mời bạn ghé quầy</h2><p class="trade-message" role="status"></p></div>' +
     '<div class="trade-basket" hidden></div><div class="trade-price" hidden><img alt=""><strong></strong></div>' +
-    '<div class="trade-actions"></div><a class="trade-receipt" target="_blank" rel="noopener noreferrer" hidden>Xem giao dịch</a><div class="trade-ledger"></div></div>';
+    '<div class="trade-actions"></div><a class="trade-receipt" target="_blank" rel="noopener noreferrer" hidden>Xem giao dịch</a><div class="trade-ledger"></div></div></div>';
   container.append(root);
 
   const get = <T extends HTMLElement = HTMLElement>(selector: string) => root.querySelector<T>(selector)!;
@@ -136,7 +136,7 @@ export function mountTradeDemo(container: HTMLElement, options: MountTradeDemoOp
     const isSeller = role === 'seller';
     pnl.render(current.pnl);
     renderBasket(current);
-    title.textContent = 'Quầy nông sản';
+    title.textContent = 'Giao dịch dâu tây';
     price.hidden = !offer;
     if (offer) get('.trade-price strong').textContent = formatPaymentAmount(offer.amount);
     const explorer = safeExplorerUrl(activeOrder?.payment?.explorerUrl);
@@ -173,6 +173,7 @@ export function mountTradeDemo(container: HTMLElement, options: MountTradeDemoOp
           { label: 'Bỏ qua', run: () => void act('skip'), secondary: true },
         );
       } else {
+        if (stage === 'completed' && !isSeller) title.textContent = 'Mâm quả hoàn tất';
         const text = isSeller && activeOrder?.status === 'succeeded'
           ? 'Mình đã nhận quả dâu và gửi ' + formatPaymentAmount(activeOrder.amount) + ' cho bạn.'
           : stage === 'completed' ? 'Bạn đã hoàn thành mâm quả mùa vụ.'
@@ -277,7 +278,7 @@ export function mountTradeDemo(container: HTMLElement, options: MountTradeDemoOp
     busy = false;
     retry = undefined;
     orderId = undefined;
-    title.textContent = 'Quầy nông sản';
+    title.textContent = 'Mời bạn ghé quầy';
     hint('Đang mở quầy…');
     price.hidden = basket.hidden = receipt.hidden = true;
     receipt.removeAttribute('href');

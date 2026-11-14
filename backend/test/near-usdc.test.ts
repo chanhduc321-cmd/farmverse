@@ -273,6 +273,8 @@ test('wrong Google identity or payload never authorizes USDC and expired request
 test('payment HTTP authorization requires the farm session and the matching callback cookie', async () => {
   const h = await harness();
   const previous = process.env.NEAR_AUTH_CALLBACK_URL;
+  const previousFlag = process.env.NEAR_DEMO_ENABLED;
+  process.env.NEAR_DEMO_ENABLED = 'true';
   process.env.NEAR_AUTH_CALLBACK_URL = 'http://localhost:3000/';
   try {
     const payment = await h.adapter.prepare(h.intent(true));
@@ -296,6 +298,7 @@ test('payment HTTP authorization requires the farm session and the matching call
     assert.equal(h.counters().sent, 0);
   } finally {
     if (previous === undefined) delete process.env.NEAR_AUTH_CALLBACK_URL; else process.env.NEAR_AUTH_CALLBACK_URL = previous;
+    if (previousFlag === undefined) delete process.env.NEAR_DEMO_ENABLED; else process.env.NEAR_DEMO_ENABLED = previousFlag;
     await h.cleanup();
   }
 });

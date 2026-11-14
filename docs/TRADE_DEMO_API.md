@@ -42,7 +42,7 @@ Server kiểm tra quyền, vai trò, giá, ví, số dư và trạng thái quả
 
 ## NPC ghé ruộng
 
-Web hỏi lịch trong tab hiện tại khi người chơi ở ruộng của mình. Khi ví, số dư và lượt quả đều hợp lệ, backend lưu một thời điểm đến cách 6–12 giây theo run/vai trò (migration 014). Reload và các tab cùng phiên nhận cùng `offerId` và `arrivesAt`. Lượt B chỉ có lịch sau khi NPC đã nhận quả. Web đọc lại lịch lúc đến trước khi hiện NPC và mở hội thoại khi người chơi bấm.
+Web hỏi lịch trong tab hiện tại khi người chơi ở ruộng của mình. Khi ví, số dư và lượt quả đều hợp lệ, backend lưu một thời điểm đến cách 6–12 giây theo run/vai trò (migration 014). Reload và các tab cùng phiên nhận cùng `offerId` và `arrivesAt`. Lượt B chỉ có lịch sau khi NPC đã nhận quả. Web đọc lại lịch lúc đến trước khi hiện NPC. Bấm NPC mở màn Quầy nông sản ở `#quay-nong-san`.
 
 Đã bỏ qua hoặc hoàn thành thì không có lời mời mới trong cùng vòng. Sau khi người chơi có lệnh hoặc đã bỏ qua, họ có thể ghé lại quầy để xem trạng thái. Thao tác tại quầy dùng chung cơ chế kiểm tra giá, phiên, revision và giữ quả.
 
@@ -66,7 +66,7 @@ PnL lấy từ các lượt đã áp dụng trong run. Phí sponsor cộng gas c
 | `cancelled` | Đã hủy xác nhận. |
 | `expired` | Yêu cầu hết hạn. |
 
-`order.payment` là kết quả provider chuẩn hóa. Với `requiredAction.type='redirect'`, web chuyển tới URL backend trả về sau thao tác nhận lời mời. Callback quay về FarmVerse, snapshot khôi phục cùng lệnh. `payment.status='confirmed'` cùng `order.status='processing'` tiếp tục hiện đang xử lý. Badge/thành công lấy từ snapshot sau khi lệnh `succeeded`.
+`order.payment` là kết quả provider chuẩn hóa. Với `requiredAction.type='redirect'`, web chuyển tới URL backend trả về sau thao tác nhận lời mời. Callback quay về FarmVerse và mở lại quầy cho cùng phiên. Reload quầy đọc snapshot để khôi phục cùng lệnh. `payment.status='confirmed'` cùng `order.status='processing'` tiếp tục hiện đang xử lý. Badge/thành công lấy từ snapshot sau khi lệnh `succeeded`.
 
 Callback xác nhận đọc lại kết quả qua adapter rồi lưu lệnh, quả và huy hiệu trong cùng transaction PostgreSQL. Khi callback gián đoạn, đọc snapshot hoặc cùng order sẽ tiếp tục đối chiếu lệnh đã lưu.
 

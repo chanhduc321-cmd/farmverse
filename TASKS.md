@@ -17,6 +17,7 @@ Lượt sửa T-41 ngày 12/11: Codex giữ backend/community, activity, migrati
 - T-46 đã nghiệm thu luật tăng tốc. T-47 chuyển phân sang mua trong Tiệm hạt với giá 5 Gold/bịch.
 - Ngày 13/11/2026, chủ dự án đưa NEAR testnet gasless lên ưu tiên cao nhất, trước T-40 và T-45. Đợt bắt đầu từ `develop` tại `86bfc94`. Codex giữ `backend/`, `shared/`, lockfile backend và dashboard. Antigravity giữ `web/` và lockfile web cho T-61, T-18 và T-62 trong worktree riêng sau khi chốt schema T-16.
 - Ngày 14/11, chủ dự án giao Codex tiếp nhận T-18/T-62, tích hợp T-65 và nghiệm thu T-19 trên `develop`.
+- Ngày 14/11, chủ dự án chốt đưa mã NEAR lên `main` để hackathon duyệt sau khi T-66 đạt. Bản server tắt demo NEAR trong lúc chờ duyệt callback Auth0. Bản local bật demo để trình diễn.
 - Chủ dự án chốt USDC ngày 13/11. Demo gồm nút Google, hai lời mời Đổi/Mua giá 1 và 1,5 USDC testnet, một quả Dâu tây demo, badge Mâm quả và PnL lãi gộp 0,5 USDC. FarmVerse tài trợ gas NEAR. [Plan và phân việc](docs/FARMVERSE_NEAR_TRADE_PLAN.md#phân-việc-và-ước-tính-còn-lại)
 - T-63 do Codex giữ migration, backend và schema lịch sử giao dịch. T-64 giao Antigravity `web/src/transactions/` trong worktree `farmverse-near-auth-ui`; Codex giữ điểm nối `main.ts`, HTML và CSS dùng chung. [Brief T-64](docs/agents/handoff-transaction-history.md)
 - Giữ bằng chứng nghiệm thu và mốc cũ trong [bản lưu](TASKS_ARCHIVE.md). Kế hoạch phát hành T-20–T-22 được lưu theo timeline cũ để lên lịch lại sau.
@@ -36,6 +37,8 @@ Lượt sửa T-41 ngày 12/11: Codex giữ backend/community, activity, migrati
 | T-18 | P4 | Ưu tiên 1 · UI lời mời | Đổi, Mua, Bỏ qua và badge Mâm quả | Codex | Tích hợp bản bàn giao của Antigravity trong `web/src/trade-demo/`, dùng asset T-14 đã duyệt. | `develop` | DONE | Cảnh quầy, mâm 2/3 → 3/3, badge và kiểm tra tải lại đã đạt local. Đã sửa BUG-49–BUG-53 và BUG-55. | A đổi quả lấy 1 USDC, B mua với 1,5 USDC. Khôi phục lệnh chờ duyệt sau reload. Badge hiển thị khi thanh toán và cấp quả hoàn tất. |
 | T-62 | P4 | Ưu tiên 1 · UI PnL | Hiện giá vốn, doanh thu và lãi gộp của NPC | Codex | Sổ quầy trong `web/src/trade-demo/` từ bản bàn giao Antigravity. | `develop` | DONE | Sau reload, sổ quầy hiện giá vốn 1, doanh thu 1,5, lãi gộp +0,5 USDC và phí sponsor 0,0043043662645273 NEAR. BUG-54 có ca kiểm thử một yoctoNEAR. | Phí sponsor ghi riêng bằng NEAR với đủ độ chính xác. |
 | T-65 | P4 | Ưu tiên 1 · Sự kiện tại ruộng | NPC ghé ruộng ngẫu nhiên, mời mua hoặc bán nông sản | Codex | Migration 014, API lịch ghé và NPC tại ruộng nhà. | `develop` | DONE | Lịch 6–12 giây, một lần theo mỗi vai trò/vòng. Chromium thấy NPC của B sau khi A bán. Kiểm thử PostgreSQL kiểm tra hai tab, reload, bỏ qua và phục hồi cùng lời mời sau hủy. | NPC mời A bán khi đủ điều kiện và mời B mua sau khi nhận quả. Thăm ruộng khác ẩn lời mời. |
+| T-66 | P4 | Ưu tiên cao nhất · Phát hành hackathon | Feature flag cho demo NEAR và tích hợp mã vào main | Codex | Cờ phía server điều khiển cả UI và API NEAR. Cập nhật hướng dẫn chạy demo từ repo. | `develop` → `main` | REVIEW | Local 3000 bật; bản kiểm tra 3001 tắt. Đã kiểm tra hai tab tài khoản, truy cập trực tiếp trả 404 khi tắt và build server. Callback public thuộc T-55. | Server mặc định tắt: ẩn hai nút Google, NPC mời giao dịch và điểm mở Quầy nông sản USDC; API demo NEAR tắt, Guest và tài khoản thường vẫn chơi được. Local bật cờ để demo. Chủ dự án review trên develop trước khi đưa mã lên main. |
+| T-67 | P4 | Ưu tiên cao nhất · Quầy nông sản | Tách Quầy nông sản thành màn riêng | Codex | `web/src/trade-demo/`, đường vào từ NPC, điều hướng và quay lại từ Google. | `develop` | REVIEW | Desktop xem lại mâm 3/3 từ vòng testnet đã lưu. Mobile 390 px kiểm tra lời mời mâm 2/3, thanh toán và quay lại quầy bằng dữ liệu mẫu. | NPC mở cảnh quầy toàn màn hình desktop/mobile. Về ruộng và Back trả lại Farm. Reload hoặc quay về sau duyệt khôi phục đúng quầy, mâm, lệnh và sổ quầy từ backend. |
 | T-19 | P4 | Ưu tiên 1 · Nghiệm thu | Chạy đủ vòng A → NPC → B và mở badge | Codex | Hai phiên testnet, local rồi public khi callback sẵn. | `develop` | REVIEW | Vòng local đạt với hai chuyển khoản thật và một badge lưu PostgreSQL. Khởi động lại Farm rồi đối chiếu badge/PnL. T-55 còn callback public. | Khớp người gửi/nhận, giá 1 và 1,5 USDC, lãi gộp 0,5, sponsor trả phí. Kiểm tra tranh suất/bấm lặp/hủy/hết hạn bằng bộ test PostgreSQL. |
 | T-24 | P1 | 01 · Tài khoản | Vào Farm bằng Guest hoặc tạo tài khoản | Codex | Nghiệm thu bố cục, trạng thái và câu chữ tài khoản trong web/. | develop | DONE | BUG-25, BUG-26 và BUG-27 FIXED. Đã kiểm tra lại BUG-22. | Chromium 1280×800, 390×844 và 844×390 xác nhận đúng một nội dung theo tab và phiên. Toast lỗi ở trên cùng hộp thoại, không che tab. Tạo tài khoản giữ nguyên ruộng Guest, đăng nhập phiên khác mở đúng ruộng. Đăng xuất và thử lại sau 503 đạt. Backend RAM tiếp tục hỗ trợ Guest. Demo offline mở riêng bằng tham số demo. |
 | T-36 | P2 | 02 · Chốt thăm ruộng | [feature] Thăm ruộng và Steal | Codex | Giao diện Hàng xóm, HUD thăm ruộng và API Community trên bản tích hợp. | develop | DONE | Đã nghiệm thu với ba tài khoản PostgreSQL thật. BUG-29 và BUG-30 FIXED. | Chromium 1280×800, 390×844 và 844×390 kiểm tra tìm người chơi, gửi và xác nhận lời mời, thăm ruộng, lấy quả và về ruộng mình. Bạn bè chỉ hiện sau xác nhận. Lấy một quả vào Kho, lượt lặp trả 409. Hai khách tranh khi còn hai quả chỉ một lượt thành công, giao diện cập nhật còn một quả và chủ ruộng hái được quả đó. Guest mở đúng tab Đăng nhập. Demo offline có 5 bạn mẫu, mỗi ruộng 6 ô cây chín, thăm và lấy quả bằng dữ liệu RAM trong tab, không gọi API. |
@@ -71,15 +74,16 @@ Lượt sửa T-41 ngày 12/11: Codex giữ backend/community, activity, migrati
 
 ## Thứ tự xử lý hiện tại
 
-Cập nhật ngày 13/11/2026. NEAR testnet gasless đứng đầu hàng chờ. T-40 và T-45 xếp sau NEAR. Cột Phase ghi giai đoạn triển khai.
+Cập nhật ngày 14/11/2026. T-66 đứng đầu để đưa mã NEAR lên main cho hackathon. T-40 và T-45 xếp sau NEAR. Cột Phase ghi giai đoạn triển khai.
 
 | Thứ tự | Task | Trạng thái | Lý do |
 |---|---|---|---|
+| 0 | T-66 + T-67 · Phát hành và màn Quầy | REVIEW | Hai chế độ và màn Quầy đã kiểm tra local. Chờ chủ dự án review trước khi đưa lên main. |
 | 1 | T-16 + T-55 + T-60 · Schema, Auth và vốn testnet | DONE / DOING / DONE | Schema, hai ví Google và vốn USDC đã sẵn. T-55 còn xác minh đăng nhập lại và callback public. |
 | 2 | T-56 · USDC, Mâm quả và PnL | DONE | Đã chốt USDC ngày 13/11 và ghi amendment FV-NEAR-01. |
 | 3 | T-17 + T-57 + T-58 và T-64 + T-18 + T-62 · Backend và UI | DONE | Quầy có NPC, mâm quả, badge và sổ quầy. |
 | 4 | T-65 · NPC ghé ruộng | DONE | Mỗi vai trò/vòng có một lịch ghé lưu PostgreSQL khi đủ điều kiện. |
-| 5 | T-19 · Nghiệm thu hai phiên | REVIEW | Vòng testnet local đạt. Public chờ callback T-55. |
+| 5 | T-19 · Nghiệm thu hai phiên | REVIEW | Vòng testnet local đạt. Nghiệm thu public sau khi T-55 được duyệt, độc lập với mốc tích hợp main của T-66. |
 | 6 | T-40 · Animation và âm thanh | TODO | Phản hồi thao tác cho vòng Farm. |
 | 7 | T-45 · Chia sẻ social | TODO | Mốc cuối của nhóm Farm. |
 

@@ -117,14 +117,15 @@ flowchart LR
 | Missions, 7-day attendance, guard pets | Running, playable in the browser |
 | Accounts, friends, farm visits, stealing, activity journal | Running, playable in the browser |
 | Merchant pricing engine: budget, stock, demand, timed offers, liquidation, closure | Running on the API ([`backend/src/merchant.ts`](backend/src/merchant.ts)); no game screen |
+| Local NEAR testnet demo: Google sign-in, sponsored USDC trades, produce stall, seasonal basket badge and merchant PnL | Running locally with funded testnet accounts |
 | Merchant personas, chat and bargaining | Specified in [ARCHITECTURE.md](docs/ARCHITECTURE.md) §4 |
 | NEAR accounts, NEP-245 contract, relayer, self-funding loop | Specified in [ARCHITECTURE.md](docs/ARCHITECTURE.md) §5–8 |
 
-The repository contains no smart contract, no NEAR SDK and no language-model calls. GOLD and items are rows in PostgreSQL.
+The testnet demo uses the NEAR SDK with an existing USDC contract. Farm GOLD and crop inventory are stored in PostgreSQL. The merchant agent and language-model calls described above are part of the design.
 
 ## Run locally
 
-Needs Node.js 20.12 or newer, pnpm, and PostgreSQL (Docker is the quickest way).
+Needs Node.js 22.22.2 or newer, pnpm, and PostgreSQL (Docker is the quickest way).
 
 **Backend**
 
@@ -146,6 +147,14 @@ pnpm --dir web dev
 ```
 
 Open http://127.0.0.1:5174. The web dev server proxies `/api` to the backend on port 8092.
+
+### Local NEAR testnet demo
+
+Add `NEAR_DEMO_ENABLED=true`, `NEAR_AUTH_CALLBACK_URL=http://localhost:3000/` and `NEAR_USDC_ENABLED=true` to `backend/.env`. Configure the testnet sponsor and NPC keys on the backend. Start the web app on port 3000 using `PORT=3000 pnpm --dir web dev` (PowerShell uses `$env:PORT = '3000'` before the command), then open [FarmVerse local](http://localhost:3000/). Follow the [testnet funding guide](docs/NEAR_USDC_ADAPTER.md) and [run setup](docs/TRADE_DEMO_API.md#tạo-vòng-demo-local) for the two Google accounts.
+
+Click the NPC on your farm to open the produce stall. A receives **1 USDC** from the NPC for one demo strawberry. B pays the NPC **1.5 USDC**, completes the basket and receives the badge. The stall ledger shows **0.5 USDC** gross profit and the fee paid by the sponsor. [Verified payout](https://testnet.nearblocks.io/txns/FgMEdFPTY5NsAuv1sAKAyfcFF34xaDjkz36oRhMmF5jg) · [Verified purchase](https://testnet.nearblocks.io/txns/8J1oyTtKof8DT12nGN4D2W5n9emr988398cxzh3eeF4D)
+
+On the hosted build, leave `NEAR_DEMO_ENABLED` unset or set it to `false` while the public callback awaits approval. Players can use Guest mode or sign in with a FarmVerse account. This flag is read by the backend at runtime.
 
 **Tests**
 
