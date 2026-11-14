@@ -39,6 +39,15 @@ Xuất `mountTradeDemoPnl(container)` trong cùng thư mục. Handle có `render
 
 Hiện giá vốn, doanh thu, lãi gộp. grossProfit=null hiển thị dấu gạch ngang. Sau bán thành công hiện +0,5 USDC từ API. Chi phí sponsor định dạng theo sponsorGas.asset, đơn vị NEAR.
 
+## Sửa sau review 5a52a60
+
+Chủ dự án muốn màn giao dịch có background cửa hàng và một NPC. Dùng bộ sprite T-14 đã duyệt gồm nền lát đá `town_square_ground.png`, quầy gỗ mái sọc `merchant_stall.png` và NPC sói đội nón rơm `npc_merchant_idle.png`. Xem [Art Bible](../art/ART_BIBLE.md) và [manifest](../art/SPRITE_MANIFEST.md). File nguồn trong `art/source/t14/`. Codex giữ quyền đưa asset vào thư mục runtime khi tích hợp. Có thể dùng bản xem thử cục bộ với các sprite nguồn để duyệt bố cục.
+
+- Cho NPC đứng cạnh quầy trên cùng nền. Lời mời xuất hiện như hội thoại của NPC, với quả, giá và nút hành động đặt gần nhau. Trên mobile, cảnh cửa hàng nằm trên hội thoại và giữ mặt NPC trong khung.
+- Mâm quả 2/3 hiện ngay lúc B cân nhắc mua. Khi nhận quả, cho người chơi thấy mâm đủ 3/3 cùng huy hiệu hiện có. Đưa mã đơn, ví và link giao dịch vào chi tiết. Đặt PnL riêng trong góc nhìn NPC, ưu tiên dòng giá vốn → doanh thu → lãi gộp, gas ở dòng phụ.
+- Sửa [BUG-49–BUG-54](../../BUGS.md). Kiểm tra một response đến sau reset, 401/409/503 kèm orderId, reload khi chờ duyệt, B bỏ qua, thông báo chứa HTML và phí 1 yoctoNEAR. Trong các ca này dùng DOM và transport mô phỏng để thực sự chạy module mount, thao tác và quan sát kết quả.
+- Gửi ảnh desktop và mobile cho ba mốc: A đổi quả, B mua với mâm 2/3, B nhận mâm 3/3. Đo viewport thật 390×844 khi chụp mobile để tránh ảnh bị cắt phải. Giữ phạm vi commit trong `web/src/trade-demo/`.
+
 ## Nghiệm thu
 
 - Desktop 1280×800 và mobile 390×844 dễ đọc, không tràn ngang, dùng được bằng bàn phím.

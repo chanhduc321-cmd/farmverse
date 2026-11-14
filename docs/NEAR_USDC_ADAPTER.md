@@ -1,6 +1,6 @@
 # T-17 · Adapter USDC testnet
 
-`backend/src/payments/provider.ts` chọn provider qua `paymentProviderFor(farmId, providerId)`. Gameplay dùng `PaymentProvider` trong `shared/payments.mts`; module NEAR giữ SDK, tài khoản, storage, NEP-366, NEAR Auth, MPC và receipt. Chưa nối route gameplay T-57/T-58.
+`backend/src/payments/provider.ts` chọn provider qua `paymentProviderFor(farmId, providerId)`. Gameplay dùng `PaymentProvider` trong `shared/payments.mts`. Module NEAR giữ SDK, tài khoản, storage, NEP-366, NEAR Auth, MPC và receipt. [Route gameplay và cách tạo run](TRADE_DEMO_API.md).
 
 ## Cấu hình local
 

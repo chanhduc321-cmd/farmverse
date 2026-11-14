@@ -18,6 +18,8 @@ import { findNearTestWallet, finishNearTestSignature, nearSigningDemoConfig, nea
 import { signInSocial } from './auth/social-store.ts';
 import { completeNearPayment, nearPaymentRoutes } from './blockchain/near-payment-routes.ts';
 import { claimTransactionRecord, readTransactionRecord, setTransactionError } from './blockchain/transaction-store.ts';
+import { tradeDemoRoutes } from './trade-demo/routes.ts';
+import { reconcileTradeDemoCallback } from './trade-demo/service.ts';
 import type { TransactionRecord } from './blockchain/transaction-store.ts';
 import { crops } from './catalog.ts';
 import { communityRoutes } from './community-routes.ts';
@@ -251,7 +253,7 @@ app.get(SOCIAL_AUTH_API.near.callback, async (context) => {
   if (state?.startsWith('test-')) return completeNearTest(context, state);
   if (state?.startsWith('pay-')) {
     const session = await farmSession(context);
-    return completeNearPayment(context, session?.tokenHash ? session.id : undefined);
+    return completeNearPayment(context, session?.tokenHash ? session.id : undefined, undefined, reconcileTradeDemoCallback);
   }
   const config = nearAuthConfig();
   if (!config) return returnFromNear(context, 'unavailable');
@@ -371,6 +373,11 @@ for (const kind of ['accept', 'reject'] as const) {
 app.route('/', communityRoutes(async (context) => {
   const session = await farmSession(context);
   if (session?.tokenHash) return { id: session.id, tokenHash: session.tokenHash };
+}));
+
+app.route('/', tradeDemoRoutes(async (context) => {
+  const session = await farmSession(context);
+  return session?.tokenHash ? session.id : undefined;
 }));
 
 app.route('/', activityRoutes(async (context) => {

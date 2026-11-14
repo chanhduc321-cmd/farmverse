@@ -210,11 +210,11 @@
     "target": "Ưu tiên 1 · NPC",
     "title": "Hai lời mời, một quả và số liệu PnL",
     "owner": "Codex",
-    "scope": "Gameplay demo riêng theo runId trong backend/ và migrations.",
-    "branch": "codex/npc-trade-ledger",
-    "status": "TODO",
-    "dependsOn": "T-16/T-56 DONE. Kiểm thử qua adapter giả lập trước USDC thật.",
-    "acceptance": "60–90 phút. Giữ quả/suất, lệnh có mốc áp dụng một lần. B thấy lời mời sau khi NPC nhận quả. Bỏ qua giữ nguyên tài sản."
+    "scope": "backend/src/trade-demo/, adapter thanh toán và migration 013.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "T-16/T-17/T-56 DONE. API local đọc đúng vai trò A/B và số dư testnet. [Cách tạo vòng](docs/TRADE_DEMO_API.md#tạo-vòng-demo-local).",
+    "acceptance": "HTTP/PostgreSQL với adapter giả lập xác nhận giữ quả trước thanh toán, khôi phục cùng lệnh sau mất phản hồi, chỉ một lượt nhận khi bấm đồng thời và bỏ qua giữ nguyên tài sản. PnL từ lệnh đã hoàn tất và log gas của run."
   },
   {
     "id": "T-58",
@@ -222,11 +222,11 @@
     "target": "Ưu tiên 1 · Mâm quả",
     "title": "Cấp badge ngay khi mua thành công",
     "owner": "Codex",
-    "scope": "Luật và lưu phần thưởng demo trong backend/.",
-    "branch": "codex/seasonal-basket",
-    "status": "TODO",
-    "dependsOn": "Schema T-16 đã sẵn. Nối cùng ledger T-57. Dùng mâm demo 2/3 và sprite hiện có.",
-    "acceptance": "20–30 phút. Mua đã xác minh hoàn thiện mâm 3/3 và cấp một badge bền qua reload/callback lặp."
+    "scope": "Áp dụng quả, badge và mốc hoàn tất trong cùng transaction PostgreSQL.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Nối ledger T-57 và callback thanh toán. T-19 nghiệm thu lượt thanh toán thật có UI.",
+    "acceptance": "Sau xác minh B, mâm lên 3/3 và có một badge. Callback đồng thời và reload giữ cùng mốc cấp. Hủy, hết hạn hoặc chưa xác nhận giữ mâm 2/3."
   },
   {
     "id": "T-61",
@@ -246,11 +246,11 @@
     "target": "Ưu tiên 1 · UI lời mời",
     "title": "Đổi, Mua, Bỏ qua và badge Mâm quả",
     "owner": "Antigravity",
-    "scope": "web/src/trade-demo/ theo [brief](docs/agents/handoff-usdc-trade.md). Codex giữ điểm nối web.",
+    "scope": "web/src/trade-demo/ theo [brief](docs/agents/handoff-usdc-trade.md). Codex giữ điểm nối web và asset runtime.",
     "branch": "feat/near-auth-ui",
-    "status": "DOING",
-    "dependsOn": "T-16/T-56 DONE. Đã bàn giao schema và 17 fixture, có thể làm song song backend.",
-    "acceptance": "60–90 phút. A đổi quả lấy 1 USDC, B mua với 1,5 USDC. Có trạng thái chờ/lỗi/hủy, mâm và badge sau xác minh."
+    "status": "REVIEW",
+    "dependsOn": "Đã nhận 5a52a60. Build và 11 test đạt. Sửa BUG-49–BUG-53 và bổ sung cảnh cửa hàng/NPC theo hướng chủ dự án chốt trước khi tích hợp.",
+    "acceptance": "A đổi quả lấy 1 USDC, B mua với 1,5 USDC. Cảnh cửa hàng có một NPC. Có thể tiếp tục duyệt sau reload, hủy polling khi đổi phiên và nhận badge sau xác minh."
   },
   {
     "id": "T-62",
@@ -260,9 +260,21 @@
     "owner": "Antigravity",
     "scope": "Màn PnL trong web/src/trade-demo/ theo [brief](docs/agents/handoff-usdc-trade.md).",
     "branch": "feat/near-auth-ui",
-    "status": "DOING",
-    "dependsOn": "T-16/T-56 DONE. Fixture trước/sau bán đã sẵn.",
-    "acceptance": "20–40 phút. Giá vốn 1, doanh thu 1,5, lãi gộp 0,5 USDC sau lượt bán. Phí sponsor ghi đơn vị NEAR."
+    "status": "REVIEW",
+    "dependsOn": "Đã nhận 5a52a60. Cần xử lý BUG-53/BUG-54 và đưa PnL vào góc nhìn NPC.",
+    "acceptance": "Giá vốn 1, doanh thu 1,5, lãi gộp 0,5 USDC sau lượt bán. Phí sponsor ghi đơn vị NEAR, giữ độ chính xác đến một yoctoNEAR."
+  },
+  {
+    "id": "T-65",
+    "phase": "P4",
+    "target": "Ưu tiên 1 · Sự kiện tại ruộng",
+    "title": "NPC ghé ruộng ngẫu nhiên, mời mua hoặc bán nông sản",
+    "owner": "Codex",
+    "scope": "Backend chọn thời điểm và lưu sự kiện theo Farm. Web hiển thị NPC tại ruộng và mở lời mời qua UI T-18.",
+    "branch": "codex/npc-farm-visit",
+    "status": "TODO",
+    "dependsOn": "T-57 cung cấp lời mời USDC hợp lệ, T-18 cung cấp hội thoại. Chốt khoảng chờ và thời gian nghỉ giữa hai lượt khi triển khai.",
+    "acceptance": "NPC có thể ghé khi người chơi ở ruộng của mình. NPC hỏi mua nếu lượt A đủ điều kiện, hoặc chào bán nếu đã có quả cho lượt B. Mỗi ruộng chỉ có một lời mời đang mở. Đồng ý đi qua luồng xác nhận hiện có. Bỏ qua giữ nguyên tài sản. Reload hoặc mở hai tab không tạo thêm lời mời cho cùng sự kiện."
   },
   {
     "id": "T-19",
@@ -273,8 +285,8 @@
     "scope": "Tích hợp develop, hai phiên local rồi public khi callback sẵn.",
     "branch": "develop",
     "status": "TODO",
-    "dependsOn": "T-17, T-57, T-58 và UI bàn giao.",
-    "acceptance": "45–75 phút. Hai khoản USDC khớp ví và số tiền, NPC lãi gộp 0,5, sponsor trả gas, badge/log bền qua reload. Thử tranh suất/bấm lặp/hủy/timeout."
+    "dependsOn": "T-17, T-57, T-58, T-65 và UI bàn giao.",
+    "acceptance": "45–75 phút. Hai khoản USDC khớp ví và số tiền, NPC lãi gộp 0,5, sponsor trả gas, badge/log bền qua reload. Thử lời mời tại ruộng, tranh suất/bấm lặp/hủy/timeout."
   },
   {
     "id": "T-24",

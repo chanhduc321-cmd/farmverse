@@ -587,6 +587,78 @@
     "repro": "Kiểm tra hai nút social trong tab Đăng ký/Đăng nhập và câu báo kết quả trong web/src/main.ts.",
     "actual": "Hai nhãn nút và thông báo còn dùng NEAR Auth, khác nội dung Google đã duyệt. Đã đổi cả hai nút thành Tiếp tục với Google và thống nhất thông báo kết quả.",
     "expected": "Kiểm tra đúng hai nhãn Google, không còn câu hiển thị NEAR Auth cũ; build web đạt."
+  },
+  {
+    "id": "BUG-49",
+    "phase": "P4",
+    "title": "Poll đơn cũ khôi phục giao diện sau reset",
+    "owner": "Antigravity",
+    "severity": "HIGH",
+    "status": "OPEN",
+    "foundIn": "T-18 · 5a52a60 · trade.ts:497",
+    "repro": "Giữ response readOrder đang chờ, gọi reset rồi trả fixture buyerCompleted.",
+    "actual": "Edge hiện lại badge và gọi onSnapshot một lần sau reset. Lệnh hủy trong refresh không truyền signal cho fetch.",
+    "expected": "Hủy hoặc vô hiệu hóa request cũ ở mọi đường đọc và thao tác. Sau reset hoặc đổi phiên, không cập nhật lời mời, badge, PnL hoặc polling từ response cũ. Kiểm tra refresh lại sau reset."
+  },
+  {
+    "id": "BUG-50",
+    "phase": "P4",
+    "title": "Lỗi phiên, revision và thanh toán dùng chung nút thử lại",
+    "owner": "Antigravity",
+    "severity": "HIGH",
+    "status": "OPEN",
+    "foundIn": "T-18 · 5a52a60 · trade.ts:251",
+    "repro": "Cho Accept lần lượt trả 401, 409 và 503 PAYMENT_UNCONFIRMED kèm orderId.",
+    "actual": "Edge vẫn bật Accept cho cả ba lỗi, không đọc snapshot mới hoặc đọc orderId.",
+    "expected": "401 xóa dữ liệu phiên. 409 đọc snapshot trước khi mở hành động mới. 503 có orderId theo dõi đúng lệnh. Retry mạng dùng lại nguyên body và requestId."
+  },
+  {
+    "id": "BUG-51",
+    "phase": "P4",
+    "title": "Reload mất cách tiếp tục duyệt khoản mua",
+    "owner": "Antigravity",
+    "severity": "HIGH",
+    "status": "OPEN",
+    "foundIn": "T-18 · 5a52a60 · trade.ts:379",
+    "repro": "Mở lại màn với fixture buyerAwaitingApproval có requiredAction.",
+    "actual": "UI chỉ hiện đang chờ xác nhận và polling, không có nút để tiếp tục duyệt.",
+    "expected": "Hiện nút Tiếp tục xác nhận khi snapshot trả URL duyệt hợp lệ. Dùng lại cùng order, không tạo khoản mua mới."
+  },
+  {
+    "id": "BUG-52",
+    "phase": "P4",
+    "title": "B bỏ qua nhưng màn vẫn báo đang chờ hàng",
+    "owner": "Antigravity",
+    "severity": "MEDIUM",
+    "status": "OPEN",
+    "foundIn": "T-18 · 5a52a60 · trade.ts:295 và trade.ts:495",
+    "repro": "Mở fixture buyerSkipped và quan sát hơn 3 giây.",
+    "actual": "Edge báo chờ NPC và gửi lần đọc thứ hai. Thông báo đã bỏ qua không xuất hiện.",
+    "expected": "Hiển thị đã bỏ qua, dừng poll chờ hàng, giữ nguyên mâm và tài sản."
+  },
+  {
+    "id": "BUG-53",
+    "phase": "P4",
+    "title": "UI diễn giải thông báo API thành HTML",
+    "owner": "Antigravity",
+    "severity": "HIGH",
+    "status": "OPEN",
+    "foundIn": "T-18/T-62 · 5a52a60 · trade.ts:169, trade.ts:400, pnl.ts:40",
+    "repro": "Trả lỗi mô phỏng có chuỗi \u003cstrong data-review-injected>test\u003c/strong>.",
+    "actual": "Edge tạo thẻ strong từ nội dung lỗi. Cùng cách chèn HTML được dùng với tên badge, dữ liệu ví, số tiền và URL Explorer.",
+    "expected": "Dữ liệu động hiển thị dưới dạng text. Xác thực URL trước khi điều hướng hoặc gắn href. Kiểm tra payload HTML và scheme không hợp lệ."
+  },
+  {
+    "id": "BUG-54",
+    "phase": "P4",
+    "title": "PnL hiện phí NEAR nhỏ thành 0",
+    "owner": "Antigravity",
+    "severity": "MEDIUM",
+    "status": "OPEN",
+    "foundIn": "T-62 · 5a52a60 · helpers.ts:23",
+    "repro": "Định dạng sponsorGas có amountAtomic 1 và decimals 24.",
+    "actual": "Helper trả 0 NEAR do mặc định cắt 6 chữ số thập phân.",
+    "expected": "Hiển thị số tiền theo độ chính xác tài sản, giữ giá trị dương nhỏ nhất và vẫn hiện đúng 0,0001 NEAR."
   }
 ]
 </script>

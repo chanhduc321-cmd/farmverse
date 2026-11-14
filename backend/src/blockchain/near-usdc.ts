@@ -3,6 +3,7 @@ import bs58 from 'bs58';
 import { Account, actions, buildDelegateAction, encodeDelegateAction, JsonRpcProvider, PublicKey, Signature } from 'near-api-js';
 import type { DelegateAction, KeyPairString } from 'near-api-js';
 import type { PaymentIntent, PaymentProvider, PaymentReference, PaymentResult } from '../../../shared/payments.mts';
+import { PaymentPreparationRefused } from '../payments/trade-payments.ts';
 import { exchangeNearCode, nearAuthConfig, nearAuthIssuer, verifyNearSigningToken } from '../auth/near.ts';
 import { findNearTestWallet } from '../auth/near-test-signing.ts';
 import { claimTransactionRecord, createTransactionRecord, readTransactionRecord, withBlockchainLock } from './transaction-store.ts';
@@ -185,7 +186,17 @@ export class NearUsdcPaymentProvider implements PaymentProvider {
         return this.result(await this.ensureUserDelegate(await this.reconcile(existing)));
       }
       if (await nearUsdcWalletBusy(intent.sender.accountId)) throw new NearPaymentError('WALLET_PAYMENT_PENDING');
-      await this.preflight(intent);
+      try {
+        await this.preflight(intent);
+      } catch (error) {
+        if (error instanceof NearPaymentError) {
+          if (error.code === 'USDC_STORAGE_REQUIRED') throw new PaymentPreparationRefused('WALLET_NOT_READY');
+          if (error.code === 'INSUFFICIENT_USDC' || error.code === 'NPC_INSUFFICIENT_USDC') {
+            throw new PaymentPreparationRefused(error.code);
+          }
+        }
+        throw error;
+      }
       const userPays = intent.sender.accountId === this.options.wallet.wallet_account_id;
       const transaction = await createTransactionRecord({
         farm_id: this.options.farmId, request_key: this.key(intent), provider: 'near', network: 'testnet', operation: 'transfer',

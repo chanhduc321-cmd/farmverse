@@ -12,7 +12,8 @@
     "migrate": "node --env-file=.env --import tsx src/migrate.ts",
     "seed:friends": "node --env-file=.env --import tsx src/seed-friends.ts",
     "db:check": "node --env-file=.env --import tsx src/check-database.ts",
-    "near:setup": "node --env-file=.env --import tsx src/blockchain/near-setup.ts"
+    "near:setup": "node --env-file=.env --import tsx src/blockchain/near-setup.ts",
+    "trade-demo:setup": "node --env-file=.env --import tsx src/trade-demo/setup.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.6",

@@ -1,19 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import pg from 'pg';
 import type { BlockchainTransactionStatus } from '../../../shared/blockchain.mts';
 import { queryFarmDatabase } from '../farm-store.ts';
 
-export async function withBlockchainLock<T>(key: string, operation: () => Promise<T>) {
-  // A dedicated session keeps log writes free to commit through the application pool.
-  const client = new pg.Client({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 5_000 });
-  try {
-    await client.connect();
-    await client.query('SELECT pg_advisory_lock(hashtext($1))', [key]);
-    return await operation();
-  } finally {
-    await client.end();
-  }
-}
+export { withDatabaseLock as withBlockchainLock } from '../database-lock.ts';
 
 export interface TransactionRecord {
   id: string;

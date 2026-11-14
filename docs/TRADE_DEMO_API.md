@@ -1,10 +1,14 @@
 # T-16 · Hợp đồng API demo USDC
 
-Chốt ngày 14/11/2026 theo FV-NEAR-01. Schema ở `shared/trade-demo.mts` và `shared/payments.mts`. Fixture ở `shared/fixtures/trade-demo.mts`. Các route gameplay triển khai ở T-57/T-58 và nối adapter T-17. API lịch sử `/api/account/transactions` đã chạy từ T-63.
+Chốt ngày 14/11/2026 theo FV-NEAR-01. Schema ở `shared/trade-demo.mts` và `shared/payments.mts`. Fixture ở `shared/fixtures/trade-demo.mts`. Các route T-57/T-58 dùng migration 013 và adapter T-17. API lịch sử `/api/account/transactions` đã chạy từ T-63.
 
 ## Phiên và đơn vị
 
 Gọi cùng origin với prefix `/api` và cookie FarmVerse. Backend lấy farm/vai trò/ví từ phiên đã xác minh. `seller` là A, `buyer` là B. Backend gắn farm vào `runId` đang hoạt động trong T-60/T-57.
+
+### Tạo vòng demo local
+
+Trong `backend/`, bật adapter NEAR USDC testnet và đặt `TRADE_DEMO_SELLER_FARM_ID` cùng `TRADE_DEMO_BUYER_FARM_ID` bằng hai Farm ID Google đã xác minh trong `.env`. Chạy `pnpm migrate`, rồi `pnpm trade-demo:setup`. Lệnh trả lại cùng run ID khi chạy lại với cùng hai vai trò. Dùng `pnpm trade-demo:setup --new-run` để mở lượt khác sau khi đã xử lý xong lệnh đang giữ quả. Kiểm tra vốn bằng `pnpm near:setup`. [Cấu hình adapter](NEAR_USDC_ADAPTER.md)
 
 `PaymentAmount` gồm `asset: { id, symbol, decimals }` và `amountAtomic` dạng chuỗi. USDC có 6 chữ số thập phân, NEAR có 24. Giá A là `1000000`, giá B là `1500000`, lãi gộp là `500000` đơn vị USDC nhỏ nhất. Tính bằng BigInt hoặc xử lý chuỗi. `serverTime` là Unix milliseconds, thời gian lệnh/badge là ISO 8601.
 
@@ -41,6 +45,8 @@ Snapshot gồm run/revision/serverTime, role/stage, wallet/balance, một item, 
 
 Sau lượt A, item thuộc `npc`, tồn NPC 1, giá vốn 1 USDC, doanh thu 0, `grossProfit: null`. Sau lượt B, item thuộc `basket`, mâm 3/3, badge có giá trị, tồn NPC 0, doanh thu 1,5 và lãi gộp 0,5 USDC. `balance: null` khi chưa lấy được số dư. `canAccept` và `unavailableReason` quyết định trạng thái nút.
 
+PnL lấy từ các lượt đã áp dụng trong run. Phí sponsor cộng gas của các giao dịch và chữ ký gắn với lệnh của run. Các khoản nạp vốn, kích hoạt ví và kiểm tra adapter trước đó nằm ngoài PnL của run.
+
 ## Lệnh và khôi phục
 
 | Trạng thái lệnh | Hiển thị |
@@ -54,6 +60,8 @@ Sau lượt A, item thuộc `npc`, tồn NPC 1, giá vốn 1 USDC, doanh thu 0, 
 | `expired` | Yêu cầu hết hạn. |
 
 `order.payment` là kết quả provider chuẩn hóa. Với `requiredAction.type='redirect'`, web chuyển tới URL backend trả về sau thao tác nhận lời mời. Callback quay về FarmVerse, snapshot khôi phục cùng lệnh. `payment.status='confirmed'` cùng `order.status='processing'` tiếp tục hiện đang xử lý. Badge/thành công lấy từ snapshot sau khi lệnh `succeeded`.
+
+Callback xác nhận đọc lại kết quả qua adapter rồi lưu lệnh, quả và huy hiệu trong cùng transaction PostgreSQL. Khi callback gián đoạn, đọc snapshot hoặc cùng order sẽ tiếp tục đối chiếu lệnh đã lưu.
 
 Đọc lệnh mỗi 2–3 giây khi đang chờ. B đang chờ NPC có quả có thể đọc snapshot mỗi 3 giây trong màn demo. Dừng polling khi tab ẩn/reset/đăng xuất hoặc lệnh kết thúc. Khi trở lại tab, đọc trạng thái server trước khi thao tác tiếp.
 

@@ -71,16 +71,16 @@ Lệnh gameplay liên kết với `farm_blockchain_transactions` và giữ mốc
 | T-16 · JSON/fixture | Codex | Đã xong | Snapshot A/B, lời mời, lệnh, PnL và 17 fixture đã bàn giao. |
 | T-60 · Ví/vốn | Codex | Đã xong | Hai ví Google đã đăng ký USDC. B có 1,5, NPC có 17,5 USDC sau thử adapter; sponsor có NEAR. |
 | T-17 · Adapter USDC | Codex | Đã xong | Hai lượt USDC thật đã xác minh FINAL, module NEAR riêng, log đúng tài sản/phí. |
-| T-57 · Lệnh/quả | Codex | 60–90 phút | Giữ một quả/suất, cập nhật một lần, B thấy lời mời sau xác minh A. |
-| T-58 · Mâm/badge | Codex | 20–30 phút | Mâm 3/3, một badge bền qua reload, sprite có sẵn. |
+| T-57 · Lệnh/quả | Codex | Đã xong | API và migration 013 giữ một quả/suất. Kiểm thử adapter giả lập xác nhận B thấy lời mời sau khi thanh toán A hoàn tất. |
+| T-58 · Mâm/badge | Codex | Đã xong | Adapter giả lập và PostgreSQL xác nhận mâm 3/3, một badge bền qua reload và callback lặp. |
 | T-64 · UI lịch sử | Antigravity + Codex | Đã xong | Đã tích hợp và nghiệm thu local, định dạng USDC và phí NEAR. |
 | T-18 · UI lời mời | Antigravity | 60–90 phút | Đổi/Mua/Bỏ qua, chờ, thành công/lỗi, mâm và badge. |
 | T-62 · UI PnL | Antigravity | 20–40 phút | Giá vốn, doanh thu và lãi gộp theo server. |
 | T-19 · Tích hợp | Codex | 45–75 phút | Hai phiên thật, số dư/hash/log, bấm đúp/hủy/reload/timeout. |
 
-**Phần còn lại của bản local ước tính khoảng 2–4 giờ khi backend và UI chạy song song.** Còn ledger/quả/mâm/badge, UI lời mời/PnL và tích hợp. Thời gian mở callback public phụ thuộc dịch vụ ngoài.
+Phần còn lại của bản local gồm UI lời mời/PnL, NPC ghé ruộng T-65 và nghiệm thu T-19. Thời gian mở callback public phụ thuộc dịch vụ ngoài.
 
-T-16/T-60/T-17 và T-64 đã xong. Codex tiếp tục T-57/T-58; Antigravity nhận T-18/T-62 bằng fixture. Gameplay kiểm thử qua adapter giả lập trước khi nối USDC thật. Chạy trọn vòng local rồi nghiệm thu public khi callback được chấp nhận.
+T-16/T-60/T-17/T-57/T-58 và T-64 đã xong. Gameplay đã nối adapter và được kiểm thử bằng thanh toán giả lập. T-19 chạy trọn vòng local với thanh toán thật rồi nghiệm thu public khi callback được chấp nhận.
 
 ## Quyền ghi khi làm song song
 

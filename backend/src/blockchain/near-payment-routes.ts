@@ -51,7 +51,10 @@ export function nearPaymentRoutes(resolveFarm: ResolveFarm, factory: Factory = c
   return routes;
 }
 
-export async function completeNearPayment(context: Context, farmId: string | undefined, factory: Factory = createNearUsdcProvider) {
+export async function completeNearPayment(
+  context: Context, farmId: string | undefined, factory: Factory = createNearUsdcProvider,
+  afterPayment?: (farmId: string, orderId: string) => Promise<void>,
+) {
   const state = context.req.query('state');
   const flow = flowPattern.exec(getCookie(context, cookie) ?? '');
   // Do not clear a different tab's in-progress authorization on a mismatched callback.
@@ -66,6 +69,7 @@ export async function completeNearPayment(context: Context, farmId: string | und
       state, nonce: flow[2], verifier: flow[3],
       code, cancelled: Boolean(context.req.query('error')),
     });
+    await afterPayment?.(farmId, record.order_id);
   } catch {
     // Never convert an uncertain chain outcome into a second payment.
   }
