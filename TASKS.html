@@ -286,19 +286,55 @@
     "branch": "develop → main",
     "status": "REVIEW",
     "dependsOn": "Local 3000 bật; bản kiểm tra 3001 tắt. Đã kiểm tra hai tab tài khoản, truy cập trực tiếp trả 404 khi tắt và build server. Callback public thuộc T-55.",
-    "acceptance": "Server mặc định tắt: ẩn hai nút Google, NPC mời giao dịch và điểm mở Quầy nông sản USDC; API demo NEAR tắt, Guest và tài khoản thường vẫn chơi được. Local bật cờ để demo. Chủ dự án review trên develop trước khi đưa mã lên main."
+    "acceptance": "Server mặc định tắt: ẩn hai nút Google, NPC mời giao dịch và điểm mở Hội chợ nông sản USDC; API demo NEAR tắt, Guest và tài khoản thường vẫn chơi được. Local bật cờ để demo. Chủ dự án review trên develop trước khi đưa mã lên main."
   },
   {
     "id": "T-67",
     "phase": "P4",
-    "target": "Ưu tiên cao nhất · Quầy nông sản",
-    "title": "Tách Quầy nông sản thành màn riêng",
+    "target": "Ưu tiên cao nhất · Hội chợ nông sản",
+    "title": "Tách Hội chợ nông sản thành màn riêng",
     "owner": "Codex",
     "scope": "web/src/trade-demo/, đường vào từ NPC, điều hướng và quay lại từ Google.",
     "branch": "develop",
     "status": "REVIEW",
     "dependsOn": "Desktop xem lại mâm 3/3 từ vòng testnet đã lưu. Mobile 390 px kiểm tra lời mời mâm 2/3, thanh toán và quay lại quầy bằng dữ liệu mẫu.",
     "acceptance": "NPC mở cảnh quầy toàn màn hình desktop/mobile. Về ruộng và Back trả lại Farm. Reload hoặc quay về sau duyệt khôi phục đúng quầy, mâm, lệnh và sổ quầy từ backend."
+  },
+  {
+    "id": "T-68",
+    "phase": "P3",
+    "target": "Farm · Tỷ lệ cây",
+    "title": "Cân kích thước sprite của 16 giống",
+    "owner": "Codex",
+    "scope": "Tỷ lệ hiển thị trong web/src/main.ts, dùng sprite đã duyệt.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Kiểm tra cảnh sáu ô chín bằng dữ liệu mẫu ở 1280×720 và 390×844. Thu hoạch, dọn, gieo lại và tưới đạt trên mobile.",
+    "acceptance": "Cảnh sáu ô chín phân biệt được từng cây, chân và nhãn. Chuối cao nhất. Kiểm tra desktop, mobile và hiệu ứng đổi giai đoạn."
+  },
+  {
+    "id": "T-69",
+    "phase": "P2",
+    "target": "Farm · Hàng xóm",
+    "title": "Giảm truy vấn PostgreSQL cho danh sách Hàng xóm",
+    "owner": "Codex",
+    "scope": "web/src/community.ts, API và store Hàng xóm, schema HTTP dùng chung.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "PostgreSQL QA xác nhận gộp lượt đọc, làm mới cho hai bên và chặn vượt hạn mức. Trong trình duyệt, mở lại, đổi tab và mở lại trang kế tiếp dùng cache.",
+    "acceptance": "12 người mỗi trang, tối đa 120 mỗi bộ lọc. Tìm từ 3 ký tự. Cache 15 giây ở web và 20 giây ở backend. Từ lượt đọc thứ 19 trong 30 giây mỗi phiên, trả 429 trước truy vấn phiên."
+  },
+  {
+    "id": "T-78",
+    "phase": "P2",
+    "target": "Farm · Pet giữ nhà",
+    "title": "Hiện Pet khi thăm ruộng và chặn 50% lượt lấy quả",
+    "owner": "Codex",
+    "scope": "Store Hàng xóm, kiểm thử PostgreSQL, vị trí Pet và phản hồi ô đất trong Phaser.",
+    "branch": "develop",
+    "status": "DONE",
+    "dependsOn": "Chủ dự án chốt tỷ lệ 50% ngày 14/11. Chromium thấy Pet ngỗng ở desktop/mobile và cả hai kết quả qua API thật trên PostgreSQL QA.",
+    "acceptance": "Hiện đúng Pet của chủ ruộng. Thành công chuyển đúng một quả và có animation. Bị chặn có clip Pet và phản hồi tại ô. Mỗi khách một lần trên cùng ô/vụ."
   },
   {
     "id": "T-19",

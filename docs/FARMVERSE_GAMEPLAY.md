@@ -76,7 +76,7 @@ Khung hướng dẫn có đuôi thoại manga, dùng nền xanh đậm, viền v
 
 Mỗi người chơi có một Pet cá nhân trong Farm để chăm sóc. Pet có cử động và biểu cảm vui, kèm thông báo nhẹ khi có sự kiện. Khi khách thực hiện Steal, Pet xuất hiện ngay trên ruộng và phản ứng với hành động đó.
 
-Chủ dự án chốt ngày 12/11/2026: Pet chặn miễn phí, chưa trừ năng lượng. Mỗi lượt Steal hợp lệ hiện đều bị Pet chặn, quả trên cây và Kho của hai bên giữ nguyên. Mỗi khách chỉ thử một lần trên mỗi ô/vụ, kể cả bị chặn. Gửi lặp không tạo thêm nhật ký. Backend ghi sự kiện Pet chặn cùng giao dịch giữ lượt; nhật ký của chủ ruộng ghi người khách, giống cây, ô đất và thời gian. Khi vào Farm, thông báo và badge tính cả lượt Pet chặn.
+Pet giữ nhà miễn phí. Ngày 14/11/2026, chủ dự án chốt xác suất chặn 50% cho mỗi lượt lấy quả hợp lệ. Khi bị chặn, khách thấy Pet phản ứng và dòng “Pet chặn!” tại ô. Khi thành công, khách thấy hiệu ứng +1, nhận một quả vào Kho và cây của chủ ruộng giảm một quả. Mỗi khách chỉ thử một lần trên mỗi ô/vụ. Backend lưu lượt thử, thay đổi tài sản và nhật ký trong cùng transaction.
 
 Cho ăn, hồi năng lượng và luật chặn dựa trên năng lượng thuộc hướng phát triển sau. T-54 tiếp tục làm mượt bước đi và điều chỉnh vị trí mặc định của Pet.
 

@@ -1,10 +1,10 @@
-import { COMMUNITY_API } from '../../shared/community.mts';
+import { COMMUNITY_API, COMMUNITY_SEARCH_MIN } from '../../shared/community.mts';
 import type { FarmVisit, PlayerList, PlayerPage } from '../../shared/community.mts';
 import './community.css';
 
 interface CommunityOptions {
   request<T>(path: string, body?: unknown): Promise<T>;
-  listPlayers(list: PlayerList, query: string, offset: number): Promise<PlayerPage>;
+  listPlayers(list: PlayerList, query: string, offset: number, signal: AbortSignal): Promise<PlayerPage>;
   visitFarm(username: string): Promise<FarmVisit>;
   openVisit(visit: FarmVisit): void;
   refreshSession(): Promise<void>;
@@ -15,6 +15,8 @@ interface CommunityOptions {
 const listLabels: Record<PlayerList, string> = {
   friends: 'Bạn bè', residents: 'Cư dân', invitations: 'Lời mời',
 };
+const pageCacheTtl = 15_000;
+const pageCacheCapacity = 24;
 
 export function playerPath(path: string, username: string): string {
   return path.replace(':username', encodeURIComponent(username));
@@ -37,9 +39,9 @@ export function createPlayerAvatar(): HTMLImageElement {
 }
 
 export function createCommunity(options: CommunityOptions) {
-  let available = false;
+  let sessionKey: string | undefined;
   const opener = makeButton('', () => {
-    if (!available) {
+    if (!sessionKey) {
       options.signIn();
       return;
     }
@@ -104,10 +106,15 @@ export function createCommunity(options: CommunityOptions) {
   let query = '';
   let nextOffset: number | null = null;
   let pending = false;
+  let accessBlocked = false;
+  let pageRequest: AbortController | undefined;
+  const pages = new Map<string, { data: PlayerPage; expiresAt: number }>();
 
   async function run(operation: () => Promise<void>): Promise<void> {
     if (pending) return;
+    const operationSession = sessionKey;
     pending = true;
+    opener.disabled = true;
     body.inert = true;
     closeButton.disabled = true;
     status.textContent = '';
@@ -115,6 +122,7 @@ export function createCommunity(options: CommunityOptions) {
     try {
       await operation();
     } catch (error) {
+      if (operationSession !== sessionKey) return;
       const msg = error instanceof Error ? error.message : 'Chưa tải được dữ liệu.';
       status.textContent = msg;
       status.classList.add('is-error');
@@ -122,6 +130,7 @@ export function createCommunity(options: CommunityOptions) {
       if (error instanceof Error && error.cause === 401) await options.refreshSession();
     } finally {
       pending = false;
+      opener.disabled = accessBlocked;
       body.inert = false;
       closeButton.disabled = false;
     }
@@ -133,11 +142,30 @@ export function createCommunity(options: CommunityOptions) {
       more.hidden = true;
       nextOffset = null;
     }
-    const page = await options.listPlayers(list, query, offset);
+    const cacheKey = `${list}:${query}:${offset}`;
+    const cached = pages.get(cacheKey);
+    const request = new AbortController();
+    pageRequest = request;
+    let page: PlayerPage;
+    try {
+      if (cached && cached.expiresAt > Date.now()) {
+        page = cached.data;
+      } else {
+        page = await options.listPlayers(list, query, offset, request.signal);
+        if (request.signal.aborted) return;
+        pages.delete(cacheKey);
+        if (pages.size >= pageCacheCapacity) pages.delete(pages.keys().next().value!);
+        pages.set(cacheKey, { data: page, expiresAt: Date.now() + pageCacheTtl });
+      }
+    } finally {
+      if (pageRequest === request) pageRequest = undefined;
+    }
     for (const { username } of page.players) {
       const row = document.createElement('li');
       const open = makeButton(username, () => void run(async () => {
+        const currentSession = sessionKey;
         const visit = await options.visitFarm(username);
+        if (currentSession !== sessionKey) return;
         dialog.close();
         options.openVisit(visit);
       }));
@@ -153,8 +181,11 @@ export function createCommunity(options: CommunityOptions) {
         const invitation = list === 'invitations';
         const action = invitation ? 'Xác nhận' : 'Kết bạn';
         const button = makeButton(invitation ? '✓' : '+', () => void run(async () => {
+          const currentSession = sessionKey;
           const path = invitation ? COMMUNITY_API.confirm : COMMUNITY_API.invite;
           await options.request<void>(playerPath(path, username), {});
+          if (currentSession !== sessionKey) return;
+          pages.clear();
           if (invitation) await loadPlayers(0);
           else {
             button.textContent = '✓';
@@ -191,6 +222,7 @@ export function createCommunity(options: CommunityOptions) {
 
   for (const kind of ['friends', 'residents', 'invitations'] as const) {
     const tab = makeButton(listLabels[kind], () => void run(async () => {
+      if (kind === list && !query) return;
       list = kind;
       query = '';
       search.value = '';
@@ -215,6 +247,9 @@ export function createCommunity(options: CommunityOptions) {
         options.notify?.('Tên đăng nhập cần 0–24 ký tự chữ không dấu, số hoặc gạch dưới.', 'error');
         throw new Error('Dùng tên đăng nhập gồm chữ không dấu, số và dấu gạch dưới.');
       }
+      if (term && term.length < COMMUNITY_SEARCH_MIN) {
+        throw new Error(`Nhập ít nhất ${COMMUNITY_SEARCH_MIN} ký tự để tìm người chơi.`);
+      }
       query = term;
       await loadPlayers(0);
     });
@@ -230,12 +265,24 @@ export function createCommunity(options: CommunityOptions) {
 
   return {
     focus: () => opener.focus(),
-    updateAccess(hasAccess: boolean, blocked: boolean) {
-      available = hasAccess;
-      opener.disabled = blocked;
-      opener.title = available ? 'Mở danh sách Bạn bè và Cư dân' : 'Đăng nhập để thăm ruộng và kết bạn';
-      opener.setAttribute('aria-label', 'Bạn bè và Cư dân');
-      if (!available && dialog.open) dialog.close();
+    updateAccess(nextSessionKey: string | undefined, blocked: boolean) {
+      if (nextSessionKey !== sessionKey) {
+        sessionKey = nextSessionKey;
+        pageRequest?.abort();
+        pages.clear();
+        players.replaceChildren();
+        more.hidden = true;
+        nextOffset = null;
+        if (dialog.open) dialog.close();
+        list = 'friends';
+        query = search.value = '';
+        for (const button of tabs.querySelectorAll('button')) {
+          button.setAttribute('aria-pressed', String(button.dataset.playerList === list));
+        }
+      }
+      accessBlocked = blocked;
+      opener.disabled = blocked || pending;
+      opener.title = sessionKey ? 'Mở danh sách Bạn bè và Cư dân' : 'Đăng nhập để thăm ruộng và kết bạn';
     },
   };
 }

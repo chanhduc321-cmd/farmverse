@@ -25,8 +25,32 @@ const width = 800;
 const height = 600;
 const tileWidth = 220;
 const tileHeight = 108;
-const cropScale = .52;
-const getCropScale = (cropId: number) => (cropId <= 5 ? .52 : .95);
+const defaultCropScale = .52;
+const growingCropScales: Readonly<Partial<Record<number, number>>> = {
+  1: .52,  // Dâu tây
+  2: .52,  // Ngô
+  3: .52,  // Củ cải trắng
+  4: .52,  // Cà rốt
+  5: .58,  // Khoai tây
+  6: .68,  // Cà tím
+  7: .64,  // Cà chua
+  8: .64,  // Đậu xanh
+  9: .58,  // Ớt
+  10: .65, // Bí đỏ
+  11: .72, // Táo
+  12: .65, // Dưa hấu
+  13: .78, // Chuối
+  14: .72, // Đào
+  15: .72, // Dứa
+  16: .70, // Hoa mai
+};
+
+function plotSpriteScale(plot: Plot, stage: number): number {
+  // The cleared crop sprites come in two image sizes and share a visible footprint.
+  if (plot.harvested) return plot.cropId <= 5 ? .52 : .95;
+  if (stage === 0) return .85;
+  return growingCropScales[plot.cropId] ?? defaultCropScale;
+}
 const toPosition = ([column, row]: number[]) => [
   400 + (column - row) * tileWidth / 2,
   214 + (column + row) * tileHeight / 2,
@@ -442,7 +466,7 @@ function setSnapshot(next: FarmResponse | FarmSessionResponse, optimistic = fals
 function updateCommunityAccess(): void {
   const available = sessionSynchronized && Boolean(session?.account);
   farmTradeVisit?.setHome(available && session?.nearDemoAvailable && !visit ? session.sessionKey : undefined);
-  community.updateAccess(available, busy || accountSubmitting);
+  community.updateAccess(available ? session?.sessionKey : undefined, busy || accountSubmitting);
   if (!available) {
     activity.setSession(undefined);
     transactionHistory.reset();
@@ -1638,11 +1662,10 @@ function attachControls(scene: FarmScene): void {
             trackEvent('farm_steal', { blocked: Boolean(result.blocked) });
             if (result.blocked) {
               setFeedback('Pet giữ nhà đã chặn! Bạn chưa lấy được quả.', 'warning');
-              scene.playPetGuard();
             } else {
               setFeedback(`Đã lấy 1 quả ${crops[crop.cropId - 1].name}. Xem trong Kho của bạn.`, 'success');
-              scene.playPlotFeedback(plot, 'harvest', 1);
             }
+            scene.playStealFeedback(plot, result.blocked, result.visit.pet ?? 'dog');
           } catch (error) {
             if (error instanceof Error && error.cause === 409) {
               await refreshVisit(currentVisit.username).catch(() => undefined);
@@ -1766,8 +1789,25 @@ class FarmScene extends Phaser.Scene {
 
   constructor() { super('Farm'); }
 
-  playPetGuard(): void {
-    this.pet.guard();
+  playStealFeedback(index: number, blocked: boolean, pet: NonNullable<FarmVisit['pet']>): void {
+    if (blocked) this.pet.guard(pet);
+    if (reduceMotion.matches) return;
+    if (!blocked) {
+      this.playPlotFeedback(index, 'harvest', 1);
+      return;
+    }
+
+    const [x, y] = positions[index];
+    this.spawnRing(x, y, 0xffa45f, 1.6, 450);
+    const notice = this.add.text(x, y - 35, 'Pet chặn!', {
+      fontFamily: 'system-ui, sans-serif', fontSize: '23px', fontStyle: 'bold',
+      color: '#ffdfa9', stroke: '#642d18', strokeThickness: 5,
+    }).setOrigin(.5);
+    this.ground.add(notice);
+    this.tweens.add({
+      targets: notice, y: y - 96, duration: 900, alpha: 0, ease: 'Quad.In',
+      onComplete: () => notice.destroy(),
+    });
   }
 
   preload(): void {
@@ -1850,7 +1890,7 @@ class FarmScene extends Phaser.Scene {
       return gate;
     });
     this.visuals = positions.map(([x, y]) => {
-      const plant = this.add.image(x, y - 6, 'crop-1-0').setOrigin(.5, .84).setScale(cropScale).setVisible(false);
+      const plant = this.add.image(x, y - 6, 'crop-1-0').setOrigin(.5, .84).setVisible(false);
       const label = this.add.text(x, y + 16, '', {
         fontFamily: 'system-ui, sans-serif',
         fontSize: '15px',
@@ -1987,7 +2027,7 @@ class FarmScene extends Phaser.Scene {
     const [x, y] = positions[index];
     const plot = visit?.plots[index] ?? snapshot?.farm.plots[index];
     const stage = plot ? stageAt(crops[plot.cropId - 1], plot, farmTime()) : 1;
-    const targetScale = plot ? (stage === 0 ? .85 : getCropScale(plot.cropId)) : cropScale;
+    const targetScale = plot ? plotSpriteScale(plot, stage) : defaultCropScale;
 
     if (type === 'water') {
       this.spawnRing(x, y, 0x7bdcf5, 1.5, 400);
@@ -2285,20 +2325,20 @@ class FarmScene extends Phaser.Scene {
 
   update(time: number, delta: number): void {
     if (!this.ready) return;
+    const visitKey = visit ? `visit:${visit.username}` : 'home';
+    const animateStage = visitKey === this.lastPlotVisitKey;
     const theme = `theme-${visit?.theme ?? snapshot.farm.theme}`;
-    if (this.background.texture.key !== theme) {
+    const themeChanged = this.background.texture.key !== theme;
+    if (themeChanged) {
       this.background.setTexture(theme);
       this.paintFieldBank();
+    }
+    if (themeChanged || !animateStage) {
       this.layout();
-      if (!reduceMotion.matches) this.cameras.main.fadeIn(220, 20, 35, 22);
+      if ((themeChanged || this.lastPlotVisitKey) && !reduceMotion.matches) this.cameras.main.fadeIn(220, 20, 35, 22);
     }
     const now = visit ? visit.serverTime + performance.now() - visitReceivedAt : farmTime();
     const elapsed = performance.now();
-    const visitKey = visit ? `visit:${visit.username}` : 'home';
-    const animateStage = visitKey === this.lastPlotVisitKey;
-    if (!animateStage && this.lastPlotVisitKey && !reduceMotion.matches) {
-      this.cameras.main.fadeIn(220, 20, 35, 22);
-    }
     this.lastPlotVisitKey = visitKey;
     const shouldSparkle = !reduceMotion.matches && elapsed - this.lastSparkleAt >= 900;
     if (shouldSparkle) this.lastSparkleAt = elapsed;
@@ -2319,7 +2359,7 @@ class FarmScene extends Phaser.Scene {
       lastGuideCheck = elapsed;
       updateToolHint();
     }
-    this.pet.update(time, delta, !visit, !visit && !guideActive, visit?.pet, snapshot.farm.pet);
+    this.pet.update(time, delta, !visit, !visit && !guideActive, visit ? visit.pet ?? 'dog' : undefined, snapshot.farm.pet);
   }
 
   private renderPlot(
@@ -2340,8 +2380,8 @@ class FarmScene extends Phaser.Scene {
       const crop = crops[plot.cropId - 1];
       const stage = stageAt(crop, plot, now);
       const frame = `crop-${crop.id}-${plot.harvested ? 'end' : stage}`;
-      const targetScale = stage === 0 ? .85 : getCropScale(crop.id);
-      if (visual.plant.texture.key !== frame) {
+      const targetScale = plotSpriteScale(plot, stage);
+      if (visual.plant.texture.key !== frame || !wasVisible) {
         visual.plant.setTexture(frame);
         if (animateStage && wasVisible && !reduceMotion.matches) {
           this.tweens.killTweensOf(visual.plant);
@@ -2450,9 +2490,9 @@ async function refreshCommunitySession(): Promise<void> {
 
 const community = createCommunity({
   request,
-  async listPlayers(list, query, offset) {
+  async listPlayers(list, query, offset, signal) {
     const params = new URLSearchParams({ list, q: query, offset: String(offset) });
-    return request<PlayerPage>(`${COMMUNITY_API.players}?${params}`);
+    return request<PlayerPage>(`${COMMUNITY_API.players}?${params}`, undefined, signal);
   },
   visitFarm: openFarmVisit,
   openVisit: setVisit,

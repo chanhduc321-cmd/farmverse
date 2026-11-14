@@ -3,6 +3,7 @@ import { createDefaultTradeDemoClient, TradeRequestError } from './client.ts';
 import { mountTradeDemo } from './trade.ts';
 
 const stallHash = '#quay-nong-san';
+const screenName = 'Hội chợ nông sản';
 const returnKey = 'farmverse:trade-return';
 const checkInterval = 8_000;
 
@@ -26,7 +27,8 @@ export function mountFarmTradeVisit(field: HTMLElement) {
   screen.hidden = true;
   screen.setAttribute('aria-labelledby', 'trade-screen-title');
   screen.innerHTML = '<header class="farm-trade-header"><button type="button" class="farm-trade-back">← Về ruộng</button>' +
-    '<h1 id="trade-screen-title">Quầy nông sản</h1></header>';
+    '<h1 id="trade-screen-title"></h1></header>';
+  screen.querySelector('h1')!.textContent = screenName;
   const back = screen.querySelector('button')!;
   document.body.append(screen);
 
@@ -127,7 +129,7 @@ export function mountFarmTradeVisit(field: HTMLElement) {
       invite.classList.toggle('is-calling', arrived);
       label.textContent = state.visit && arrived
         ? state.visit.kind === 'sell_to_npc' ? 'Bạn có dâu bán không?' : 'Mình có dâu cho mâm quả!'
-        : 'Quầy nông sản';
+        : screenName;
       syncScreen();
       if (signal.aborted) return;
       if (!canOpen && !state.checkAgain) clearStallUrl();

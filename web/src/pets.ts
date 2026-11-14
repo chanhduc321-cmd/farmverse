@@ -121,7 +121,7 @@ export function createFarmPet(
     const top = bounds.top + y - displaySize;
     const bottom = bounds.top + y + 8;
     if (left < bounds.left || right > bounds.right || top < bounds.top || bottom > bounds.bottom) return false;
-    return ![...field.querySelectorAll('.plot-targets button, .bottom-dock, .meters, .farm-hud-menu')].some(element => {
+    return ![...field.querySelectorAll('.plot-targets button, .bottom-dock, .meters, .farm-hud-menu, #visit-hud, [data-visit-exit], .instructions')].some(element => {
       const box = element.getBoundingClientRect();
       return left < box.right && right > box.left && top < box.bottom && bottom > box.top;
     });
@@ -241,7 +241,8 @@ export function createFarmPet(
   });
 
   return {
-    guard() {
+    guard(hostPet: Pet) {
+      if (shown !== hostPet) showPet(hostPet);
       stand(shown);
       say(`${pets[shown].voice} Có mình giữ nhà rồi!`, 2400);
       guardUntil = reactionUntil;
@@ -249,7 +250,9 @@ export function createFarmPet(
     },
     layout() {
       const bounds = field.getBoundingClientRect();
-      const dockTop = dock.getBoundingClientRect().top;
+      const visitExit = field.querySelector('[data-visit-exit]');
+      const dockTop = dock.getClientRects().length ? dock.getBoundingClientRect().top
+        : visitExit?.getBoundingClientRect().top || bounds.bottom;
       displaySize = bounds.width >= 900 && bounds.height >= 550 ? 120 : bounds.width <= 480 ? 90 : 100;
       sprite.setScale(displaySize / pets[shown].size);
       updateShadowSize(shown);
@@ -259,7 +262,7 @@ export function createFarmPet(
       // Smart placement: beside the path near the field plots, easily visible
       const firstPlot = field.querySelector<HTMLButtonElement>('.plot-targets button');
       let targetX = Math.round(displaySize / 2 + 18);
-      let targetY = Math.round(dockTop - bounds.top - 16);
+      let targetY = Math.round(Phaser.Math.Clamp(dockTop - bounds.top - 16, displaySize, bounds.height - 8));
 
       if (firstPlot) {
         const plotBox = firstPlot.getBoundingClientRect();

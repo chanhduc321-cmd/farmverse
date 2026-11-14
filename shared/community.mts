@@ -9,6 +9,9 @@ export const COMMUNITY_API = {
 } as const;
 
 export type PlayerList = 'residents' | 'friends' | 'invitations';
+export const COMMUNITY_SEARCH_MIN = 3;
+export const COMMUNITY_PAGE_SIZE = 12;
+export const COMMUNITY_RESULT_LIMIT = 120;
 export interface PlayerPage {
   players: { username: string }[];
   nextOffset: number | null;

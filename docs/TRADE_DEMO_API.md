@@ -42,7 +42,7 @@ Server kiểm tra quyền, vai trò, giá, ví, số dư và trạng thái quả
 
 ## NPC ghé ruộng
 
-Web hỏi lịch trong tab hiện tại khi người chơi ở ruộng của mình. Khi ví, số dư và lượt quả đều hợp lệ, backend lưu một thời điểm đến cách 6–12 giây theo run/vai trò (migration 014). Reload và các tab cùng phiên nhận cùng `offerId` và `arrivesAt`. Lượt B chỉ có lịch sau khi NPC đã nhận quả. Web đọc lại lịch lúc đến trước khi hiện NPC. Bấm NPC mở màn Quầy nông sản ở `#quay-nong-san`.
+Web hỏi lịch trong tab hiện tại khi người chơi ở ruộng của mình. Khi ví, số dư và lượt quả đều hợp lệ, backend lưu một thời điểm đến cách 6–12 giây theo run/vai trò (migration 014). Reload và các tab cùng phiên nhận cùng `offerId` và `arrivesAt`. Lượt B chỉ có lịch sau khi NPC đã nhận quả. Web đọc lại lịch lúc đến trước khi hiện NPC. Bấm NPC mở màn Hội chợ nông sản ở `#quay-nong-san`.
 
 Đã bỏ qua hoặc hoàn thành thì không có lời mời mới trong cùng vòng. Sau khi người chơi có lệnh hoặc đã bỏ qua, họ có thể ghé lại quầy để xem trạng thái. Thao tác tại quầy dùng chung cơ chế kiểm tra giá, phiên, revision và giữ quả.
 

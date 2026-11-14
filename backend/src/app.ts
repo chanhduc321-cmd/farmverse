@@ -408,7 +408,7 @@ for (const kind of ['accept', 'reject'] as const) {
 app.route('/', communityRoutes(async (context) => {
   const session = await farmSession(context);
   if (session?.tokenHash) return { id: session.id, tokenHash: session.tokenHash };
-}));
+}, context => accountTokenHash(getCookie(context, accountCookie))));
 
 app.route('/', tradeDemoRoutes(async (context) => {
   const session = await farmSession(context);

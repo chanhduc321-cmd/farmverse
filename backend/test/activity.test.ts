@@ -214,7 +214,7 @@ test('community integration: Pet blocks for free, preserves fruit and records on
   const stealResult = await stealFruit(visitor.farmId, visitor.tokenHash, host.username, {
     plot: 1,
     plantedAt: host.farm.plots[1]!.plantedAt,
-  });
+  }, () => 0.499);
 
   assert.ok(!('error' in stealResult));
   assert.equal(stealResult.blocked, true);
@@ -241,41 +241,51 @@ test('community integration: Pet blocks for free, preserves fruit and records on
   const duplicateSteal = await stealFruit(visitor.farmId, visitor.tokenHash, host.username, {
     plot: 1,
     plantedAt: host.farm.plots[1]!.plantedAt,
-  });
+  }, () => assert.fail('Retry must not roll again'));
   assert.ok('error' in duplicateSteal);
 
   page = await getActivityPage(host.farmId);
   assert.equal(page.events.length, 2);
 });
 
-test('Pet blocks concurrent retries once, blocks distinct visitors and supports legacy saves', async () => {
+test('Steal applies one transfer and a different visitor can be blocked, including with a legacy Pet', async () => {
   for (const pet of ['dog', 'cat', 'goose', undefined] as const) {
     const host = await createTestAccount('guard_host');
     const visitor = await createTestAccount('guard_vis');
     const other = await createTestAccount('guard_vis');
     host.farm.pet = pet;
-    host.farm.plots[0] = { cropId: 1, plantedAt: Date.now() - 60_000, harvested: false, yieldRoll: 0, fruitTaken: 8 };
+    host.farm.plots[0] = { cropId: 1, plantedAt: Date.now() - 60_000, harvested: false, yieldRoll: 0, fruitTaken: 7 };
     await queryFarmDatabase('UPDATE farm_guest_progress SET state = $1 WHERE session_id = $2', [host.farm, host.farmId]);
     const action = { plot: 0, plantedAt: host.farm.plots[0].plantedAt };
     const results = await Promise.all([
-      stealFruit(visitor.farmId, visitor.tokenHash, host.username, action),
-      stealFruit(visitor.farmId, visitor.tokenHash, host.username, action),
-      stealFruit(other.farmId, other.tokenHash, host.username, action),
+      stealFruit(visitor.farmId, visitor.tokenHash, host.username, action, () => 0.5),
+      stealFruit(visitor.farmId, visitor.tokenHash, host.username, action, () => 0.5),
+      stealFruit(other.farmId, other.tokenHash, host.username, action, () => 0),
     ]);
-    assert.equal(results.filter(result => 'blocked' in result && result.blocked).length, 2);
+    assert.equal(results.filter(result => 'blocked' in result && result.blocked).length, 1);
     assert.equal(results.filter(result => 'status' in result && result.status === 409).length, 1);
+    const success = results.find(result => 'blocked' in result && !result.blocked);
+    assert.ok(success && 'farm' in success);
+    assert.equal(success.farm.produce[1], 1);
+    assert.equal(success.farm.revision, visitor.farm.revision + 1);
+    assert.equal(success.visit.plots[0]!.canSteal, false);
+    const { rows: [savedHost] } = await queryFarmDatabase<{ state: typeof host.farm }>(
+      'SELECT state FROM farm_guest_progress WHERE session_id = $1', [host.farmId]);
+    assert.equal(savedHost.state.revision, host.farm.revision + 1);
+    assert.equal(savedHost.state.plots[0]!.fruitTaken, 8);
     let page = await getActivityPage(host.farmId);
     assert.equal(page.events.length, 2);
-    assert.equal(page.summary.recentBlockedSteals, 2);
-    assert.equal(page.summary.recentStolenFruit, 0);
+    assert.equal(page.summary.recentBlockedSteals, 1);
+    assert.equal(page.summary.recentStolenFruit, 1);
     const visit = await visitFarm(visitor.farmId, host.username);
     assert.equal(visit!.plots[0]!.remainingFruit, 2);
     assert.equal(visit!.pet, pet ?? 'dog');
     // Invalid attempts neither consume a turn nor generate a block event.
-    const stale = await stealFruit(other.farmId, other.tokenHash, host.username, { ...action, plantedAt: action.plantedAt + 1 });
+    const stale = await stealFruit(other.farmId, other.tokenHash, host.username,
+      { ...action, plantedAt: action.plantedAt + 1 }, () => assert.fail('Stale attempt must not roll'));
     assert.ok('status' in stale && stale.status === 409);
     page = await getActivityPage(host.farmId);
-    assert.equal(page.summary.recentBlockedSteals, 2);
+    assert.equal(page.summary.recentBlockedSteals, 1);
     await markActivitiesRead(host.farmId, page.events[0].id);
     assert.equal((await getActivityPage(host.farmId)).summary.recentBlockedSteals, 0);
   }
