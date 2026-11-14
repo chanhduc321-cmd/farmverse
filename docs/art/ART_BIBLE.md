@@ -1,11 +1,10 @@
 # FarmVerse Art Bible
 
-Use this guide whenever Codex or Antigravity generates, edits, or integrates FarmVerse art. The [Phaser MVP guide](../FARMVERSE_PHASER_MVP_GUIDE.md) defines the visual direction. This document records the locked master reference and asset standards.
+This document records the master visual style reference and asset standards for FarmVerse. The [Phaser MVP guide](../FARMVERSE_PHASER_MVP_GUIDE.md) defines the general technical framework.
 
 ## Approved Style Reference
 
-- **Status:** **APPROVED** by Project Owner (2026-11-09).
-- The project owner reconfirmed this reference during Codex review on 2026-11-09. Its brighter palette supersedes the earlier muted-palette direction in the Phaser guide.
+- **Status:** **APPROVED**.
 - **Master Reference File:** [`docs/art/approved_style.png`](approved_style.png) *(Source: `art/source/style_candidate_farmery.jpg`)*
 
 ![FarmVerse Master Style Reference](approved_style.png)

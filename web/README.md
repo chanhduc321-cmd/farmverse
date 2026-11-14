@@ -1,50 +1,60 @@
-# Nông Trại Mộng Mơ · Web
+# FarmVerse Web Client
 
-**Tên tiếng Anh:** FarmVerse · **Tên tiếng Việt:** Nông Trại Mộng Mơ
+The FarmVerse web frontend is built with **Phaser 3**, **Vite**, and **TypeScript**. It communicates with the backend API to render real-time farm states, animations, player interactions, and Web3 trading components.
 
-Bản web dùng Phaser, Vite và Hono. Xem [luật và cách nghiệm thu gameplay](../docs/FARMVERSE_GAMEPLAY.md).
+---
 
-Chạy hai terminal từ thư mục gốc.
+## 1. Quickstart
 
-**Backend**
+Run both services in separate terminal windows from the repository root:
 
-```powershell
+**Terminal 1 — Backend:**
+```bash
 pnpm --dir backend install --frozen-lockfile
 pnpm --dir backend migrate
 pnpm --dir backend start
 ```
 
-**Web**
-
-```powershell
+**Terminal 2 — Web Client:**
+```bash
 pnpm --dir web install --frozen-lockfile
 pnpm --dir web dev
 ```
 
-Mở http://127.0.0.1:5174/. Mua hạt dâu trong Tiệm hạt, chọn gieo trong Túi hạt và bấm ô trống. Bấm cây chín để hái, bấm gốc để dọn và bán dâu trong Kho. Chọn Tưới nước hoặc Bón phân để rút ngắn thời gian chín. Mua phân trong Tiệm hạt với giá 5 Gold mỗi bịch. Bấm lại nút đang chọn hoặc nhấn Escape để về thao tác theo ô đất. Backend nạp cấu hình PostgreSQL từ backend/.env. [Cách kết nối PostgreSQL](../backend/README.md)
+Open `http://127.0.0.1:5174/` in your browser. The Vite dev server automatically proxies `/api` requests to the backend at port 8092.
 
-Web gọi API để mở Guest hoặc tài khoản. Khi API lỗi, màn tải báo lỗi và có nút Thử lại. Nút Bạn bè yêu cầu đăng nhập. Tab Cư dân gồm dữ liệu seed và người chơi thật, loại các bạn bè đã xác nhận. [Seed và kế hoạch migration](../docs/POSTGRES_MIGRATION_PLAN.md)
+---
 
-## Google Analytics 4
+## 2. Gameplay Controls & Tools
 
-Web gửi sự kiện tới GA4 khi biến `VITE_GA_MEASUREMENT_ID` (dạng `G-XXXXXXXXXX`) có mặt lúc build. Không đặt biến thì không tải script và không gửi gì, nên chạy local mặc định không ghi dữ liệu. Mẫu biến nằm trong [.env.example](.env.example).
+- **Planting:** Open the Seed Shop to buy seeds, select a crop from your Bag, and tap an empty plot to plant.
+- **Care Tools:** Select **Watering Can** or **Fertilizer** from the lower toolbar and tap growing crops to reduce maturation time. Press `Escape` or tap the active tool icon again to cancel tool selection.
+- **Harvest & Clear:** Tap a ripe crop to harvest produce into your Warehouse, then select the **Shovel** to clear the plot for the next cycle.
+- **Community:** Open the Friends icon on the top HUD to view friends and neighbors, visit other farms, and harvest produce.
 
-- **Production:** đặt `VITE_GA_MEASUREMENT_ID` trong Vercel (chỉ môi trường Production) rồi deploy lại, vì Vite gắn giá trị lúc build.
-- **Thử local:** chép `.env.example` thành `.env.local`, điền ID thử nghiệm và mở `http://127.0.0.1:5174/?ga_debug=1` để xem sự kiện trong GA4 DebugView.
-- **Kiểm thử:** `pnpm --dir web test`.
+---
 
-| Sự kiện | Khi nào | Tham số |
+## 3. Google Analytics 4 (GA4) Tracking
+
+The client tracks user journeys and engagement via GA4 when `VITE_GA_MEASUREMENT_ID` (format `G-XXXXXXXXXX`) is provided at build time. If omitted, no tracking scripts are injected.
+
+- **Local Debugging:** Copy `web/.env.example` to `web/.env.local`, set your test measurement ID, and open `http://127.0.0.1:5174/?ga_debug=1` to inspect live events in GA4 DebugView.
+- **Testing:** Run frontend test suites via `pnpm --dir web test`.
+
+### Tracked Gameplay Events:
+| Event Name | Trigger | Parameters |
 |---|---|---|
-| `page_view` | Mở trang (tự động) | |
-| `game_boot` / `game_boot_failed` | Nông trại hiện xong / màn tải báo lỗi | `load_ms` |
-| `tutorial_complete` / `tutorial_skip` | Xong hướng dẫn / bấm Bỏ qua | |
-| `sign_up`, `login`, `logout` | Tài khoản thành công | `method` |
-| `farm_buy`, `farm_sell` | Mua hạt, bán nông sản | `crop_id`, `quantity` |
-| `farm_buy_fertilizer` | Mua phân | `quantity` |
-| `farm_plant` | Gieo hạt | `crop_id` |
-| `farm_harvest`, `farm_clear`, `farm_water`, `farm_fertilize` | Thao tác trên ô đất | |
-| `farm_theme`, `farm_check_in` | Đổi giao diện, điểm danh | |
-| `farm_select_pet`, `farm_claim_mission` | Chọn pet, nhận thưởng nhiệm vụ | `pet`, `mission` |
-| `farm_visit`, `farm_steal` | Thăm ruộng, lấy quả | `blocked` |
+| `page_view` | Initial page load (automatic) | — |
+| `game_boot` / `game_boot_failed` | Phaser game canvas ready / Loading error | `load_ms` |
+| `tutorial_complete` / `tutorial_skip` | Onboarding tour finished / skipped | — |
+| `sign_up`, `login`, `logout` | Authentication lifecycle | `method` |
+| `farm_buy`, `farm_sell` | Seed shop purchase, warehouse sales | `crop_id`, `quantity` |
+| `farm_buy_fertilizer` | Fertilizer purchase | `quantity` |
+| `farm_plant` | Crop planting action | `crop_id` |
+| `farm_harvest`, `farm_clear` | Harvest ripe crop, shovel plot | — |
+| `farm_water`, `farm_fertilize` | Care tool applied | — |
+| `farm_check_in` | Daily attendance streak recorded | — |
+| `farm_select_pet`, `farm_claim_mission` | Pet companion chosen, mission reward claimed | `pet`, `mission` |
+| `farm_visit`, `farm_steal` | Neighbor farm visited, crop steal action | `blocked` |
 
-Chỉ gửi sự kiện sau khi API báo thành công. Không gửi tên đăng nhập hay dữ liệu cá nhân; thêm sự kiện mới qua `trackEvent` trong [src/analytics.ts](src/analytics.ts). Hiện chưa có hộp xin đồng ý cookie.
+*Events dispatch strictly after backend API confirmation. Personally identifiable information (PII) is never tracked.*
