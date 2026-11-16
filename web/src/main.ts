@@ -10,8 +10,9 @@ import { initAnalytics, trackEvent } from './analytics.ts';
 import { attributionParams, captureAttribution } from './attribution.ts';
 import { farmActionEvent } from './analytics-events.ts';
 import { COMMUNITY_API, parseFarmLink } from '../../shared/community.mts';
-import type { FarmVisit, PlayerPage, StealResponse } from '../../shared/community.mts';
+import type { FarmVisit, PlayerPage, StealResponse, WeeklyLeaderboard } from '../../shared/community.mts';
 import { createCommunity, createPlayerAvatar, playerPath } from './community.ts';
+import { createLeaderboard } from './leaderboard.ts';
 import { createMissions } from './missions.ts';
 import { createSavePrompt } from './save-prompt.ts';
 import { farmShareUrl, sendShare, shareMessage, shareOutcomeMessage, SHARE_TITLE } from './share.ts';
@@ -2652,6 +2653,17 @@ farmShare.innerHTML = `
   </span>`;
 farmShare.onclick = () => void shareFarmWithFeedback({ surface: 'farm' });
 document.querySelector<HTMLElement>('.farm-hud-actions')?.append(farmShare);
+
+const hudActions = document.querySelector<HTMLElement>('.farm-hud-actions');
+if (hudActions) {
+  createLeaderboard({
+    actions: hudActions,
+    load: () => request<WeeklyLeaderboard>(COMMUNITY_API.leaderboard),
+    currentPlayer: () => session?.account?.username,
+    share: async rank => (await shareFarm({ surface: 'leaderboard', rank }))?.text,
+    onOpen: () => trackEvent('leaderboard_open'),
+  });
+}
 
 const savePrompt = createSavePrompt({
   container: field,

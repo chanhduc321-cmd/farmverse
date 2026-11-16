@@ -7,6 +7,8 @@ export const COMMUNITY_API = {
   visit: '/community/farms/:username',
   /** Read-only view for a shared farm link. Needs no account and records no visit. */
   publicVisit: '/community/public/farms/:username',
+  /** This week's rankings. Public, so it can be screenshotted and shared by anyone. */
+  leaderboard: '/community/leaderboard',
   steal: '/community/farms/:username/steal',
 } as const;
 
@@ -65,4 +67,47 @@ export function parseFarmLink(pathname: string, search: string): string | null |
     return null;
   }
   return FARM_USERNAME_PATTERN.test(username) ? username : null;
+}
+
+export const LEADERBOARD_SIZE = 5;
+const VIETNAM_OFFSET_MS = 7 * 3_600_000;
+const DAY_MS = 86_400_000;
+
+/** Start of the leaderboard week containing `now`: Monday 00:00 in Vietnam, as a UTC timestamp. */
+export function leaderboardWeekStart(now: number): number {
+  const day = Math.floor((now + VIETNAM_OFFSET_MS) / DAY_MS);
+  // 1 January 1970 was a Thursday, so day 4 was the first Monday.
+  const monday = day - ((day + 3) % 7);
+  return monday * DAY_MS - VIETNAM_OFFSET_MS;
+}
+
+export interface LeaderboardThief {
+  username: string;
+  /** Different farms this player took fruit from; repeat raids on one farm count once. */
+  farms: number;
+  fruit: number;
+}
+
+export interface LeaderboardRobbedFarm {
+  username: string;
+  /** Different players who took fruit from this farm. */
+  thieves: number;
+  fruit: number;
+}
+
+export interface LeaderboardGuard {
+  username: string;
+  pet: PetSpecies;
+  /** Different players this farm's pet turned away. */
+  blockedVisitors: number;
+  blocks: number;
+}
+
+export interface WeeklyLeaderboard {
+  weekStart: number;
+  weekEnd: number;
+  generatedAt: number;
+  thieves: LeaderboardThief[];
+  robbed: LeaderboardRobbedFarm[];
+  guards: LeaderboardGuard[];
 }

@@ -2,7 +2,8 @@ import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { COMMUNITY_API, COMMUNITY_RESULT_LIMIT, COMMUNITY_SEARCH_MIN, FARM_USERNAME_PATTERN } from '../../shared/community.mts';
-import type { FarmVisit } from '../../shared/community.mts';
+import type { FarmVisit, WeeklyLeaderboard } from '../../shared/community.mts';
+import { readWeeklyLeaderboard } from './leaderboard-store.ts';
 import { confirmFriend, inviteFriend, listPlayers, stealFruit, viewFarm, visitFarm } from './community-store.ts';
 
 interface AccountSession { id: string; tokenHash: string }
@@ -12,6 +13,7 @@ const directorySessionLimit = 1024;
 // A shared link can be opened by many people at once; one read serves them all for a moment.
 const publicVisitTtlMs = 5_000;
 const publicVisitCapacity = 256;
+const leaderboardTtlMs = 60_000;
 
 export function communityRoutes(
   sessionFor: (context: Context) => Promise<AccountSession | undefined>,
@@ -66,6 +68,17 @@ export function communityRoutes(
     }
     const visit = await entry.visit;
     return visit ? context.json(visit) : context.json({ error: 'Không tìm thấy vườn này. Có thể đường link đã sai.' }, 404);
+  });
+
+  let leaderboard: { expiresAt: number; board: Promise<WeeklyLeaderboard> } | undefined;
+  routes.get(COMMUNITY_API.leaderboard, async (context) => {
+    const now = Date.now();
+    if (!leaderboard || leaderboard.expiresAt <= now) {
+      const board = readWeeklyLeaderboard(now);
+      leaderboard = { expiresAt: now + leaderboardTtlMs, board };
+      board.catch(() => { if (leaderboard?.board === board) leaderboard = undefined; });
+    }
+    return context.json(await leaderboard.board);
   });
 
   routes.use('/community/*', async (context, next) => {

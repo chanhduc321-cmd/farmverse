@@ -92,3 +92,17 @@ Values must be lowercase slugs of up to 40 characters (`a-z`, `0-9`, `_`, `.`, `
 Example: `https://nongtraimongmo.xyz/?utm_source=threads&utm_medium=social&utm_campaign=nostalgia_w1`. A dare on the founder's farm uses the farm link with the same parameters: `https://nongtraimongmo.xyz/farm/<username>?utm_source=threads&utm_medium=social&utm_campaign=dare_w1`.
 
 Register `utm_source`, `utm_medium`, `utm_campaign`, `referred_by_player`, `surface` and `outcome` as event-scoped custom dimensions in GA4 before the launch, or they will not appear in reports.
+
+## Weekly leaderboard
+
+`GET /community/leaderboard` returns this week's top five in three rankings. It needs no account and is cached for a minute. The week runs Monday 00:00 to Sunday 24:00 in Vietnam time (`leaderboardWeekStart` in `shared/community.mts`).
+
+| Ranking | Ordered by | Tie-break |
+|---|---|---|
+| Trùm trộm rau | different farms the player took fruit from | fruit taken, then username |
+| Vườn bị trộm nhiều nhất | different players who took fruit from the farm | fruit lost, then username |
+| Thú cưng giữ vườn giỏi nhất | different players the farm's pet turned away | number of blocks, then username |
+
+Counting different farms and players first means raiding one friend's farm over and over cannot lift someone up the board. The panel opens from the trophy button in the HUD, prints the week and the site address so a screenshot carries the link, highlights the signed-in player, and has its own share button (`surface` `leaderboard`).
+
+Usernames on the board are visible to anyone who opens the game, including people with no account.

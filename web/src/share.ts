@@ -2,7 +2,7 @@ import { farmLinkPath } from '../../shared/community.mts';
 import type { ActivityType } from '../../shared/activity.mts';
 
 /** Where a share was started. Sent to analytics as the `surface` of `share_click`. */
-export type ShareSurface = 'farm' | 'steal' | 'pet_block' | 'journal';
+export type ShareSurface = 'farm' | 'steal' | 'pet_block' | 'journal' | 'leaderboard';
 export type ShareOutcome = 'shared' | 'copied' | 'cancelled' | 'failed';
 
 export interface SharePayload {
@@ -13,6 +13,7 @@ export interface SharePayload {
 
 export type ShareContext =
   | { surface: 'farm' }
+  | { surface: 'leaderboard'; rank?: number }
   | { surface: 'steal'; host: string; cropName: string }
   | { surface: 'pet_block'; host: string }
   | { surface: 'journal'; event: ActivityType; visitor: string; cropName?: string; amount?: number };
@@ -38,6 +39,10 @@ export function shareMessage(context: ShareContext): string {
   switch (context.surface) {
     case 'farm':
       return 'Vườn mình ở Nông Trại Mộng Mơ đang chín rau, có thú giữ đàng hoàng. Vào trộm thử xem!';
+    case 'leaderboard':
+      return context.rank
+        ? `Mình đang đứng hạng ${context.rank} bảng trộm rau tuần này ở Nông Trại Mộng Mơ. Vào vườn mình thử sức xem!`
+        : 'Bảng xếp hạng trộm rau tuần này ở Nông Trại Mộng Mơ đang nóng. Vào vườn mình thử sức xem!';
     case 'steal':
       return `Mình vừa trộm được 1 quả ${context.cropName.toLowerCase()} ở vườn của ${context.host}. Vườn mình đây, ai dám vào trộm lại không?`;
     case 'pet_block':
