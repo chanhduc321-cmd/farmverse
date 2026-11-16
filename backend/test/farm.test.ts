@@ -241,3 +241,54 @@ test('batch uses server planting time and enforces the same harvest and care rul
   assert.equal(farm.plots[0]?.harvested, true);
   assert.equal(farm.revision, 3);
 });
+
+test('fertilizer purchase cannot leave a new player unable to buy a first seed', () => {
+  const cheapestSeed = Math.min(...crops.filter(crop => crop.level <= 1).map(crop => crop.buyPrice));
+  const farm = createFarm();
+  assert.equal(farm.gold, 200);
+
+  // 39 bags leave 5 Gold: less than any seed, with nothing planted, stored or in the bag.
+  assert.throws(
+    () => applyAction(farm, { type: 'buyFertilizer', quantity: 39, expectedRevision: 0 }, 0),
+    new RegExp(`Giữ lại ít nhất ${cheapestSeed} Gold`),
+  );
+  assert.equal(farm.gold, 200);
+  assert.equal(farm.fertilizer, 0);
+  assert.equal(farm.revision, 0);
+
+  // 38 bags leave exactly the price of the cheapest seed.
+  applyAction(farm, { type: 'buyFertilizer', quantity: 38, expectedRevision: 0 }, 0);
+  assert.equal(farm.gold, cheapestSeed);
+  assert.throws(() => applyAction(farm, { type: 'buyFertilizer', quantity: 1, expectedRevision: 1 }, 0), /Giữ lại ít nhất/);
+
+  // The same guard holds inside a batch, and the batch leaves the farm untouched.
+  const batched = createFarm();
+  assert.throws(() => applyBatch(batched, {
+    expectedRevision: 0,
+    actions: [{ type: 'buyFertilizer', quantity: 20 }, { type: 'buyFertilizer', quantity: 20 }],
+  }, 0), /Giữ lại ít nhất/);
+  assert.equal(batched.gold, 200);
+});
+
+test('fertilizer purchase is unrestricted once the player has another way to keep farming', () => {
+  const spendAll = (prepare: (farm: ReturnType<typeof createFarm>) => void) => {
+    const farm = createFarm();
+    prepare(farm);
+    const quantity = Math.floor(farm.gold / 5);
+    applyAction(farm, { type: 'buyFertilizer', quantity, expectedRevision: farm.revision }, 1_000);
+    assert.ok(farm.gold < 5);
+  };
+  // Seeds in the bag.
+  spendAll((farm) => { farm.seeds[1] = 1; });
+  // A crop still in the ground, growing or ripe.
+  spendAll((farm) => { farm.plots[0] = { cropId: 1, plantedAt: 0, harvested: false }; });
+  // Produce waiting to be sold.
+  spendAll((farm) => { farm.produce[1] = 3; });
+
+  // A harvested stump and an empty produce entry are not a way forward.
+  const stuck = createFarm();
+  stuck.plots[0] = { cropId: 1, plantedAt: 0, harvested: true };
+  stuck.produce[1] = 0;
+  stuck.seeds[1] = 0;
+  assert.throws(() => applyAction(stuck, { type: 'buyFertilizer', quantity: 40, expectedRevision: 0 }, 1_000), /Giữ lại ít nhất/);
+});
