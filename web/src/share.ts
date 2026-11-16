@@ -55,6 +55,9 @@ export function shareMessage(context: ShareContext): string {
       if (context.event === 'pet_block') {
         return `Thú cưng nhà mình vừa chặn ${context.visitor} vào vườn trộm rau. Ai muốn thử vận may không?`;
       }
+      if (context.event === 'invite') {
+        return `${context.visitor} vừa vào Nông Trại Mộng Mơ nhờ link vườn mình. Ai chơi cùng nữa không?`;
+      }
       return `${context.visitor} vừa ghé vườn mình ở Nông Trại Mộng Mơ. Vào chơi cùng nhé!`;
   }
 }

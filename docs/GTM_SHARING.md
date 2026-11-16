@@ -106,3 +106,15 @@ Register `utm_source`, `utm_medium`, `utm_campaign`, `referred_by_player`, `surf
 Counting different farms and players first means raiding one friend's farm over and over cannot lift someone up the board. The panel opens from the trophy button in the HUD, prints the week and the site address so a screenshot carries the link, highlights the signed-in player, and has its own share button (`surface` `leaderboard`).
 
 Usernames on the board are visible to anyone who opens the game, including people with no account.
+
+## Invite reward
+
+Approved as amendment FV-INVITE-01 in `docs/FARMVERSE_MVP_CONTRACT.md`. Sizes live in `shared/invite.mts`.
+
+- The client sends the stored referring username with account creation. The server looks it up, ignores unknown names and self-referrals, and stores it on the new account (`farm_accounts.referred_by`).
+- The reward is settled by the server (`backend/src/invite-store.ts`) once the invited player has both an account and a completed harvest, in either order: after the harvest for someone who signed up first, or at sign-up for a guest who had already harvested.
+- The invited player gets 2 strawberry seeds. The inviter gets 10 Gold for up to 5 invited players per Vietnam day; beyond that the invited player still gets seeds and the inviter gets nothing for that one.
+- Both farms change in one transaction, and the account is marked settled in the same transaction, so retries and concurrent requests pay nothing more.
+- The inviter sees an entry in their journal: “… đã vào chơi nhờ lời mời của bạn. Bạn nhận 10 Gold.”
+
+Sign-in through the gated social login does not carry a referrer, so those accounts earn no invite reward.

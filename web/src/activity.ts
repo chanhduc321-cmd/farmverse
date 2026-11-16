@@ -65,6 +65,12 @@ function renderActivity(event: ActivityEvent, share: (event: ActivityEvent, butt
     const actionText = document.createElement('span');
     actionText.textContent = `bị Pet chặn khi định hái ${event.cropName ?? 'nông sản'} tại Ô ${event.plot ?? '?'}. Quả vẫn còn nguyên.`;
     title.append(actionText);
+  } else if (event.type === 'invite') {
+    const actionText = document.createElement('span');
+    actionText.textContent = event.amount
+      ? `đã vào chơi nhờ lời mời của bạn. Bạn nhận ${event.amount} Gold.`
+      : 'đã vào chơi nhờ lời mời của bạn.';
+    title.append(actionText);
   } else {
     const actionText = document.createElement('span');
     actionText.textContent = 'đã ghé thăm nông trại';

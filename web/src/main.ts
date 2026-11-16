@@ -1631,11 +1631,12 @@ function attachControls(scene: FarmScene): void {
     setAccountBusy(true, 'Đang tạo tài khoản và lưu nông trại...');
     try {
       await batchQueue.flushAndWait();
-      const res = await request<FarmSessionResponse>(ACCOUNT_API.register.path, { username, password });
+      // The server ignores a referrer it does not know and decides any invite reward itself.
+      const res = await request<FarmSessionResponse>(ACCOUNT_API.register.path, { username, password, referrer: attribution?.referrerFarm });
       setSnapshot(res);
       trackEvent('sign_up', { method: 'password', ...attributionParams(attribution) });
       formRegister.reset();
-      setFeedback(`Tài khoản ${res.account?.username ?? username} đã được tạo và lưu trữ nông trại!`, 'success');
+      setFeedback(res.message ?? `Tài khoản ${res.account?.username ?? username} đã được tạo và lưu trữ nông trại!`, 'success', res.message ? 6000 : undefined);
       accountDialog.close();
       await resumeLinkedVisit();
     } catch (error) {

@@ -21,6 +21,7 @@ describe('share messages', () => {
     shareMessage({ surface: 'journal', event: 'steal', visitor: 'chi_3', cropName: 'Ngô', amount: 1 }),
     shareMessage({ surface: 'journal', event: 'pet_block', visitor: 'chi_3' }),
     shareMessage({ surface: 'journal', event: 'visit', visitor: 'chi_3' }),
+    shareMessage({ surface: 'journal', event: 'invite', visitor: 'chi_3' }),
     shareMessage({ surface: 'leaderboard', rank: 2 }),
     shareMessage({ surface: 'leaderboard' }),
   ];
