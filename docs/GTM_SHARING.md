@@ -26,3 +26,18 @@ Facebook and Threads cache previews per URL. After a deploy that changes the ima
 - A link that names an unknown or malformed player leaves the visitor on their own farm with a message, and the address is reset to `/`.
 
 On Vercel the route is added in `tools/build-vercel.mjs` (`/farm/<username>` → `index.html`). The Vite dev and preview servers already fall back to `index.html`.
+
+## Share buttons
+
+Every share links to the sharer's own farm (`farmShareUrl` in `web/src/share.ts`) so the people who open it can visit and take fruit from them.
+
+| Surface | Where | `surface` value |
+|---|---|---|
+| Chia sẻ vườn | HUD action row on the home farm | `farm` |
+| Khoe ngay | Visit bar, after taking a fruit | `steal` |
+| Kể bạn bè | Visit bar, after a guard pet blocks the attempt | `pet_block` |
+| Chia sẻ | Beside each entry in the activity journal | `journal` |
+
+The device share sheet is used when the browser has one. Otherwise the message and link are copied and the player is told to paste them. Dismissing the share sheet does nothing. A player with no account is sent to account creation, since a farm link needs a username.
+
+Each attempt sends the GA4 event `share_click` with `surface` and `outcome` (`shared`, `copied`, `cancelled` or `failed`).

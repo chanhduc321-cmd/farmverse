@@ -12,11 +12,14 @@ import { COMMUNITY_API, parseFarmLink } from '../../shared/community.mts';
 import type { FarmVisit, PlayerPage, StealResponse } from '../../shared/community.mts';
 import { createCommunity, createPlayerAvatar, playerPath } from './community.ts';
 import { createMissions } from './missions.ts';
+import { farmShareUrl, sendShare, shareMessage, shareOutcomeMessage, SHARE_TITLE } from './share.ts';
+import type { ShareContext } from './share.ts';
 import { farmLoading } from './loading.ts';
 import { createFarmPet, loadPetSprites } from './pets.ts';
 import { mountTransactionHistory } from './transactions/history.ts';
 import { mountFarmTradeVisit } from './trade-demo/farm-visit.ts';
 import './style.css';
+import './share.css';
 
 // Initialize Vercel Web Analytics
 inject();
@@ -191,12 +194,14 @@ visitHud.innerHTML = `
   <img class="visit-avatar" src="/face/face_1.png" alt="">
   <h2></h2>
   <button type="button" data-visit-refresh aria-label="Làm mới ruộng" title="Làm mới ruộng">↻</button>
+  <button type="button" data-visit-share hidden></button>
   <button type="button" data-visit-exit aria-label="Về ruộng mình" title="Về ruộng mình"><img src="/icon/topbutton%20(8).png" alt=""><span>Về nhà</span></button>
 `;
 field.append(visitHud);
 const visitTitle = visitHud.querySelector('h2')!;
 const visitRefresh = visitHud.querySelector<HTMLButtonElement>('[data-visit-refresh]')!;
 const visitExit = visitHud.querySelector<HTMLButtonElement>('[data-visit-exit]')!;
+const visitShare = visitHud.querySelector<HTMLButtonElement>('[data-visit-share]')!;
 visitExit.hidden = true;
 field.append(visitExit);
 
@@ -482,6 +487,7 @@ function updateCommunityAccess(): void {
 function setVisit(next: FarmVisit | undefined): void {
   const wasVisiting = Boolean(visit);
   hidePlotTooltip();
+  if (next?.username !== visit?.username) setStealShare(undefined);
   visit = next;
   visitIsPublic = Boolean(next) && !session?.account;
   if (!next) clearFarmLink();
@@ -529,6 +535,41 @@ async function runVisitAction(action: () => Promise<void>): Promise<void> {
     visitExit.disabled = false;
   }
 }
+
+type ShareNotice = ReturnType<typeof shareOutcomeMessage>;
+
+/**
+ * Shares a link to the player's own farm. Someone with no account has no farm link yet,
+ * so they are sent to account creation instead.
+ */
+async function shareFarm(context: ShareContext): Promise<ShareNotice> {
+  const username = session?.account?.username;
+  if (!username) {
+    activeAccountTab = 'register';
+    openAccountDialog();
+    return { text: 'Tạo tài khoản để có link vườn riêng và rủ bạn bè vào trộm.', type: 'warning' };
+  }
+  const url = farmShareUrl(window.location.origin, username, context.surface);
+  const outcome = await sendShare({ title: SHARE_TITLE, text: shareMessage(context), url });
+  trackEvent('share_click', { surface: context.surface, outcome });
+  return shareOutcomeMessage(outcome, url);
+}
+
+async function shareFarmWithFeedback(context: ShareContext): Promise<void> {
+  const notice = await shareFarm(context);
+  if (notice) setFeedback(notice.text, notice.type, 6000);
+}
+
+// The result of the latest steal attempt on the farm being visited, offered for sharing.
+let stealShare: ShareContext | undefined;
+function setStealShare(next: ShareContext | undefined): void {
+  stealShare = next;
+  visitShare.hidden = !next;
+  if (!next) return;
+  visitShare.textContent = next.surface === 'steal' ? 'Khoe ngay' : 'Kể bạn bè';
+  visitShare.title = next.surface === 'steal' ? 'Khoe quả vừa lấy được và rủ bạn vào vườn mình' : 'Kể chuyện bị Pet đuổi và rủ bạn vào vườn mình';
+}
+visitShare.onclick = () => { if (stealShare) void shareFarmWithFeedback(stealShare); };
 
 async function readVisit(username: string): Promise<FarmVisit> {
   // Without an account the farm is shown read-only and no visit is recorded.
@@ -1740,8 +1781,11 @@ function attachControls(scene: FarmScene): void {
             trackEvent('farm_steal', { blocked: Boolean(result.blocked) });
             if (result.blocked) {
               setFeedback('Pet giữ nhà đã chặn! Bạn chưa lấy được quả.', 'warning');
+              setStealShare({ surface: 'pet_block', host: currentVisit.username });
             } else {
-              setFeedback(`Đã lấy 1 quả ${crops[crop.cropId - 1].name}. Xem trong Kho của bạn.`, 'success');
+              const cropName = crops[crop.cropId - 1].name;
+              setFeedback(`Đã lấy 1 quả ${cropName}. Xem trong Kho của bạn.`, 'success');
+              setStealShare({ surface: 'steal', host: currentVisit.username, cropName });
             }
             scene.playStealFeedback(plot, result.blocked, result.visit.pet ?? 'dog');
           } catch (error) {
@@ -2583,6 +2627,22 @@ const community = createCommunity({
   notify: (msg, type) => setFeedback(msg, type),
 });
 
+const farmShare = document.createElement('button');
+farmShare.type = 'button';
+farmShare.id = 'farm-share';
+farmShare.className = 'hud-action-btn';
+farmShare.setAttribute('aria-label', 'Chia sẻ vườn');
+farmShare.title = 'Chia sẻ vườn để rủ bạn bè vào trộm';
+farmShare.innerHTML = `
+  <span class="hud-action-icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+      <path d="M8.6 10.6 15.4 6.4M8.6 13.4l6.8 4.2"/>
+    </svg>
+  </span>`;
+farmShare.onclick = () => void shareFarmWithFeedback({ surface: 'farm' });
+document.querySelector<HTMLElement>('.farm-hud-actions')?.append(farmShare);
+
 const transactionHistoryContainer = document.createElement('div');
 transactionHistoryContainer.hidden = true;
 viewProfile.insertBefore(transactionHistoryContainer, btnAccountLogout);
@@ -2616,6 +2676,12 @@ const activity = createActivity({
     showGameToast('Đăng nhập để xem nhật ký hoạt động.', 'warning');
     activeAccountTab = 'login';
     openAccountDialog();
+  },
+  async share(event) {
+    const notice = await shareFarm({
+      surface: 'journal', event: event.type, visitor: event.visitorName, cropName: event.cropName, amount: event.amount,
+    });
+    return notice?.text;
   },
   notify(summary) {
     const notices: string[] = [];
