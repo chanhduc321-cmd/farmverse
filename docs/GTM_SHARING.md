@@ -68,3 +68,27 @@ Headless Chrome cannot stand in for the real in-app browsers. Run this on the de
 10. In a fresh guest session (log out first): plant, harvest, and confirm the “Giữ vườn này lại nhé!” card appears once the tour and dialogs are closed, both buttons are easy to hit, and “Để sau” does not bring it back after a reload.
 11. Close the in-app browser as a guest, reopen the home link from the app, and confirm the guest farm is unchanged. Then open the same link in Safari or Chrome and note that it starts a new farm; this is expected and is why step 10 exists.
 12. Rotate to landscape and back on the home farm and on a visited farm. Nothing is cut off and no horizontal scroll appears.
+
+## Attribution
+
+On first load the client reads `utm_source`, `utm_medium`, `utm_campaign` and the farm named by a shared link (`web/src/attribution.ts`). The first visit that carries any of them is stored on the device and reused afterwards, so a player who arrives from Threads and signs up two days later is still counted for Threads.
+
+`game_boot` and `sign_up` carry `utm_source` (`(direct)` when there is none), `utm_medium`, `utm_campaign` and `referred_by_player`. The referring username is kept on the device and is never sent to analytics; `referred_by_player` only says that a player's link brought them.
+
+Values must be lowercase slugs of up to 40 characters (`a-z`, `0-9`, `_`, `.`, `-`). Anything else is dropped.
+
+### UTM convention
+
+| Where the link is posted | `utm_source` | `utm_medium` | `utm_campaign` |
+|---|---|---|---|
+| Threads post, reply or bio | `threads` | `social` | post type and week, e.g. `nostalgia_w1`, `dare_w2`, `launch` |
+| Facebook Page post or Reel | `facebook_page` | `social` | e.g. `reel_w1`, `leaderboard_w2`, `raid_night` |
+| Own Facebook group | `facebook_group` | `community` | e.g. `daily_links`, `pinned` |
+| Someone else's group | `facebook_group` | `seeding` | a short name for the group, e.g. `hoai_niem_8x` |
+| Creator posts | `creator` | `social` | the creator's handle, e.g. `tenkoc` |
+| Paid boost | `facebook_ads` | `paid` | the ad name, e.g. `reel_pet_w3` |
+| Player share buttons (set automatically) | `share` | `player` | `farm`, `steal`, `pet_block` or `journal` |
+
+Example: `https://nongtraimongmo.xyz/?utm_source=threads&utm_medium=social&utm_campaign=nostalgia_w1`. A dare on the founder's farm uses the farm link with the same parameters: `https://nongtraimongmo.xyz/farm/<username>?utm_source=threads&utm_medium=social&utm_campaign=dare_w1`.
+
+Register `utm_source`, `utm_medium`, `utm_campaign`, `referred_by_player`, `surface` and `outcome` as event-scoped custom dimensions in GA4 before the launch, or they will not appear in reports.

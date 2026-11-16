@@ -7,6 +7,7 @@ import { BatchQueueManager, FarmRateLimitError } from './batch-queue.ts';
 import { createActivity } from './activity.ts';
 import { beginNearAuth, consumeNearAuthResult } from './auth/near.ts';
 import { initAnalytics, trackEvent } from './analytics.ts';
+import { attributionParams, captureAttribution } from './attribution.ts';
 import { farmActionEvent } from './analytics-events.ts';
 import { COMMUNITY_API, parseFarmLink } from '../../shared/community.mts';
 import type { FarmVisit, PlayerPage, StealResponse } from '../../shared/community.mts';
@@ -347,6 +348,8 @@ let visitPending = false;
 let visitIsPublic = false;
 // `null` marks a farm link that names no valid player.
 let pendingFarmLink = parseFarmLink(window.location.pathname, window.location.search);
+// Read before the farm link is cleared from the address bar.
+const attribution = captureAttribution(window.location.pathname, window.location.search, window.localStorage);
 let crops: Crop[] = [];
 const plotButtons: HTMLButtonElement[] = [];
 
@@ -1629,7 +1632,7 @@ function attachControls(scene: FarmScene): void {
       await batchQueue.flushAndWait();
       const res = await request<FarmSessionResponse>(ACCOUNT_API.register.path, { username, password });
       setSnapshot(res);
-      trackEvent('sign_up', { method: 'password' });
+      trackEvent('sign_up', { method: 'password', ...attributionParams(attribution) });
       formRegister.reset();
       setFeedback(`Tài khoản ${res.account?.username ?? username} đã được tạo và lưu trữ nông trại!`, 'success');
       accountDialog.close();
@@ -1990,7 +1993,7 @@ class FarmScene extends Phaser.Scene {
         farmLoading.finish();
         if (farmLoading.failed) return;
         farmTradeVisit?.farmReady();
-        trackEvent('game_boot', { load_ms: Math.round(performance.now()) });
+        trackEvent('game_boot', { load_ms: Math.round(performance.now()), ...attributionParams(attribution) });
         void openFarmLink();
         activity.start();
       });
