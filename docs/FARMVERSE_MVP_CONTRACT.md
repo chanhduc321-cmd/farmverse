@@ -218,6 +218,7 @@ The judge-facing README must cover the gameplay concept, local setup, demo accou
 - **Locked now:** Product scope; two-scene game; C01; C02 Lite v0.3 with explicit GOLD SELL anti-arbitrage price floor; C03 Micro as an isolated NEAR proof-of-integration; acceptance criteria above.
 - **Next design phase:** UI/UX screens, Phaser scenes and input behaviors, art direction, API schemas, persistence, and task decomposition. These decisions must honor the locked behavior and may not silently add new mechanics.
 - **Approved stack amendment:** See [MVP-TECH-01](FARMVERSE_PHASER_MVP_GUIDE.md#mvp-tech-01--backend-runtime) for the backend runtime decision.
+- **Approved invite reward amendment:** See [FV-INVITE-01](FARMVERSE_INVITE_AMENDMENT.md) for the one-time reward when an invited player completes a first harvest.
 - **Change process:** Any change to a locked rule or AC requires a labeled amendment with reason, impact and approval before implementation.
 
 ### FV-NEAR-01 — USDC testnet trade demo
@@ -232,15 +233,3 @@ Approved by the project owner on 2026-11-13 through the two-offer scenario and t
 - Acceptance requires two distinct Google identities and wallets, both USDC transfers confirmed, one badge, correct NPC gross profit and consistent behavior after cancellation, concurrent requests and reloads.
 
 Implementation details, ownership and remaining estimates are maintained in the [USDC testnet build plan](FARMVERSE_NEAR_TRADE_PLAN.md). Current implementation status is tracked in [TASKS.md](../TASKS.md).
-
-
-### FV-INVITE-01 — Invite reward
-
-Approved by the project owner on 2026-11-16 for the Threads and Facebook launch. This amendment adds one new source of seeds and Gold.
-
-- **Reason:** the launch depends on players sending their farm link to friends. A small reward gives both sides a reason to finish the first harvest.
-- **Rule:** a player who first arrived through another player's farm link, creates an account and completes a first harvest receives 2 strawberry seeds. The player whose link they used receives 10 Gold.
-- **Limits:** one reward per invited account. An inviter is paid for at most 5 invited players per day (Vietnam time); further invited players that day still receive their seeds. Nothing is granted for a click or for creating an account alone. A player cannot invite themselves.
-- **Authority:** the server decides and applies the reward in one transaction. The client only names the referring player when the account is created.
-- **Impact:** at most 50 Gold a day enters an inviter's balance from this source, compared with 10 Gold from the daily mission. The invited player's reward is seeds, so it cannot be spent on fertilizer.
-- **Acceptance:** reward granted once when both conditions are met in either order; repeated and concurrent requests grant nothing more; the sixth invited player in a day pays the inviter nothing; unknown or self referrers are ignored.

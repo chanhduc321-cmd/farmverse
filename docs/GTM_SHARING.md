@@ -109,7 +109,7 @@ Usernames on the board are visible to anyone who opens the game, including peopl
 
 ## Invite reward
 
-Approved as amendment FV-INVITE-01 in `docs/FARMVERSE_MVP_CONTRACT.md`. Sizes live in `shared/invite.mts`.
+Approved as amendment [FV-INVITE-01](FARMVERSE_INVITE_AMENDMENT.md). Sizes live in `shared/invite.mts`.
 
 - The client sends the stored referring username with account creation. The server looks it up, ignores unknown names and self-referrals, and stores it on the new account (`farm_accounts.referred_by`).
 - The reward is settled by the server (`backend/src/invite-store.ts`) once the invited player has both an account and a completed harvest, in either order: after the harvest for someone who signed up first, or at sign-up for a guest who had already harvested.
