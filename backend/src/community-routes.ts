@@ -1,13 +1,17 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
-import { COMMUNITY_API, COMMUNITY_RESULT_LIMIT, COMMUNITY_SEARCH_MIN } from '../../shared/community.mts';
-import { confirmFriend, inviteFriend, listPlayers, stealFruit, visitFarm } from './community-store.ts';
+import { COMMUNITY_API, COMMUNITY_RESULT_LIMIT, COMMUNITY_SEARCH_MIN, FARM_USERNAME_PATTERN } from '../../shared/community.mts';
+import type { FarmVisit } from '../../shared/community.mts';
+import { confirmFriend, inviteFriend, listPlayers, stealFruit, viewFarm, visitFarm } from './community-store.ts';
 
 interface AccountSession { id: string; tokenHash: string }
 const directoryWindowMs = 30_000;
 const directoryRequestLimit = 18;
 const directorySessionLimit = 1024;
+// A shared link can be opened by many people at once; one read serves them all for a moment.
+const publicVisitTtlMs = 5_000;
+const publicVisitCapacity = 256;
 
 export function communityRoutes(
   sessionFor: (context: Context) => Promise<AccountSession | undefined>,
@@ -44,6 +48,24 @@ export function communityRoutes(
     const session = await sessionFor(context);
     if (!session) return context.json({ error: 'Hãy đăng nhập để thăm ruộng.' }, 401);
     return context.json(await listPlayers(session.id, list, search, offset));
+  });
+
+  const publicVisits = new Map<string, { expiresAt: number; visit: Promise<FarmVisit | undefined> }>();
+  routes.get(COMMUNITY_API.publicVisit, async (context) => {
+    const username = context.req.param('username').toLowerCase();
+    if (!FARM_USERNAME_PATTERN.test(username)) return context.json({ error: 'Tên người chơi không hợp lệ.' }, 400);
+    const now = Date.now();
+    let entry = publicVisits.get(username);
+    if (!entry || entry.expiresAt <= now) {
+      publicVisits.delete(username);
+      if (publicVisits.size >= publicVisitCapacity) publicVisits.delete(publicVisits.keys().next().value!);
+      const visit = viewFarm(username);
+      entry = { expiresAt: now + publicVisitTtlMs, visit };
+      publicVisits.set(username, entry);
+      visit.catch(() => { if (publicVisits.get(username)?.visit === visit) publicVisits.delete(username); });
+    }
+    const visit = await entry.visit;
+    return visit ? context.json(visit) : context.json({ error: 'Không tìm thấy vườn này. Có thể đường link đã sai.' }, 404);
   });
 
   routes.use('/community/*', async (context, next) => {

@@ -16,3 +16,13 @@ sips -s format jpeg -s formatOptions 82 /tmp/preview.png --out image/social/prev
 ```
 
 Facebook and Threads cache previews per URL. After a deploy that changes the image or tags, re-scrape the URL in the Meta Sharing Debugger before posting.
+
+## Farm links
+
+`/farm/<username>` opens the game on that player's farm. `/?farm=<username>` is an equivalent fallback for places that strip paths. Both are parsed by `parseFarmLink` in `shared/community.mts`.
+
+- A visitor with an account goes through the normal visit route, so the owner sees the visit in their journal.
+- A visitor with no account sees the farm read-only through `GET /community/public/farms/:username`. Nothing is recorded, and tapping a ripe plot opens account creation. After signing up or logging in, the farm reloads through the account route and fruit can be taken.
+- A link that names an unknown or malformed player leaves the visitor on their own farm with a message, and the address is reset to `/`.
+
+On Vercel the route is added in `tools/build-vercel.mjs` (`/farm/<username>` → `index.html`). The Vite dev and preview servers already fall back to `index.html`.

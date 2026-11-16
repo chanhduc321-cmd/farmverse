@@ -8,7 +8,7 @@ import { createActivity } from './activity.ts';
 import { beginNearAuth, consumeNearAuthResult } from './auth/near.ts';
 import { initAnalytics, trackEvent } from './analytics.ts';
 import { farmActionEvent } from './analytics-events.ts';
-import { COMMUNITY_API } from '../../shared/community.mts';
+import { COMMUNITY_API, parseFarmLink } from '../../shared/community.mts';
 import type { FarmVisit, PlayerPage, StealResponse } from '../../shared/community.mts';
 import { createCommunity, createPlayerAvatar, playerPath } from './community.ts';
 import { createMissions } from './missions.ts';
@@ -337,6 +337,10 @@ let receivedAt = 0;
 let visit: FarmVisit | undefined;
 let visitReceivedAt = 0;
 let visitPending = false;
+// A visit opened from a shared link by someone with no account. It is read-only.
+let visitIsPublic = false;
+// `null` marks a farm link that names no valid player.
+let pendingFarmLink = parseFarmLink(window.location.pathname, window.location.search);
 let crops: Crop[] = [];
 const plotButtons: HTMLButtonElement[] = [];
 
@@ -472,13 +476,15 @@ function updateCommunityAccess(): void {
     transactionHistory.reset();
   }
   activity.setBlocked(busy || accountSubmitting);
-  if (!available && visit) setVisit(undefined);
+  if (!available && visit && !visitIsPublic) setVisit(undefined);
 }
 
 function setVisit(next: FarmVisit | undefined): void {
   const wasVisiting = Boolean(visit);
   hidePlotTooltip();
   visit = next;
+  visitIsPublic = Boolean(next) && !session?.account;
+  if (!next) clearFarmLink();
   farmTradeVisit?.setHome(sessionSynchronized && session?.nearDemoAvailable && session.account && !next ? session.sessionKey : undefined);
   if (next) activeCareTool = undefined;
   visitReceivedAt = performance.now();
@@ -525,18 +531,80 @@ async function runVisitAction(action: () => Promise<void>): Promise<void> {
 }
 
 async function readVisit(username: string): Promise<FarmVisit> {
-  return request<FarmVisit>(playerPath(COMMUNITY_API.visit, username));
+  // Without an account the farm is shown read-only and no visit is recorded.
+  const path = session?.account ? COMMUNITY_API.visit : COMMUNITY_API.publicVisit;
+  return request<FarmVisit>(playerPath(path, username));
+}
+
+/** Drops the farm link from the address bar once it has been handled, keeping any campaign parameters out too. */
+function clearFarmLink(): void {
+  if (parseFarmLink(window.location.pathname, window.location.search) === undefined) return;
+  window.history.replaceState(null, '', '/');
+}
+
+/** Opens the farm named by a shared link once the scene is ready. */
+async function openFarmLink(): Promise<void> {
+  const username = pendingFarmLink;
+  if (username === undefined) return;
+  if (username === null || session?.account?.username === username) {
+    pendingFarmLink = undefined;
+    clearFarmLink();
+    updateToolHint();
+    setFeedback(username === null
+      ? 'Đường link vườn không hợp lệ. Bạn đang ở vườn của mình.'
+      : 'Đây là vườn của bạn.', username === null ? 'warning' : 'info');
+    return;
+  }
+  await runVisitAction(async () => {
+    try {
+      const farmVisit = await readVisit(username);
+      pendingFarmLink = undefined;
+      setVisit(farmVisit);
+      trackEvent('farm_visit', { source: 'link', signed_in: Boolean(session?.account) });
+      if (!session?.account) {
+        setFeedback(`Bạn đang ghé vườn của ${username}. Tạo tài khoản để lấy quả nhé!`, 'info');
+      }
+    } catch (error) {
+      pendingFarmLink = undefined;
+      clearFarmLink();
+      updateToolHint();
+      if (error instanceof Error && error.cause === 404) {
+        setFeedback(`Không tìm thấy vườn của ${username}. Có thể đường link đã sai.`, 'warning');
+        return;
+      }
+      throw error;
+    }
+  });
 }
 
 async function openFarmVisit(username: string): Promise<FarmVisit> {
   await batchQueue.flushAndWait();
   const farmVisit = await readVisit(username);
-  trackEvent('farm_visit');
+  trackEvent('farm_visit', { source: 'directory', signed_in: true });
   return farmVisit;
 }
 
 async function refreshVisit(username: string): Promise<void> {
   setVisit(await readVisit(username));
+}
+
+/** After signing in on a shared link, reload the farm through the account route so fruit can be taken. */
+async function resumeLinkedVisit(): Promise<void> {
+  const current = visit;
+  if (!current || !session?.account) return;
+  if (session.account.username === current.username) {
+    setVisit(undefined);
+    return;
+  }
+  await runVisitAction(async () => {
+    try {
+      await refreshVisit(current.username);
+      setFeedback(`Bấm vào ô có chữ “Lấy 1 quả” để lấy quả của ${current.username}.`, 'info');
+    } catch (error) {
+      setVisit(undefined);
+      throw error;
+    }
+  });
 }
 
 visitRefresh.onclick = () => {
@@ -709,6 +777,8 @@ function positionGuide(target?: HTMLElement): void {
 
 function updateGuidedTour(): void {
   if (!snapshot || !plotButtons.length) return;
+  // A newcomer arriving through a shared link gets the tour once they are back on their own farm.
+  if (!guideChecked && (visit || pendingFarmLink)) return;
   if (!guideChecked) {
     guideChecked = true;
     guideActive = snapshot.farm.revision === 0;
@@ -1515,6 +1585,7 @@ function attachControls(scene: FarmScene): void {
       formRegister.reset();
       setFeedback(`Tài khoản ${res.account?.username ?? username} đã được tạo và lưu trữ nông trại!`, 'success');
       accountDialog.close();
+      await resumeLinkedVisit();
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Tạo tài khoản thất bại.';
       const targetInput = msg.toLowerCase().includes('tên đăng nhập') ? usernameInput : passwordInput;
@@ -1550,6 +1621,7 @@ function attachControls(scene: FarmScene): void {
       formLogin.reset();
       setFeedback(`Chào mừng ${res.account?.username ?? username} trở lại nông trại!`, 'success');
       accountDialog.close();
+      await resumeLinkedVisit();
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Đăng nhập thất bại.';
       setAccountFeedback(msg, 'error', passwordInput);
@@ -1653,6 +1725,12 @@ function attachControls(scene: FarmScene): void {
       if (currentVisit) {
         const crop = currentVisit.plots[plot];
         if (!crop?.canSteal) return;
+        if (!session?.account) {
+          setFeedback('Tạo tài khoản để lấy quả ở vườn này.', 'info');
+          activeAccountTab = 'register';
+          openAccountDialog();
+          return;
+        }
         await runVisitAction(async () => {
           try {
             const action = { plot, plantedAt: crop.plantedAt };
@@ -1862,6 +1940,7 @@ class FarmScene extends Phaser.Scene {
         if (farmLoading.failed) return;
         farmTradeVisit?.farmReady();
         trackEvent('game_boot', { load_ms: Math.round(performance.now()) });
+        void openFarmLink();
         activity.start();
       });
     }).catch(error => {

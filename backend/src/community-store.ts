@@ -101,6 +101,16 @@ function farmVisit(username: string, farm: Farm, taken: readonly number[], now: 
   };
 }
 
+/** Read-only view of a farm for a shared link. Identifies no visitor, so it records nothing. */
+export async function viewFarm(username: string): Promise<FarmVisit | undefined> {
+  const { rows: [host] } = await queryFarmDatabase<{ state: Farm }>(`
+    SELECT state FROM farm_accounts AS account
+    JOIN farm_guest_progress AS farm ON farm.session_id = account.farm_id
+    WHERE account.username = $1
+  `, [username]);
+  return host ? farmVisit(username, host.state, [], Date.now()) : undefined;
+}
+
 export async function visitFarm(visitorId: string, username: string): Promise<FarmVisit | undefined> {
   const { rows: [host] } = await queryFarmDatabase<{ farm_id: string; state: Farm; taken: number[] }>(`
     SELECT account.farm_id, state, ARRAY(
