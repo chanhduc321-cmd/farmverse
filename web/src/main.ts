@@ -12,6 +12,7 @@ import { COMMUNITY_API, parseFarmLink } from '../../shared/community.mts';
 import type { FarmVisit, PlayerPage, StealResponse } from '../../shared/community.mts';
 import { createCommunity, createPlayerAvatar, playerPath } from './community.ts';
 import { createMissions } from './missions.ts';
+import { createSavePrompt } from './save-prompt.ts';
 import { farmShareUrl, sendShare, shareMessage, shareOutcomeMessage, SHARE_TITLE } from './share.ts';
 import type { ShareContext } from './share.ts';
 import { farmLoading } from './loading.ts';
@@ -61,7 +62,7 @@ const toPosition = ([column, row]: number[]) => [
 const positions = [[0, 1], [0, 0], [1, 0], [1, 1], [2, 0], [2, 1]].map(toPosition);
 const lockedPositions = [[0, 2], [1, 2], [2, 2]].map(toPosition);
 const themes = [
-  { file: 'web-wide-dock.png', fieldOffset: 0, bank: ['#a5b44b', '#778d2b'] },
+  { file: 'web-wide-dock.jpg', fieldOffset: 0, bank: ['#a5b44b', '#778d2b'] },
   { file: 'web-theme-2.jpg', fieldOffset: .1, bank: ['#a8bc49', '#7f982e'] },
   { file: 'web-theme-3.jpg', fieldOffset: .05, bank: ['#c0b44c', '#9d8d36'] },
   { file: 'web-theme-4.jpg', fieldOffset: .12, bank: ['#e7ae58', '#bd7c31'] },
@@ -482,6 +483,7 @@ function updateCommunityAccess(): void {
   }
   activity.setBlocked(busy || accountSubmitting);
   if (!available && visit && !visitIsPublic) setVisit(undefined);
+  refreshSavePrompt();
 }
 
 function setVisit(next: FarmVisit | undefined): void {
@@ -779,6 +781,7 @@ function finishGuidedTour(): void {
   guideShade.hidden = true;
   guidedPanel = undefined;
   document.querySelectorAll('.guide-pulse').forEach(target => target.classList.remove('guide-pulse'));
+  refreshSavePrompt();
   try { localStorage.setItem(guideStorageKey, '1'); } catch { /* Continue without browser storage. */ }
   hudAccountBtn.focus();
 }
@@ -1228,6 +1231,10 @@ const batchQueue = new BatchQueueManager({
 function trackFarmAction(action: FarmAction): void {
   const event = farmActionEvent(action);
   trackEvent(event.name, event.params);
+  if (action.type === 'harvest' && session && !session.account) {
+    savePrompt.noteHarvest();
+    refreshSavePrompt();
+  }
 }
 
 function showFarmSyncFeedback(message: string, type: 'success' | 'warning' | 'error'): void {
@@ -2642,6 +2649,21 @@ farmShare.innerHTML = `
   </span>`;
 farmShare.onclick = () => void shareFarmWithFeedback({ surface: 'farm' });
 document.querySelector<HTMLElement>('.farm-hud-actions')?.append(farmShare);
+
+const savePrompt = createSavePrompt({
+  container: field,
+  canShow: () => sessionSynchronized && !guideActive && !visit && !document.querySelector('dialog[open]'),
+  createAccount() {
+    activeAccountTab = 'register';
+    openAccountDialog();
+  },
+  track: action => trackEvent('save_prompt', { action }),
+});
+function refreshSavePrompt(): void {
+  savePrompt.refresh(Boolean(session?.accountsAvailable) && !session?.account);
+}
+// Dialogs and the tour take priority; look again whenever one of them closes.
+document.addEventListener('close', refreshSavePrompt, true);
 
 const transactionHistoryContainer = document.createElement('div');
 transactionHistoryContainer.hidden = true;
