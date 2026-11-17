@@ -23,6 +23,10 @@ import { reconcileTradeDemoCallback } from './trade-demo/service.ts';
 import type { TransactionRecord } from './blockchain/transaction-store.ts';
 import { crops } from './catalog.ts';
 import { communityRoutes } from './community-routes.ts';
+import { FARM_USERNAME_PATTERN } from '../../shared/community.mts';
+import { INVITE_REWARD } from '../../shared/invite.mts';
+import { settleInviteReward } from './invite-store.ts';
+import type { FarmResponse } from '../../shared/farm.mts';
 import { FarmError, parseAction, parseBatch } from './farm.ts';
 import { checkFarmStorage, farmStorageMode, FarmStorageError, mutateFarm, mutateFarmBatch, readFarm, registerFarm, requestMerchant } from './farm-store.ts';
 import type { MerchantAction } from './merchant.ts';
@@ -78,6 +82,31 @@ function sessionResponse(farm: Farm, sessionKey: string, username?: string): Far
 
 function isJson(context: Context): boolean {
   return context.req.header('Content-Type')?.split(';')[0].trim().toLowerCase() === 'application/json';
+}
+
+/**
+ * FV-INVITE-01: after a harvest or account creation, settle the invite reward if one is due and
+ * hand the caller the farm as it now stands. A failure here must not undo the player's action.
+ */
+async function withInviteReward<Response extends FarmResponse>(farmId: string, response: Response, harvestedNow: boolean): Promise<Response> {
+  try {
+    const settled = await settleInviteReward(farmId, harvestedNow);
+    if (!settled) return response;
+    const { amount } = INVITE_REWARD.inviteeSeeds;
+    const reward = `Quà mời bạn: +${amount} hạt giống dâu tây. Xem trong Túi hạt nhé!`;
+    // Keep the action's own result (for example the harvest count) in front of the reward.
+    return { ...response, farm: settled.farm, message: [response.message, reward].filter(Boolean).join(' ') };
+  } catch (error) {
+    console.warn('Chưa trao được quà mời bạn.', error instanceof Error ? error.name : 'UnknownError');
+    return response;
+  }
+}
+
+function referrerFrom(body: unknown, ownUsername: string): string | undefined {
+  const referrer = typeof body === 'object' && body !== null ? (body as { referrer?: unknown }).referrer : undefined;
+  if (typeof referrer !== 'string') return;
+  const normalized = referrer.trim().toLowerCase();
+  return FARM_USERNAME_PATTERN.test(normalized) && normalized !== ownUsername ? normalized : undefined;
 }
 
 const merchantErrors: Record<MerchantErrorCode, string> = {
@@ -310,7 +339,8 @@ app.use('/account/*', async (context, next) => {
 
 for (const type of ['register', 'login'] as const) {
   app.post(ACCOUNT_API[type].path, async (context) => {
-    const credentials = parseCredentials(await context.req.json().catch(() => null));
+    const body: unknown = await context.req.json().catch(() => null);
+    const credentials = parseCredentials(body);
     if (!credentials) return context.json({ error: 'Tên đăng nhập cần 3–24 chữ cái không dấu, chữ số hoặc dấu gạch dưới. Mật khẩu cần 15–128 ký tự.' }, 400);
     const tokenHash = accountTokenHash(getCookie(context, accountCookie));
     if (tokenHash && await findAccountSession(tokenHash)) {
@@ -332,7 +362,9 @@ for (const type of ['register', 'login'] as const) {
     credentialAttempts += 1;
     activeCredentialRequests += 1;
     try {
-      const result = guest ? await registerAccount(guest, credentials) : await loginAccount(credentials);
+      const result = guest
+        ? await registerAccount(guest, credentials, referrerFrom(body, credentials.username))
+        : await loginAccount(credentials);
       if (!result) {
         if (type === 'register') return context.json({ error: 'Tên đã được dùng hoặc ruộng Guest vừa thay đổi.' }, 409);
         return context.json({ error: 'Tên đăng nhập hoặc mật khẩu không đúng.' }, 401);
@@ -340,7 +372,9 @@ for (const type of ['register', 'login'] as const) {
       setSessionCookie(context, accountCookie, result.token, accountLifetimeSeconds);
       if (guest) setSessionCookie(context, guestCookie, '', 0);
       const sessionKey = farmSessionKey('account', hashToken(result.token));
-      return context.json(sessionResponse(result.farm, sessionKey, result.username), type === 'register' ? 201 : 200);
+      const response = sessionResponse(result.farm, sessionKey, result.username);
+      // A guest who harvested before signing up qualifies as soon as the account exists.
+      return context.json(guest ? await withInviteReward(guest, response, false) : response, type === 'register' ? 201 : 200);
     } finally {
       activeCredentialRequests -= 1;
     }
@@ -372,7 +406,8 @@ app.post(FARM_API.batch.path, bodyLimit({
   }
   const result = await mutateFarmBatch(session.id, batch, session.tokenHash);
   if (!result) return context.json({ error: 'Phiên chơi đã hết. Hãy tải lại trang.' }, 401);
-  return context.json(result);
+  const harvested = Boolean(session.tokenHash) && batch.actions.some(action => action.type === 'harvest');
+  return context.json(harvested ? await withInviteReward(session.id, result, true) : result);
 });
 
 for (const type of ['buy', 'buyFertilizer', 'sell', 'plant', 'harvest', 'clear', 'water', 'fertilize', 'theme', 'claimMission', 'checkIn', 'selectPet'] as const) {
@@ -384,7 +419,8 @@ for (const type of ['buy', 'buyFertilizer', 'sell', 'plant', 'harvest', 'clear',
     if (!action) return context.json({ error: 'Thao tác không hợp lệ.' }, 400);
     const result = await mutateFarm(session.id, action, session.tokenHash);
     if (!result) return context.json({ error: 'Phiên chơi đã hết. Hãy tải lại trang.' }, 401);
-    return context.json(result);
+    const harvested = Boolean(session.tokenHash) && action.type === 'harvest';
+    return context.json(harvested ? await withInviteReward(session.id, result, true) : result);
   });
 }
 

@@ -188,7 +188,6 @@ pnpm --dir web test
 - Each farm has its own merchant; merchants are not yet shared between players.
 - No real-time multiplayer. Other players' farms are loaded when you visit.
 - The game text is in Vietnamese.
-- A guest can spend all starting GOLD on fertilizer before buying a first seed.
 
 ## Security
 

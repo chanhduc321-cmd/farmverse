@@ -28,7 +28,9 @@ function formatRelativeTime(timestampMs: number, nowMs: number = Date.now()): st
   return `${dd}/${MM} ${hh}:${mm}`;
 }
 
-function renderActivity(event: ActivityEvent): HTMLLIElement {
+type ShareActivity = (event: ActivityEvent) => Promise<string | undefined>;
+
+function renderActivity(event: ActivityEvent, share: (event: ActivityEvent, button: HTMLButtonElement) => void): HTMLLIElement {
   const li = document.createElement('li');
   li.className = 'activity-item';
   li.classList.toggle('is-unread', event.isUnread);
@@ -63,6 +65,12 @@ function renderActivity(event: ActivityEvent): HTMLLIElement {
     const actionText = document.createElement('span');
     actionText.textContent = `bị Pet chặn khi định hái ${event.cropName ?? 'nông sản'} tại Ô ${event.plot ?? '?'}. Quả vẫn còn nguyên.`;
     title.append(actionText);
+  } else if (event.type === 'invite') {
+    const actionText = document.createElement('span');
+    actionText.textContent = event.amount
+      ? `đã vào chơi nhờ lời mời của bạn. Bạn nhận ${event.amount} Gold.`
+      : 'đã vào chơi nhờ lời mời của bạn.';
+    title.append(actionText);
   } else {
     const actionText = document.createElement('span');
     actionText.textContent = 'đã ghé thăm nông trại';
@@ -86,7 +94,13 @@ function renderActivity(event: ActivityEvent): HTMLLIElement {
   }
 
   content.append(title, meta);
-  li.append(content);
+  const shareButton = document.createElement('button');
+  shareButton.type = 'button';
+  shareButton.className = 'activity-share';
+  shareButton.textContent = 'Chia sẻ';
+  shareButton.setAttribute('aria-label', `Chia sẻ chuyện ${event.visitorName} ghé vườn`);
+  shareButton.onclick = () => share(event, shareButton);
+  li.append(content, shareButton);
   return li;
 }
 
@@ -96,6 +110,8 @@ const pageSize = 20;
 export function createActivity(options: {
   openAccount: () => void;
   notify: (summary: ActivitySummary) => void;
+  /** Shares one journal entry and resolves to a message for the player, if any. */
+  share: ShareActivity;
 }) {
   const dialog = document.querySelector<HTMLDialogElement>('#activity')!;
   const openButton = document.querySelector<HTMLButtonElement>('#activity-open')!;
@@ -167,13 +183,21 @@ export function createActivity(options: {
     updateControls();
   }
 
+  function shareEntry(event: ActivityEvent, button: HTMLButtonElement): void {
+    button.disabled = true;
+    void options.share(event)
+      .then(message => { feedback.textContent = message ?? ''; })
+      .catch(() => { feedback.textContent = 'Chưa chia sẻ được. Hãy thử lại.'; })
+      .finally(() => { button.disabled = false; });
+  }
+
   function showPage(page: ActivityPage, first: boolean): void {
     if (first) {
       resetView();
       through = page.events[0]?.id;
       rendered = true;
     }
-    list.append(...page.events.map(renderActivity));
+    list.append(...page.events.map(event => renderActivity(event, shareEntry)));
     list.hidden = list.childElementCount === 0;
     empty.hidden = !list.hidden;
     nextOffset = page.nextOffset;

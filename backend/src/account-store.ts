@@ -40,7 +40,8 @@ export async function findAccountSession(tokenHash: string) {
   return result.rows[0];
 }
 
-export async function registerAccount(guestId: string, { username, password }: AccountCredentials) {
+/** `referrer` is the username whose farm link brought this player in; unknown names are ignored. */
+export async function registerAccount(guestId: string, { username, password }: AccountCredentials, referrer?: string) {
   const salt = randomBytes(16);
   const key = await deriveKey(password, salt);
   const passwordHash = `${salt.toString('hex')}:${key.toString('hex')}`;
@@ -49,8 +50,10 @@ export async function registerAccount(guestId: string, { username, password }: A
   // Insert the account before claiming the farm so a username conflict leaves the Guest intact.
   const result = await queryFarmDatabase<{ state: Farm }>(`
     WITH account AS (
-      INSERT INTO farm_accounts (farm_id, username, password_hash)
-      SELECT session_id, $2, $3 FROM farm_guest_progress WHERE session_id = $1 AND NOT claimed
+      INSERT INTO farm_accounts (farm_id, username, password_hash, referred_by)
+      SELECT session_id, $2, $3, (
+        SELECT farm_id FROM farm_accounts WHERE username = $6::text AND farm_id <> session_id
+      ) FROM farm_guest_progress WHERE session_id = $1 AND NOT claimed
       ON CONFLICT DO NOTHING
       RETURNING farm_id
     ), claimed_farm AS (
@@ -63,7 +66,7 @@ export async function registerAccount(guestId: string, { username, password }: A
       RETURNING farm_id
     )
     SELECT state FROM claimed_farm JOIN session ON farm_id = session_id
-  `, [guestId, username, passwordHash, hashToken(token), accountLifetimeSeconds]);
+  `, [guestId, username, passwordHash, hashToken(token), accountLifetimeSeconds, referrer ?? null]);
   if (result.rows[0]) return { farm: result.rows[0].state, username, token };
 }
 

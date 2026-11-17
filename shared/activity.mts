@@ -3,7 +3,7 @@ export const ACTIVITY_API = {
   markRead: '/activity/read',
 } as const;
 
-export type ActivityType = 'visit' | 'steal' | 'pet_block';
+export type ActivityType = 'visit' | 'steal' | 'pet_block' | 'invite';
 
 export interface ActivityEvent {
   id: string;

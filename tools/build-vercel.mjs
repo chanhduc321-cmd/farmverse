@@ -34,5 +34,10 @@ await writeFile(join(functionDir, '.vc-config.json'), JSON.stringify({
 }));
 await writeFile(join(output, 'config.json'), JSON.stringify({
   version: 3,
-  routes: [{ src: '^/api(?:/(.*))?$', dest: '/api/farmverse?__farm_route=$1' }],
+  routes: [
+    { src: '^/api(?:/(.*))?$', dest: '/api/farmverse?__farm_route=$1' },
+    // Shared farm links open the game, which reads the player from the path.
+    { handle: 'filesystem' },
+    { src: '^/farm/[A-Za-z0-9_]{3,24}/?$', dest: '/index.html' },
+  ],
 }));

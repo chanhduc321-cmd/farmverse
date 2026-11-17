@@ -1,0 +1,31 @@
+<!doctype html>
+<!-- Source for image/social/preview.jpg. Render at 1200x630; see docs/GTM_SHARING.md for the render command. -->
+<html lang="vi">
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; }
+  body {
+    position: relative;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: #55b837 url('../../image/background/loading-desktop.webp') center 38% / cover no-repeat;
+  }
+  .band {
+    position: absolute; inset: auto 0 0 0; padding: 120px 56px 40px;
+    background: linear-gradient(to top, rgb(39 78 29 / 0.94) 0%, rgb(39 78 29 / 0.78) 45%, rgb(39 78 29 / 0) 100%);
+    color: #fff;
+  }
+  h1 { margin: 0; font-size: 76px; line-height: 1; font-weight: 900; letter-spacing: -1px;
+    text-shadow: 0 4px 0 #274e1d, 0 8px 18px rgb(0 0 0 / 0.35); }
+  p { margin: 14px 0 0; font-size: 31px; font-weight: 700; color: #fff7c2;
+    text-shadow: 0 2px 6px rgb(0 0 0 / 0.45); }
+  /* dog-guard.png is a 7-frame strip of 176px frames; show the first one. */
+  .pet { position: absolute; right: 48px; bottom: 26px; width: 176px; height: 176px;
+    background: url('../../image/pets/dog/dog-guard.png') 0 0 / auto 176px no-repeat;
+    filter: drop-shadow(0 8px 10px rgb(0 0 0 / 0.35)); }
+</style>
+<div class="band">
+  <h1>Nông Trại Mộng Mơ</h1>
+  <p>Trồng cây, trộm rau cùng bạn bè. Chơi ngay trên trình duyệt.</p>
+</div>
+<div class="pet"></div>
+</html>

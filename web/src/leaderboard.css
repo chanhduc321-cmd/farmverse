@@ -1,0 +1,83 @@
+/* Weekly leaderboard: a single card sized to be screenshotted whole on a phone. */
+#leaderboard-open { flex: none; color: #8a5a12; }
+#leaderboard-open svg { display: block; }
+
+#leaderboard {
+  --board-ink: #2c2410;
+  --board-gold: #f4b938;
+  --board-green: #274e1d;
+  width: min(400px, calc(100% - 20px));
+  max-height: calc(100dvh - 20px);
+  padding: 0;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: var(--board-ink);
+  overflow: visible;
+}
+#leaderboard::backdrop { background: rgb(12 28 16 / .62); }
+.leaderboard-card {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 20px);
+  border: 3px solid #fff1bb;
+  border-radius: 22px;
+  background: #fffaf0;
+  box-shadow: 0 6px 0 #a87941, 0 18px 40px rgb(0 0 0 / .35);
+  overflow: hidden;
+}
+.leaderboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 14px;
+  background: linear-gradient(160deg, #3b7a2b, var(--board-green));
+  color: #fff8dd;
+}
+.leaderboard-kicker { margin: 0; font-size: .7rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #ffdc82; }
+.leaderboard-header h2 { margin: 2px 0 0; font-size: 1.5rem; line-height: 1.1; font-weight: 900; }
+.leaderboard-week { margin: 6px 0 0; min-height: 1em; font-size: .8rem; font-weight: 700; opacity: .9; }
+.leaderboard-close {
+  width: 44px; height: 44px; border: 0; border-radius: 50%;
+  background: rgb(255 255 255 / .16); color: inherit; font-size: 1.5rem; line-height: 1; cursor: pointer;
+}
+.leaderboard-close:hover { background: rgb(255 255 255 / .28); }
+.leaderboard-body { padding: 4px 14px 6px; overflow-y: auto; }
+.leaderboard-section { padding: 10px 0 8px; }
+.leaderboard-section + .leaderboard-section { border-top: 2px dashed #ecd8ab; }
+.leaderboard-section h3 { margin: 0 0 6px; font-size: .78rem; font-weight: 900; letter-spacing: .04em; text-transform: uppercase; color: #8a5a12; }
+.leaderboard-section ol { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.leaderboard-section li {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 8px;
+  padding: 4px 8px; border-radius: 12px; font-size: .85rem;
+}
+.leaderboard-section li strong { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 800; }
+.leaderboard-rank {
+  display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%;
+  background: #f1ebd8; color: #635338; font-size: .78rem; font-weight: 900;
+}
+.leaderboard-detail { font-size: .74rem; font-weight: 700; color: #6b5d43; white-space: nowrap; }
+.leaderboard-section li.is-leader { background: #fff0c2; font-size: .95rem; }
+.leaderboard-section li.is-leader .leaderboard-rank { background: var(--board-gold); color: #3b2a0a; box-shadow: 0 2px 0 #a8731a; }
+.leaderboard-section li.is-me { outline: 2px solid #3b7a2b; outline-offset: -2px; }
+.leaderboard-empty { margin: 0; padding: 6px 8px; font-size: .82rem; color: #8a7e6c; }
+.leaderboard-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 14px; border-top: 2px solid #ecd8ab; background: #fff3ca;
+}
+.leaderboard-site { font-size: .9rem; font-weight: 900; color: var(--board-green); }
+.leaderboard-share {
+  min-height: 44px; padding: 0 16px; border: 0; border-radius: 12px;
+  background: var(--board-gold); color: #3b2a0a; box-shadow: 0 2px 0 #a8731a;
+  font: inherit; font-size: .85rem; font-weight: 800; cursor: pointer;
+}
+.leaderboard-share:active { transform: translateY(1px); box-shadow: none; }
+.leaderboard-share:disabled { opacity: .55; cursor: default; }
+.leaderboard-status { margin: 0; padding: 0 14px 10px; background: #fff3ca; font-size: .78rem; color: #6b5d43; }
+.leaderboard-status:empty { display: none; }
+:is(.leaderboard-close, .leaderboard-share):focus-visible { outline: 3px solid #fff4af; outline-offset: 2px; }
+.leaderboard-share:focus-visible { outline-color: #274e1d; }
+@media (prefers-reduced-motion: reduce) {
+  .leaderboard-share:active { transform: none; }
+}

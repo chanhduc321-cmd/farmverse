@@ -22,6 +22,22 @@ export function ripeYield(crop: Crop, plot: Plot, plotIndex: number, now: number
   return 10 + Math.floor(roll * 20) - (plot.fruitTaken ?? 0);
 }
 
+/** Price of the cheapest seed the player's level allows, falling back to the cheapest in the catalog. */
+function cheapestSeedPrice(farm: Farm, crops: readonly Crop[]): number {
+  const unlocked = crops.filter(crop => crop.level <= farm.level);
+  return Math.min(...(unlocked.length ? unlocked : crops).map(crop => crop.buyPrice));
+}
+
+/**
+ * True when the player can still grow or sell something without buying a seed:
+ * seeds in the bag, a crop that has not been harvested, or produce in the warehouse.
+ */
+function canKeepFarming(farm: Farm): boolean {
+  return Object.values(farm.seeds).some(count => count > 0)
+    || Object.values(farm.produce).some(count => count > 0)
+    || farm.plots.some(plot => plot !== null && !plot.harvested);
+}
+
 function addXp(farm: Farm, amount: number): void {
   farm.xp += amount;
   if (farm.xp >= farm.level * 200) {
@@ -96,6 +112,10 @@ function applyMutation(farm: Farm, action: FarmMutation, now: number, crops: rea
     case 'buyFertilizer': {
       const cost = FERTILIZER_COST * action.quantity;
       if (farm.gold < cost) throw new FarmError('Không đủ Gold để mua phân bón.');
+      const seedPrice = cheapestSeedPrice(farm, crops);
+      if (farm.gold - cost < seedPrice && !canKeepFarming(farm)) {
+        throw new FarmError(`Giữ lại ít nhất ${seedPrice} Gold để mua hạt giống đầu tiên nhé.`);
+      }
       farm.gold -= cost;
       farm.fertilizer = (farm.fertilizer ?? 0) + action.quantity;
       return `Đã mua ${action.quantity} bịch phân bón.`;
